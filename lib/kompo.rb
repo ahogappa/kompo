@@ -124,29 +124,51 @@ module Kompo
       end
     end
 
+    def ensure_ruby_build_installed
+      return if system('which ruby-build > /dev/null 2>&1')
+
+      if system('which brew > /dev/null 2>&1')
+        exec_command 'brew install ruby-build', 'Installing ruby-build via Homebrew'
+      else
+        command = [
+          'git clone https://github.com/rbenv/ruby-build.git',
+          '&&',
+          'cd ruby-build',
+          '&&',
+          'PREFIX=/usr/local ./install.sh'
+        ].join(' ')
+        exec_command command, 'Installing ruby-build from source'
+      end
+    end
+
     def clone_ruby_src
       if ruby_src_path.nil?
-        command = ['git', '-C', "#{work_dir}", 'clone', '-b', "#{ruby_version}", '--single-branch', '--depth=1', 'https://github.com/ruby/ruby.git'].join(' ')
-        exec_command command, 'git clone ruby.git'
+        ensure_ruby_build_installed
 
-        Dir.chdir(ruby_src_dir) do
-          exec_command (File.exist?("#{ruby_src_dir}/autogen.sh") ? './autogen.sh' : "autoconf"), 'autoxxx'
+        # Set configure options as environment variable
+        ENV['CONFIGURE_OPTS'] = [
+          '--disable-install-doc',
+          '--disable-install-rdoc',
+          '--disable-install-capi',
+          '--with-static-linked-ext',
+          '--with-ruby-pc=ruby.pc',
+          '--with-setup=Setup',
+          '--with-ext=+'
+        ].join(' ')
 
-          command = [
-            './configure',
-            get_cofigure_option_from_env,
-            "--prefix=#{work_dir}/dest_dir",
-            "--disable-install-doc",
-            "--disable-install-rdoc",
-            "--disable-install-capi",
-            "--with-static-linked-ext",
-            "--with-ruby-pc=ruby.pc",
-            "--with-ext=#{get_ruby_exts_dir}"
-          ].join(' ')
-          exec_command command, 'configure'
+        # Build Ruby using ruby-build
+        command = [
+          'ruby-build',
+          '--verbose',
+          '--keep',
+          ruby_version.delete_prefix('v').gsub('_', '.'),
+          "#{work_dir}/dest_dir"
+        ].join(' ')
 
-          exec_command ['make', 'install'].join(' '), 'build target version ruby'
-        end
+        exec_command command, 'Building Ruby with ruby-build'
+
+        # Set ruby_src_dir to the build directory
+        @ruby_src_dir = "#{work_dir}/dest_dir/src/ruby-#{ruby_version.delete_prefix('v').gsub('_', '.')}"
       end
     end
 
