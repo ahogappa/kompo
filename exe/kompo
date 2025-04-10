@@ -8,8 +8,6 @@ option = Kompo::Option.default
 Kompo::Tasks.cd_work_dir(option) do |task|
   task.clone_ruby_src
 
-  task.fs_cli
-
   task.make_main_c
 
   task.packing

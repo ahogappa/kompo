@@ -75,7 +75,6 @@ module Kompo
     attr_reader :task, :fs, :work_dir, :ruby_src_dir, :ruby_pc, :ruby_bin, :extinit_o, :encinit_o, :lib_ruby_static_dir, :bundle_setup, :bundle_ruby, :std_libs, :gem_libs, :exts_libs
 
     delegate %i[entrypoint output gemfile ignore_stdlib dyn_link_lib dest_dir ruby_src_path cache_bundle_path ruby_version compress context args use_group] => :@option
-    delegate %i[komop_cli lib_kompo_dir] => :@fs
 
     def initialize(option, dir)
       @option = option
@@ -107,8 +106,6 @@ module Kompo
     end
 
     def valid?
-      raise "kompo-cli not found. Please install 'kompo-cli'." unless komop_cli
-      raise "libkompo.a not found. Please install 'kompo-cli'." unless lib_kompo_dir
       raise "Entrypoint not found: '#{entrypoint}'. Please specify the entry file path with '-e' or '--entrypoint' option." unless File.exist?(entrypoint)
 
       true
@@ -206,18 +203,6 @@ module Kompo
         @bundle_setup = File.join(work_dir, 'bundle', 'bundler', 'setup.rb')
         @bundle_ruby = File.join(work_dir, 'bundle', 'ruby')
       end
-    end
-
-    def fs_cli
-      command = [
-        komop_cli,
-        context,
-        args.join(' '),
-        get_load_paths,
-        "--entrypoint=#{entrypoint}",
-      ].join(' ')
-
-      exec_command command, 'kompo-cli'
     end
 
     def make_main_c
@@ -416,37 +401,6 @@ module Kompo
       ].join(' ')
 
       @gem_libs = (exec_command(command, 'Check gem_libs', true).split("\n") - std_libs)
-    end
-  end
-
-  class Fs
-    attr_reader :komop_cli, :lib_kompo_dir
-
-    def initialize
-      @komop_cli = local_komop_cli || ENV['KOMPO_CLI']
-      @lib_kompo_dir = local_lib_kompo_dir || ENV['LIB_KOMPO_DIR']
-    end
-
-    def local_komop_cli
-      return nil if `which brew`.empty?
-
-      path = `brew --prefix kompo-vfs`.chomp + '/bin/kompo-cli'
-      if File.exist?(path)
-        path
-      else
-        nil
-      end
-    end
-
-    def local_lib_kompo_dir
-      return nil if `which brew`.empty?
-
-      path = `brew --prefix kompo-vfs`.chomp + '/lib'
-      if File.exist?(path)
-        path
-      else
-        nil
-      end
     end
   end
 end
