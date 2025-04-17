@@ -1,0 +1,80 @@
+--- ext/Setup	2025-04-12 08:23:26.564793009 +0000
++++ ext/Setupall	2025-04-12 08:11:54.979580009 +0000
+@@ -1,39 +1,39 @@
+-#option nodynamic
++option nodynamic
+
+-#bigdecimal
+-#cgi/escape
+-#continuation
+-#coverage
+-#date
+-#digest/bubblebabble
+-#digest
+-#digest/md5
+-#digest/rmd160
+-#digest/sha1
+-#digest/sha2
+-#etc
+-#fcntl
+-#fiddle
+-#io/console
+-#io/nonblock
+-#io/wait
+-#json
+-#json/generator
+-#json/parser
+-#nkf
+-#objspace
+-#openssl
+-#pathname
+-#psych
+-#pty
+-#racc/cparse
+-#rbconfig/sizeof
+-#readline
+-#ripper
+-#socket
+-#stringio
+-#strscan
+-#syslog
+-#win32
+-#win32ole
+-#zlib
++bigdecimal
++cgi/escape
++continuation
++coverage
++date
++digest/bubblebabble
++digest
++digest/md5
++digest/rmd160
++digest/sha1
++digest/sha2
++etc
++fcntl
++fiddle
++io/console
++io/nonblock
++io/wait
++json
++json/generator
++json/parser
++nkf
++objspace
++openssl
++pathname
++psych
++pty
++racc/cparse
++rbconfig/sizeof
++readline
++ripper
++socket
++stringio
++strscan
++syslog
++# win32
++# win32ole
++zlib

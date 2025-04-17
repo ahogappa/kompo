@@ -1,18 +1,9 @@
 #!/usr/bin/env ruby
 
 require_relative '../lib/kompo'
-require 'optparse'
+
 
 option = Kompo::Option.default
-
-Kompo::Tasks.cd_work_dir(option) do |task|
-  task.clone_ruby_src
-
-  task.make_main_c
-
-  task.packing
-
-  task.copy_to_dest_dir
-end
+Kompo::Packing.exec(option.to_context)
 
 puts 'info: Finish kompo!'

@@ -3,5 +3,4 @@ const int FILES_SIZE = <%= @file_bytes.size %>;
 const unsigned long long FILES_SIZES[] = {<%= @file_sizes.join(',') %>};
 const char PATHS[] = {<%= @paths.join(',') %>};
 const int PATHS_SIZE = <%= @paths.size %>;
-const char WD[] = {<%= Dir.pwd.bytes.join(',') %>,0};
-const char START_FILE_PATH[] = {<%= File.expand_path(start_file_path).bytes.join(',') %>,0};
+const char WD[] = {<%= context.work_dir.bytes.join(',') %>,0};
