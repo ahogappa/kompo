@@ -24,18 +24,13 @@ $ git clone https://github.com/ahogappa/kompo-vfs.git
 $ cd kompo-vfs
 $ cargo build --release
 ```
-Set environment variables.
-```sh
-$ KOMPO_CLI=/path/to/kompo-vfs/target/release/kompo-cli
-$ LIB_KOMPO_DIR=/path/to/kompo-vfs/target/release
-```
 
 ## examples
 
 * hello
   * simple hello world script.
 * sinatra_and_sqlite
-  * sinatra app with sqlite3 with Gemfile.
+  * 🚧
 * rails
   * 🚧
 
