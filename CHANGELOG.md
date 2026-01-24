@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2025-01-25
+
+### Fixed
+- Copy gemspec files when Gemfile contains `gemspec` directive [#8](https://github.com/ahogappa/kompo/pull/8)
+- Fix "." directory handling to copy contents directly instead of creating nested structure [#8](https://github.com/ahogappa/kompo/pull/8)
+
 ## [0.3.0] - 2026-01-24
 
 ### Changed
