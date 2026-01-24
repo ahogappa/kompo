@@ -53,13 +53,20 @@ module Kompo
         end
 
         if File.directory?(src)
-          FileUtils.mkdir_p(dest)
-          FileUtils.cp_r(src, File.dirname(dest))
+          # Special handling for "." - copy directory contents directly to work_dir
+          if file == '.' || real_src == real_project_dir
+            copy_directory_contents(src, work_dir)
+            @additional_paths << work_dir
+          else
+            FileUtils.mkdir_p(dest)
+            FileUtils.cp_r(src, File.dirname(dest))
+            @additional_paths << dest
+          end
         else
           FileUtils.mkdir_p(File.dirname(dest))
           FileUtils.cp(src, dest)
+          @additional_paths << dest
         end
-        @additional_paths << dest
         puts "Copied: #{file}"
       end
     end
@@ -84,6 +91,22 @@ module Kompo
         FileUtils.rm_rf(path) if expanded_path.start_with?(real_work_dir + File::SEPARATOR) && File.exist?(path)
       end
       puts 'Cleaned up project files'
+    end
+
+    private
+
+    def copy_directory_contents(src_dir, dest_dir)
+      # Copy all files and directories from src_dir directly into dest_dir
+      Dir.each_child(src_dir) do |child|
+        src_path = File.join(src_dir, child)
+        dest_path = File.join(dest_dir, child)
+
+        if File.directory?(src_path)
+          FileUtils.cp_r(src_path, dest_path)
+        else
+          FileUtils.cp(src_path, dest_path)
+        end
+      end
     end
   end
 end

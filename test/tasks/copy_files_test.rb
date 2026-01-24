@@ -55,6 +55,64 @@ class CopyGemfileTest < Minitest::Test
       assert File.exist?(File.join(work_dir, 'Gemfile.lock'))
     end
   end
+
+  def test_copy_gemfile_copies_gemspec_when_gemfile_references_gemspec
+    Dir.mktmpdir do |tmpdir|
+      work_dir = File.join(tmpdir, 'work')
+      project_dir = File.join(tmpdir, 'project')
+      FileUtils.mkdir_p([work_dir, project_dir])
+      # Create Gemfile with gemspec directive
+      File.write(File.join(project_dir, 'Gemfile'), "source 'https://rubygems.org'\ngemspec")
+      File.write(File.join(project_dir, 'my_gem.gemspec'), "Gem::Specification.new { |s| s.name = 'my_gem' }")
+
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_args(project_dir: project_dir)
+
+      assert Kompo::CopyGemfile.gemfile_exists
+      # Verify Gemfile and gemspec were copied to work_dir
+      assert File.exist?(File.join(work_dir, 'Gemfile'))
+      assert File.exist?(File.join(work_dir, 'my_gem.gemspec'))
+    end
+  end
+
+  def test_copy_gemfile_does_not_copy_gemspec_when_no_gemspec_directive
+    Dir.mktmpdir do |tmpdir|
+      work_dir = File.join(tmpdir, 'work')
+      project_dir = File.join(tmpdir, 'project')
+      FileUtils.mkdir_p([work_dir, project_dir])
+      # Create Gemfile without gemspec directive
+      File.write(File.join(project_dir, 'Gemfile'), "source 'https://rubygems.org'\ngem 'rake'")
+      File.write(File.join(project_dir, 'my_gem.gemspec'), "Gem::Specification.new { |s| s.name = 'my_gem' }")
+
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_args(project_dir: project_dir)
+
+      assert Kompo::CopyGemfile.gemfile_exists
+      # Verify Gemfile was copied but gemspec was not
+      assert File.exist?(File.join(work_dir, 'Gemfile'))
+      refute File.exist?(File.join(work_dir, 'my_gem.gemspec'))
+    end
+  end
+
+  def test_copy_gemfile_copies_multiple_gemspecs
+    Dir.mktmpdir do |tmpdir|
+      work_dir = File.join(tmpdir, 'work')
+      project_dir = File.join(tmpdir, 'project')
+      FileUtils.mkdir_p([work_dir, project_dir])
+      # Create Gemfile with gemspec directive and multiple gemspecs
+      File.write(File.join(project_dir, 'Gemfile'), "gemspec")
+      File.write(File.join(project_dir, 'my_gem.gemspec'), "Gem::Specification.new { |s| s.name = 'my_gem' }")
+      File.write(File.join(project_dir, 'other_gem.gemspec'), "Gem::Specification.new { |s| s.name = 'other_gem' }")
+
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_args(project_dir: project_dir)
+
+      assert Kompo::CopyGemfile.gemfile_exists
+      # Verify all gemspecs were copied
+      assert File.exist?(File.join(work_dir, 'my_gem.gemspec'))
+      assert File.exist?(File.join(work_dir, 'other_gem.gemspec'))
+    end
+  end
 end
 
 class CopyProjectFilesTest < Minitest::Test
@@ -133,6 +191,33 @@ class CopyProjectFilesTest < Minitest::Test
       assert_includes additional_paths, File.join(work_dir, 'config/settings.rb')
       # Verify individual file was copied with parent dir created
       assert File.exist?(File.join(work_dir, 'config', 'settings.rb'))
+    end
+  end
+
+  def test_copy_project_files_with_dot_copies_directory_contents
+    Dir.mktmpdir do |tmpdir|
+      tmpdir = File.realpath(tmpdir)
+      work_dir = File.join(tmpdir, 'work')
+      project_dir = File.join(tmpdir, 'project')
+      lib_dir = File.join(project_dir, 'lib')
+      FileUtils.mkdir_p([work_dir, lib_dir])
+
+      # Create files in project_dir
+      File.write(File.join(project_dir, 'main.rb'), "puts 'hello'")
+      File.write(File.join(project_dir, 'app.gemspec'), "Gem::Specification.new { |s| s.name = 'app' }")
+      File.write(File.join(lib_dir, 'app.rb'), 'class App; end')
+
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_args(project_dir: project_dir, entrypoint: 'main.rb', files: ['.'])
+
+      Kompo::CopyProjectFiles.entrypoint_path
+
+      # Verify all files were copied directly to work_dir (not into work_dir/project/)
+      assert File.exist?(File.join(work_dir, 'main.rb'))
+      assert File.exist?(File.join(work_dir, 'app.gemspec'))
+      assert File.exist?(File.join(work_dir, 'lib', 'app.rb'))
+      # Ensure no nested project directory was created
+      refute File.exist?(File.join(work_dir, 'project'))
     end
   end
 end
