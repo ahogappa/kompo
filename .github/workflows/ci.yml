@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache kompo-vfs build
+        uses: actions/cache@v4
+        with:
+          path: ../kompo-vfs/target
+          key: kompo-vfs-${{ runner.os }}-v6-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: |
+            kompo-vfs-${{ runner.os }}-v6-
+
+      - name: Clone kompo-vfs
+        run: |
+          if [ ! -d ../kompo-vfs ]; then
+            git clone https://github.com/ahogappa/kompo-vfs.git ../kompo-vfs
+          fi
+          cd ../kompo-vfs
+          git fetch origin
+          git checkout 30aff09286b7c45e9f8a89dbac0798c5651731f9
+
+      - name: Build kompo-vfs
+        run: |
+          cd ../kompo-vfs
+          cargo build --release
+
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libssl-dev libreadline-dev zlib1g-dev libyaml-dev libffi-dev
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install openssl readline libyaml libffi sqlite3
+          # sqlite3 is keg-only, so we need to add it to PKG_CONFIG_PATH
+          echo "PKG_CONFIG_PATH=$(brew --prefix sqlite3)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+      - name: Cache kompo Ruby build
+        uses: actions/cache@v4
+        with:
+          path: ~/.kompo/cache
+          key: kompo-ruby-${{ runner.os }}-3.4-v8-${{ hashFiles('lib/kompo.rb') }}
+          restore-keys: |
+            kompo-ruby-${{ runner.os }}-3.4-v8-
+
+      - name: Install native_gems dependencies
+        run: |
+          cd samples/native_gems
+          bundle install
+
+      - name: Pack native_gems sample
+        timeout-minutes: 30
+        run: |
+          cd samples/native_gems
+          BUNDLE_GEMFILE=../../Gemfile TASKI_PROGRESS_MODE=plain bundle exec ../../exe/kompo --local-vfs-path=../../../kompo-vfs -o .
+
+      - name: Run native_gems binary
+        run: |
+          cd samples/native_gems
+          OUTPUT=$(./native_gems)
+          echo "$OUTPUT"
+          echo "$OUTPUT" | grep -q "SUCCESS: nokogiri, sqlite3 and msgpack are working correctly!"

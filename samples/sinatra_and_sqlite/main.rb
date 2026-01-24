@@ -1,30 +1,13 @@
-require 'sqlite3'
+# frozen_string_literal: true
+
+require_relative 'src/server'
 require 'sinatra'
 
-require_relative './hello'
-
-File.delete("sample.db") if File.exist?("sample.db")
-
-db = SQLite3::Database.new "sample.db"
-
-rows = db.execute <<-SQL
-  create table numbers (
-    name varchar(30),
-    val int
-  );
-SQL
-
-{
-  "one" => 1,
-  "two" => 2,
-}.each do |pair|
-  db.execute "insert into numbers values ( ?, ? )", pair
-end
-
 set :bind, '0.0.0.0'
+set :run, true
 
 get '/' do
-  rows = db.execute 'select * from numbers;'
+  rows = $db.execute 'select * from numbers;'
   rows.to_s
 end
 

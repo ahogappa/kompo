@@ -1,0 +1,8 @@
+# frozen_string_literal: true
+
+APP_PATH = File.expand_path('config/application', __dir__)
+require_relative 'config/boot'
+
+require 'rails/commands'
+
+Rails::Command.invoke('server', ['-p', '3000', '-b', '0.0.0.0', '--pid=/tmp/rails_server.pid'])

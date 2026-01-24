@@ -1,45 +1,58 @@
 #include <ruby.h>
 
-extern char *get_kompo_patch(void);
 extern void ruby_init_ext(const char *name, void (*init)(void));
 extern void Init_kompo_fs(void);
-extern char *get_start_file_name(void);
-<% exts.each do |(_, func)| %>
+extern void kompo_fs_set_entrypoint_dir(const char *entrypoint_path);
+<% context.exts.each do |(_, func)| %>
 extern void <%= func %>(void);
 <% end %>
 void Init_gems(void)
 {
-  <% exts.each do |(so_path, func)| %>
-    ruby_init_ext("<%= so_path %>", <%= func %>);
+  <% context.exts.each do |(ext_path, func)| %>
+    ruby_init_ext("<%= ext_path %>.so", <%= func %>);
   <% end %>
 }
-<% ignore_stdlib.each do |stdlib|%>
-void <%= "Init_#{stdlib.gsub('/', '_')}" %>(void){}
-<% end %>
 
 int main(int argc, char **argv)
 {
-  int c = argc + 2;
+<% if context.has_gemfile %>
+  int c = argc + 3;
   char *argv2[c];
 
   argv2[0] = argv[0];
-  argv2[1] = "-e";
-  argv2[2] = get_kompo_patch();
+  argv2[1] = (char *)"-r";
+  argv2[2] = (char *)"bundler/setup";
+  argv2[3] = (char *)"<%= context.work_dir_entrypoint %>";
   for (int i = 1; i < argc; i++) {
-    argv2[i + 2] = argv[i];
+    argv2[i + 3] = argv[i];
   }
+<% else %>
+  int c = argc + 1;
+  char *argv2[c];
 
-  ruby_sysinit(&c, &argv);
+  argv2[0] = argv[0];
+  argv2[1] = (char *)"<%= context.work_dir_entrypoint %>";
+  for (int i = 1; i < argc; i++) {
+    argv2[i + 1] = argv[i];
+  }
+<% end %>
+
+  char **argv2_ptr = argv2;
+  ruby_sysinit(&c, &argv2_ptr);
 
   RUBY_INIT_STACK;
   ruby_init();
 
   Init_kompo_fs();
+
+  const char *entrypoint = "<%= context.work_dir_entrypoint %>";
+  kompo_fs_set_entrypoint_dir(entrypoint);
+
   Init_gems();
 
-  void *node = ruby_options(c, argv2);
+  void *node = ruby_options(c, argv2_ptr);
 
   // set $0
-  ruby_script(get_start_file_name());
+  ruby_script("<%= File.basename(context.project_dir) %>");
   return ruby_run_node(node);
 }
