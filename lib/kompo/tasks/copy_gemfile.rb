@@ -5,7 +5,7 @@ require 'fileutils'
 module Kompo
   # Copy Gemfile, Gemfile.lock, and gemspec files to working directory if they exist
   class CopyGemfile < Taski::Task
-    exports :gemfile_exists
+    exports :gemfile_exists, :gemspec_paths
 
     def run
       work_dir = WorkDir.path
@@ -15,7 +15,7 @@ module Kompo
       gemfile_lock_path = File.join(project_dir, 'Gemfile.lock')
 
       @gemfile_exists = File.exist?(gemfile_path)
-      @copied_gemspecs = []
+      @gemspec_paths = []
 
       if @gemfile_exists
         FileUtils.cp(gemfile_path, work_dir)
@@ -46,7 +46,7 @@ module Kompo
       FileUtils.rm_f(gemfile_lock)
 
       # Clean up copied gemspec files
-      (@copied_gemspecs || []).each do |gemspec|
+      (@gemspec_paths || []).each do |gemspec|
         FileUtils.rm_f(gemspec)
       end
 
@@ -66,7 +66,7 @@ module Kompo
       gemspec_files.each do |gemspec_path|
         dest_path = File.join(work_dir, File.basename(gemspec_path))
         FileUtils.cp(gemspec_path, dest_path)
-        @copied_gemspecs << dest_path
+        @gemspec_paths << dest_path
         puts "Copied: #{File.basename(gemspec_path)}"
       end
 
