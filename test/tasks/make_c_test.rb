@@ -286,6 +286,7 @@ class MakeFsCTest < Minitest::Test
   def mock_fs_c_dependencies(work_dir, tmpdir, entrypoint,
                              additional_paths: [],
                              gemfile_exists: false,
+                             gemspec_paths: [],
                              bundler_config_path: nil,
                              bundle_ruby_dir: nil)
     mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
@@ -294,7 +295,7 @@ class MakeFsCTest < Minitest::Test
               original_ruby_install_dir: '/path/to/install',
               ruby_major_minor: '3.4')
     mock_task(Kompo::CopyProjectFiles, entrypoint_path: entrypoint, additional_paths: additional_paths)
-    mock_task(Kompo::CopyGemfile, gemfile_exists: gemfile_exists)
+    mock_task(Kompo::CopyGemfile, gemfile_exists: gemfile_exists, gemspec_paths: gemspec_paths)
     mock_task(Kompo::BundleInstall, bundler_config_path: bundler_config_path, bundle_ruby_dir: bundle_ruby_dir)
     mock_task(Kompo::CheckStdlibs, paths: [])
   end

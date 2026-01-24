@@ -94,11 +94,14 @@ module Kompo
       paths << CopyProjectFiles.entrypoint_path
       paths += CopyProjectFiles.additional_paths
 
-      # 2. Gemfile and Gemfile.lock (if exists)
+      # 2. Gemfile, Gemfile.lock, and gemspec files (if exists)
       #    Created by: CopyGemfile
       if CopyGemfile.gemfile_exists
         paths << File.join(@work_dir, 'Gemfile')
         paths << File.join(@work_dir, 'Gemfile.lock')
+
+        # Include gemspec files for Bundler's gemspec directive
+        paths += CopyGemfile.gemspec_paths
 
         # 3. Bundle directory (.bundle/config and bundle/ruby/X.Y.Z/gems/...)
         #    Created by: BundleInstall
