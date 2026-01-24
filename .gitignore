@@ -11,3 +11,12 @@ kompo-fs
 sample.db
 samples/hello/hello
 samples/sinatra_and_sqlite/sinatra_and_sqlite
+
+kompo-vfs/
+.gem_rbs_collection
+
+CLAUDE.md
+.serena
+.specify
+.claude/
+samples/rails/sample/sample

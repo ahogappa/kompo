@@ -1,42 +1,48 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    base64 (0.2.0)
-    mini_portile2 (2.8.5)
-    mustermann (3.0.0)
+    base64 (0.3.0)
+    logger (1.7.0)
+    mini_portile2 (2.8.9)
+    mustermann (3.0.4)
       ruby2_keywords (~> 0.0.1)
-    nio4r (2.7.0)
-    puma (6.4.2)
+    nio4r (2.7.5)
+    puma (7.2.0)
       nio4r (~> 2.0)
-    rack (3.0.9.1)
-    rack-protection (4.0.0)
+    rack (3.2.4)
+    rack-protection (4.2.1)
       base64 (>= 0.1.0)
+      logger (>= 1.6.0)
       rack (>= 3.0.0, < 4)
-    rack-session (2.0.0)
+    rack-session (2.1.1)
+      base64 (>= 0.1.0)
       rack (>= 3.0.0)
-    rackup (2.1.0)
+    rackup (2.3.1)
       rack (>= 3)
-      webrick (~> 1.8)
     ruby2_keywords (0.0.5)
-    sinatra (4.0.0)
+    sinatra (4.2.1)
+      logger (>= 1.6.0)
       mustermann (~> 3.0)
       rack (>= 3.0.0, < 4)
-      rack-protection (= 4.0.0)
+      rack-protection (= 4.2.1)
       rack-session (>= 2.0.0, < 3)
       tilt (~> 2.0)
-    sqlite3 (1.7.2)
+    sqlite3 (2.9.0)
       mini_portile2 (~> 2.8.0)
-    tilt (2.3.0)
-    webrick (1.8.1)
+    tilt (2.7.0)
 
 PLATFORMS
-  aarch64-linux
-  arm-linux
+  aarch64-linux-gnu
+  aarch64-linux-musl
+  arm-linux-gnu
+  arm-linux-musl
   arm64-darwin
   ruby
-  x86-linux
+  x86-linux-gnu
+  x86-linux-musl
   x86_64-darwin
-  x86_64-linux
+  x86_64-linux-gnu
+  x86_64-linux-musl
 
 DEPENDENCIES
   puma
@@ -44,5 +50,21 @@ DEPENDENCIES
   sinatra
   sqlite3
 
+CHECKSUMS
+  base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
+  logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
+  mini_portile2 (2.8.9) sha256=0cd7c7f824e010c072e33f68bc02d85a00aeb6fce05bb4819c03dfd3c140c289
+  mustermann (3.0.4) sha256=85fadcb6b3c6493a8b511b42426f904b7f27b282835502233dd154daab13aa22
+  nio4r (2.7.5) sha256=6c90168e48fb5f8e768419c93abb94ba2b892a1d0602cb06eef16d8b7df1dca1
+  puma (7.2.0) sha256=bf8ef4ab514a4e6d4554cb4326b2004eba5036ae05cf765cfe51aba9706a72a8
+  rack (3.2.4) sha256=5d74b6f75082a643f43c1e76b419c40f0e5527fcfee1e669ac1e6b73c0ccb6f6
+  rack-protection (4.2.1) sha256=cf6e2842df8c55f5e4d1a4be015e603e19e9bc3a7178bae58949ccbb58558bac
+  rack-session (2.1.1) sha256=0b6dc07dea7e4b583f58a48e8b806d4c9f1c6c9214ebc202ec94562cbea2e4e9
+  rackup (2.3.1) sha256=6c79c26753778e90983761d677a48937ee3192b3ffef6bc963c0950f94688868
+  ruby2_keywords (0.0.5) sha256=ffd13740c573b7301cf7a2e61fc857b2a8e3d3aff32545d6f8300d8bae10e3ef
+  sinatra (4.2.1) sha256=b7aeb9b11d046b552972ade834f1f9be98b185fa8444480688e3627625377080
+  sqlite3 (2.9.0) sha256=ece9c00b32ec5f550d3a4a35c41ea8d738563589f090b9dfd0d510b7ae5f296c
+  tilt (2.7.0) sha256=0d5b9ba69f6a36490c64b0eee9f6e9aad517e20dcc848800a06eb116f08c6ab3
+
 BUNDLED WITH
-   2.5.3
+  4.0.3

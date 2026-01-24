@@ -13,8 +13,8 @@
   },
   "containerEnv": {
     // "PATH": "/usr/local/cargo/bin:${containerEnv:PATH}",
-    "KOMPO_CLI": "/usr/local/bin/kompo-cli",
-    "LIB_KOMPO_DIR": "/usr/local/lib",
+    // "KOMPO_CLI": "/usr/local/bin/kompo-cli",
+    // "LIB_KOMPO_DIR": "/usr/local/lib",
   },
   // Features to add to the dev container. More info: https://containers.dev/features.
   // "features": {},

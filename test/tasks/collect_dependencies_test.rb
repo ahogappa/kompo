@@ -1,0 +1,105 @@
+# frozen_string_literal: true
+
+require_relative '../test_helper'
+
+class CollectDependenciesTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def test_collect_dependencies_output_path_in_directory
+    Dir.mktmpdir do |tmpdir|
+      work_dir = File.join(tmpdir, 'work')
+      project_dir = File.join(tmpdir, 'myproject')
+      output_dir = File.join(tmpdir, 'output')
+      FileUtils.mkdir_p([work_dir, project_dir, output_dir])
+
+      # Mock all dependencies
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::InstallRuby,
+                ruby_install_dir: '/path/to/install',
+                ruby_version: '3.4.1',
+                ruby_major_minor: '3.4',
+                ruby_build_path: '/path/to/build')
+      mock_task(Kompo::KompoVfsPath, path: '/path/to/kompo_lib')
+      mock_task(Kompo::MakeMainC, path: File.join(work_dir, 'main.c'))
+      mock_task(Kompo::MakeFsC, path: File.join(work_dir, 'fs.c'))
+      mock_task(Kompo::BuildNativeGem, exts_dir: nil, exts: [])
+      mock_task(Kompo::InstallDeps, lib_paths: '')
+      mock_args(project_dir: project_dir, output_dir: output_dir)
+
+      output_path = Kompo::CollectDependencies.output_path
+
+      # Output should be in output_dir with project name
+      assert_equal File.join(output_dir, 'myproject'), output_path
+    end
+  end
+
+  def test_collect_dependencies_output_path_as_file
+    Dir.mktmpdir do |tmpdir|
+      work_dir = File.join(tmpdir, 'work')
+      project_dir = File.join(tmpdir, 'myproject')
+      output_file = File.join(tmpdir, 'mybinary')
+      FileUtils.mkdir_p([work_dir, project_dir])
+
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::InstallRuby,
+                ruby_install_dir: '/path/to/install',
+                ruby_version: '3.4.1',
+                ruby_major_minor: '3.4',
+                ruby_build_path: '/path/to/build')
+      mock_task(Kompo::KompoVfsPath, path: '/path/to/kompo_lib')
+      mock_task(Kompo::MakeMainC, path: File.join(work_dir, 'main.c'))
+      mock_task(Kompo::MakeFsC, path: File.join(work_dir, 'fs.c'))
+      mock_task(Kompo::BuildNativeGem, exts_dir: nil, exts: [])
+      mock_task(Kompo::InstallDeps, lib_paths: '')
+      mock_args(project_dir: project_dir, output_dir: output_file)
+
+      output_path = Kompo::CollectDependencies.output_path
+
+      # Output should be the specified file path
+      assert_equal output_file, output_path
+    end
+  end
+
+  def test_collect_dependencies_collects_all_dependencies
+    Dir.mktmpdir do |tmpdir|
+      work_dir = File.join(tmpdir, 'work')
+      project_dir = File.join(tmpdir, 'myproject')
+      output_dir = File.join(tmpdir, 'output')
+      FileUtils.mkdir_p([work_dir, project_dir, output_dir])
+
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::InstallRuby,
+                ruby_install_dir: '/test/install',
+                ruby_version: '3.4.1',
+                ruby_major_minor: '3.4',
+                ruby_build_path: '/test/build')
+      mock_task(Kompo::KompoVfsPath, path: '/test/kompo_lib')
+      mock_task(Kompo::MakeMainC, path: '/test/main.c')
+      mock_task(Kompo::MakeFsC, path: '/test/fs.c')
+      mock_task(Kompo::BuildNativeGem, exts_dir: '/test/exts', exts: ['ext1'])
+      mock_task(Kompo::InstallDeps, lib_paths: '')
+      mock_args(project_dir: project_dir, output_dir: output_dir)
+
+      # Access deps through exported value
+      deps = Kompo::CollectDependencies.deps
+
+      # Verify all dependencies were collected
+      assert_equal '/test/install', deps.ruby_install_dir
+      assert_equal '3.4.1', deps.ruby_version
+      assert_equal '3.4', deps.ruby_major_minor
+      assert_equal '/test/build', deps.ruby_build_path
+      assert_equal '/test/kompo_lib', deps.kompo_lib
+      assert_equal '/test/main.c', deps.main_c
+      assert_equal '/test/fs.c', deps.fs_c
+      assert_equal '/test/exts', deps.exts_dir
+
+      # Verify dependent tasks were accessed
+      assert_task_accessed(Kompo::InstallRuby, :ruby_install_dir)
+      assert_task_accessed(Kompo::KompoVfsPath, :path)
+      assert_task_accessed(Kompo::MakeMainC, :path)
+      assert_task_accessed(Kompo::MakeFsC, :path)
+      assert_task_accessed(Kompo::BuildNativeGem, :exts_dir)
+    end
+  end
+end

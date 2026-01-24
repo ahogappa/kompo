@@ -1,20 +1,51 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
-require_relative '../lib/kompo'
 require 'optparse'
+require_relative '../lib/kompo'
 
-option = Kompo::Option.default
+args = {}
+opt = OptionParser.new do |o|
+  o.banner = 'Usage: kompo [options] [files...]'
+  o.separator ''
+  o.separator 'Options:'
 
-Kompo::Tasks.cd_work_dir(option) do |task|
-  task.clone_ruby_src
+  o.on('-e', '--entrypoint=FILE', 'Entry point file (default: main.rb)') { |v| args[:entrypoint] = v }
+  o.on('-o', '--output=DIR', 'Output directory for the binary') { |v| args[:output_dir] = File.expand_path(v) }
+  o.on('--ruby-version=VERSION', "Ruby version to use (default: #{RUBY_VERSION})") { |v| args[:ruby_version] = v }
+  o.on('--ruby-source=PATH', 'Path to Ruby source tarball or directory') do |v|
+    args[:ruby_source_path] = File.expand_path(v)
+  end
+  o.on('--no-cache', 'Build Ruby from source, ignoring cache') { |_v| args[:no_cache] = true }
+  o.on('--no-stdlib', 'Exclude Ruby standard library from binary') { |_v| args[:no_stdlib] = true }
+  o.on('--local-vfs-path=PATH', 'Path to local kompo-vfs for development') do |v|
+    args[:local_kompo_vfs_path] = File.expand_path(v)
+  end
+  o.on('--clean[=VERSION]', 'Clean cache (current Ruby version by default, or specify VERSION, or "all")') do |v|
+    args[:clean_cache] = v.nil? ? RUBY_VERSION : v
+  end
+  o.on('-t', '--tree', 'Show task dependency tree and exit') do
+    puts Kompo::Packing.tree
+    exit(0)
+  end
+  o.on('-v', '--version', 'Show version') do
+    puts "kompo #{Kompo::VERSION}"
+    exit(0)
+  end
+  o.on('-h', '--help', 'Show this help message') do
+    puts o
+    exit(0)
+  end
 
-  task.fs_cli
-
-  task.make_main_c
-
-  task.packing
-
-  task.copy_to_dest_dir
+  o.separator ''
+  o.separator 'Files:'
+  o.separator '  Additional files and directories to include in the binary'
 end
+opt.parse!(ARGV)
+args[:files] = ARGV
 
-puts 'info: Finish kompo!'
+if args[:clean_cache]
+  Kompo.clean_cache(args[:clean_cache])
+else
+  Kompo::Packing.run_and_clean(args:)
+end

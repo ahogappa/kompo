@@ -1,0 +1,6 @@
+const char FILES[] = {<%= @file_bytes.join(',') %>};
+const int FILES_SIZE = <%= @file_bytes.size %>;
+const unsigned long long FILES_SIZES[] = {<%= @file_sizes.join(',') %>};
+const char PATHS[] = {<%= @paths.join(',') %>};
+const int PATHS_SIZE = <%= @paths.size %>;
+const char WD[] = {<%= context.work_dir.bytes.join(',') %>,0};
