@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    kompo (0.3.1)
+    kompo (0.3.2)
       async
       mini_portile2
       pathspec
