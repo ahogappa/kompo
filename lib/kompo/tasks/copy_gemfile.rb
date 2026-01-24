@@ -3,7 +3,7 @@
 require 'fileutils'
 
 module Kompo
-  # Copy Gemfile and Gemfile.lock to working directory if they exist
+  # Copy Gemfile, Gemfile.lock, and gemspec files to working directory if they exist
   class CopyGemfile < Taski::Task
     exports :gemfile_exists
 
@@ -15,6 +15,7 @@ module Kompo
       gemfile_lock_path = File.join(project_dir, 'Gemfile.lock')
 
       @gemfile_exists = File.exist?(gemfile_path)
+      @copied_gemspecs = []
 
       if @gemfile_exists
         FileUtils.cp(gemfile_path, work_dir)
@@ -24,6 +25,9 @@ module Kompo
           FileUtils.cp(gemfile_lock_path, work_dir)
           puts 'Copied: Gemfile.lock'
         end
+
+        # Copy gemspec files if Gemfile references gemspec
+        copy_gemspec_if_needed(gemfile_path, project_dir, work_dir)
       else
         puts 'No Gemfile found, skipping'
       end
@@ -40,7 +44,35 @@ module Kompo
 
       FileUtils.rm_f(gemfile)
       FileUtils.rm_f(gemfile_lock)
+
+      # Clean up copied gemspec files
+      (@copied_gemspecs || []).each do |gemspec|
+        FileUtils.rm_f(gemspec)
+      end
+
       puts 'Cleaned up Gemfile'
+    end
+
+    private
+
+    def copy_gemspec_if_needed(gemfile_path, project_dir, work_dir)
+      gemfile_content = File.read(gemfile_path)
+
+      # Check if Gemfile contains a gemspec directive
+      return unless gemfile_content.match?(/^\s*gemspec\b/)
+
+      # Copy all .gemspec files from project directory
+      gemspec_files = Dir.glob(File.join(project_dir, '*.gemspec'))
+      gemspec_files.each do |gemspec_path|
+        dest_path = File.join(work_dir, File.basename(gemspec_path))
+        FileUtils.cp(gemspec_path, dest_path)
+        @copied_gemspecs << dest_path
+        puts "Copied: #{File.basename(gemspec_path)}"
+      end
+
+      if gemspec_files.empty?
+        warn 'Warning: Gemfile contains gemspec directive but no .gemspec files found'
+      end
     end
   end
 end
