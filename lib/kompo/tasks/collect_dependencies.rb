@@ -79,8 +79,18 @@ module Kompo
     end
 
     def get_unique_ext_paths(_work_dir, ruby_build_path, ruby_version, exts_dir)
+      ruby_build_dir = File.join(ruby_build_path, "ruby-#{ruby_version}")
+
       # Ruby standard extension .o files
-      paths = Dir.glob(File.join(ruby_build_path, "ruby-#{ruby_version}", 'ext', '**', '*.o'))
+      paths = Dir.glob(File.join(ruby_build_dir, 'ext', '**', '*.o'))
+
+      # Ruby bundled gems .o files (Ruby 4.0+)
+      # Skip if --no-stdlib is specified (bundled gems are part of stdlib)
+      no_stdlib = Taski.args.fetch(:no_stdlib, false)
+      unless no_stdlib
+        bundled_gems_paths = Dir.glob(File.join(ruby_build_dir, '.bundle', 'gems', '*', 'ext', '**', '*.o'))
+        paths += bundled_gems_paths
+      end
 
       # Extract extension path (everything after /ext/) for deduplication
       # e.g., ".../ext/cgi/escape/escape.o" -> "cgi/escape/escape.o"

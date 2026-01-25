@@ -52,6 +52,69 @@ class FindNativeExtensionsTest < Minitest::Test
     end
   end
 
+  def test_find_native_extensions_finds_bundled_gems
+    Dir.mktmpdir do |tmpdir|
+      bundle_dir, ruby_install_dir, ruby_build_path = setup_extension_dirs(tmpdir)
+
+      # Create bundled gem directory structure (Ruby 4.0+)
+      bundled_gems_dir = File.join(ruby_build_path, "ruby-3.4.1", ".bundle", "gems")
+      bigdecimal_ext_dir = File.join(bundled_gems_dir, "bigdecimal-4.0.1", "ext", "bigdecimal")
+      FileUtils.mkdir_p(bigdecimal_ext_dir)
+      File.write(File.join(bigdecimal_ext_dir, "extconf.rb"), "require 'mkmf'")
+      File.write(File.join(bigdecimal_ext_dir, "bigdecimal.o"), "")
+
+      mock_extension_tasks(ruby_install_dir, ruby_build_path, bundle_dir)
+
+      extensions = Kompo::FindNativeExtensions.extensions
+
+      bundled_ext = extensions.find { |e| e[:gem_ext_name] == "bigdecimal" }
+      assert bundled_ext, "Expected to find bigdecimal bundled gem extension"
+      assert bundled_ext[:is_prebuilt], "Expected bundled gem to be marked as pre-built"
+      refute bundled_ext[:is_rust]
+    end
+  end
+
+  def test_find_native_extensions_skips_bundled_gems_when_no_stdlib
+    Dir.mktmpdir do |tmpdir|
+      bundle_dir, ruby_install_dir, ruby_build_path = setup_extension_dirs(tmpdir)
+
+      # Create bundled gem directory structure
+      bundled_gems_dir = File.join(ruby_build_path, "ruby-3.4.1", ".bundle", "gems")
+      bigdecimal_ext_dir = File.join(bundled_gems_dir, "bigdecimal-4.0.1", "ext", "bigdecimal")
+      FileUtils.mkdir_p(bigdecimal_ext_dir)
+      File.write(File.join(bigdecimal_ext_dir, "extconf.rb"), "require 'mkmf'")
+      File.write(File.join(bigdecimal_ext_dir, "bigdecimal.o"), "")
+
+      mock_extension_tasks(ruby_install_dir, ruby_build_path, bundle_dir)
+      mock_args(no_stdlib: true)
+
+      extensions = Kompo::FindNativeExtensions.extensions
+
+      bundled_ext = extensions.find { |e| e[:gem_ext_name] == "bigdecimal" }
+      assert_nil bundled_ext, "Expected bundled gems to be skipped with --no-stdlib"
+    end
+  end
+
+  def test_find_native_extensions_skips_bundled_gems_without_o_files
+    Dir.mktmpdir do |tmpdir|
+      bundle_dir, ruby_install_dir, ruby_build_path = setup_extension_dirs(tmpdir)
+
+      # Create bundled gem directory without .o files
+      bundled_gems_dir = File.join(ruby_build_path, "ruby-3.4.1", ".bundle", "gems")
+      bigdecimal_ext_dir = File.join(bundled_gems_dir, "bigdecimal-4.0.1", "ext", "bigdecimal")
+      FileUtils.mkdir_p(bigdecimal_ext_dir)
+      File.write(File.join(bigdecimal_ext_dir, "extconf.rb"), "require 'mkmf'")
+      # No .o files created
+
+      mock_extension_tasks(ruby_install_dir, ruby_build_path, bundle_dir)
+
+      extensions = Kompo::FindNativeExtensions.extensions
+
+      bundled_ext = extensions.find { |e| e[:gem_ext_name] == "bigdecimal" }
+      assert_nil bundled_ext, "Expected bundled gems without .o files to be skipped"
+    end
+  end
+
   private
 
   def setup_extension_dirs(tmpdir)
@@ -139,5 +202,64 @@ class BuildNativeGemTest < Minitest::Test
     result = task.send(:parse_cargo_toml_target_name, content)
 
     assert_nil result
+  end
+
+  def test_register_prebuilt_extension_parses_makefile
+    Dir.mktmpdir do |tmpdir|
+      ext_dir = File.join(tmpdir, "bigdecimal")
+      FileUtils.mkdir_p(ext_dir)
+
+      makefile_content = <<~MAKEFILE
+        TARGET_NAME = bigdecimal
+        target_prefix =
+        OBJS = bigdecimal.o missing.o
+      MAKEFILE
+      File.write(File.join(ext_dir, "Makefile"), makefile_content)
+
+      task = Kompo::BuildNativeGem.allocate
+      task.instance_variable_set(:@exts, [])
+      task.send(:register_prebuilt_extension, ext_dir, "bigdecimal")
+
+      exts = task.instance_variable_get(:@exts)
+      assert_equal 1, exts.size
+      assert_equal ["bigdecimal", "Init_bigdecimal"], exts.first
+    end
+  end
+
+  def test_register_prebuilt_extension_with_prefix
+    Dir.mktmpdir do |tmpdir|
+      ext_dir = File.join(tmpdir, "escape")
+      FileUtils.mkdir_p(ext_dir)
+
+      makefile_content = <<~MAKEFILE
+        TARGET_NAME = escape
+        target_prefix = /cgi
+        OBJS = escape.o
+      MAKEFILE
+      File.write(File.join(ext_dir, "Makefile"), makefile_content)
+
+      task = Kompo::BuildNativeGem.allocate
+      task.instance_variable_set(:@exts, [])
+      task.send(:register_prebuilt_extension, ext_dir, "escape")
+
+      exts = task.instance_variable_get(:@exts)
+      assert_equal 1, exts.size
+      assert_equal ["cgi/escape", "Init_escape"], exts.first
+    end
+  end
+
+  def test_register_prebuilt_extension_raises_without_makefile
+    Dir.mktmpdir do |tmpdir|
+      ext_dir = File.join(tmpdir, "noext")
+      FileUtils.mkdir_p(ext_dir)
+      # No Makefile
+
+      task = Kompo::BuildNativeGem.allocate
+      task.instance_variable_set(:@exts, [])
+
+      assert_raises(RuntimeError) do
+        task.send(:register_prebuilt_extension, ext_dir, "noext")
+      end
+    end
   end
 end

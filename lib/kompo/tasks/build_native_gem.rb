@@ -43,18 +43,44 @@ module Kompo
     def build_extension(ext, work_dir)
       dir_name = ext[:dir_name]
       gem_ext_name = ext[:gem_ext_name]
-      ext_type = ext[:is_rust] ? "Rust" : "C"
 
-      group("Building #{gem_ext_name} (#{ext_type})") do
-        if ext[:is_rust]
-          build_rust_extension(dir_name, ext[:cargo_toml], gem_ext_name, work_dir)
-        else
-          build_c_extension(dir_name, gem_ext_name, work_dir)
+      if ext[:is_prebuilt]
+        # Pre-built bundled gems only need registration for ruby_init_ext()
+        group("Registering #{gem_ext_name} (pre-built bundled gem)") do
+          register_prebuilt_extension(dir_name, gem_ext_name)
+          puts "Registered: #{gem_ext_name}"
         end
+      else
+        ext_type = ext[:is_rust] ? "Rust" : "C"
+        group("Building #{gem_ext_name} (#{ext_type})") do
+          if ext[:is_rust]
+            build_rust_extension(dir_name, ext[:cargo_toml], gem_ext_name, work_dir)
+          else
+            build_c_extension(dir_name, gem_ext_name, work_dir)
+          end
 
-        register_extension(dir_name, gem_ext_name)
-        puts "Built: #{gem_ext_name}"
+          register_extension(dir_name, gem_ext_name)
+          puts "Built: #{gem_ext_name}"
+        end
       end
+    end
+
+    # Register pre-built bundled gem extension for ruby_init_ext()
+    # These extensions are already compiled during Ruby build
+    def register_prebuilt_extension(dir_name, gem_ext_name)
+      makefile_path = File.join(dir_name, "Makefile")
+
+      unless File.exist?(makefile_path)
+        raise "Cannot register pre-built extension #{gem_ext_name}: Makefile not found in #{dir_name}"
+      end
+
+      makefile_content = File.read(makefile_path)
+      prefix = makefile_content.scan(/target_prefix = (.*)/).flatten.first&.delete_prefix("/") || ""
+      target_name = makefile_content.scan(/TARGET_NAME = (.*)/).flatten.first || gem_ext_name
+
+      # Path for ruby_init_ext must match require path (without file extension)
+      ext_path = File.join(prefix, target_name).delete_prefix("/")
+      @exts << [ext_path, "Init_#{target_name}"]
     end
 
     def register_extension(dir_name, gem_ext_name)
