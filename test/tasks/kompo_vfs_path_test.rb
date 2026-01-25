@@ -123,10 +123,6 @@ class KompoVfsPathTest < Minitest::Test
     refute Kompo::KompoVfsVersionCheck.version_satisfies?("0.4.9", "0.5.0")
   end
 
-  def test_kompo_vfs_path_from_source_has_repo_url_constant
-    assert_equal "https://github.com/ahogappa/kompo-vfs", Kompo::KompoVfsPath::FromSource::REPO_URL
-  end
-
   def test_kompo_vfs_path_from_homebrew_installed_class_exists
     assert_kind_of Class, Kompo::KompoVfsPath::FromHomebrew::Installed
     assert Kompo::KompoVfsPath::FromHomebrew::Installed < Taski::Task

@@ -5,7 +5,6 @@ require_relative "../test_helper"
 class SectionClassesTest < Minitest::Test
   SECTIONS_WITH_IMPLEMENTATIONS = [
     [Kompo::CargoPath, [:path]],
-    [Kompo::RubyBuildPath, [:path]],
     [Kompo::HomebrewPath, [:path]]
   ].freeze
 
@@ -32,8 +31,27 @@ class RubyBuildPathTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
 
-  def test_ruby_build_path_install_uses_home_directory
-    # The Install class uses ~/.ruby-build for installation
+  def test_ruby_build_path_is_section
+    assert Kompo::RubyBuildPath < Taski::Section
+    assert_includes Kompo::RubyBuildPath.exported_methods, :path
+  end
+
+  def test_ruby_build_path_has_implementations
+    # Installed: Use existing ruby-build installation
+    assert_kind_of Class, Kompo::RubyBuildPath::Installed
+    assert Kompo::RubyBuildPath::Installed < Taski::Task
+
+    # FromHomebrew: Install via Homebrew (macOS)
+    assert_kind_of Class, Kompo::RubyBuildPath::FromHomebrew
+    assert Kompo::RubyBuildPath::FromHomebrew < Taski::Task
+
+    # FromSource: Install via git clone (Linux)
+    assert_kind_of Class, Kompo::RubyBuildPath::FromSource
+    assert Kompo::RubyBuildPath::FromSource < Taski::Task
+  end
+
+  def test_ruby_build_path_from_source_uses_home_directory
+    # The FromSource class uses ~/.ruby-build for installation
     # Verify the expected path structure
     install_dir = File.expand_path("~/.ruby-build")
     expected_path = File.join(install_dir, "bin", "ruby-build")

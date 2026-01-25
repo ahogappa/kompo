@@ -1,14 +1,15 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "open3"
 require_relative "kompo_vfs_version_check"
 
 module Kompo
   # Section to get the kompo-vfs library path.
   # Priority:
   #   1. Local directory (if specified via context[:local_kompo_vfs_path])
-  #   2. Homebrew (install if needed)
-  #   3. Source build (fallback if Homebrew doesn't support arch/os)
+  #   2. macOS: Homebrew (required)
+  #   3. Linux: Build from source
   class KompoVfsPath < Taski::Section
     interfaces :path
 
@@ -16,10 +17,13 @@ module Kompo
       # Priority 1: Local directory if specified
       return FromLocal if Taski.args[:local_kompo_vfs_path]
 
-      # # Priority 2: Homebrew if supported
-      return FromHomebrew if homebrew_supported?
+      # macOS: Homebrew is required
+      if darwin?
+        check_homebrew_available!
+        return FromHomebrew
+      end
 
-      # # Priority 3: Build from source
+      # Linux: Build from source
       FromSource
     end
 
@@ -77,8 +81,8 @@ module Kompo
         def run
           brew = HomebrewPath.path
           puts "Installing kompo-vfs via Homebrew..."
-          system(brew, "tap", "ahogappa/kompo") or raise "Failed to tap ahogappa/kompo"
-          system(brew, "install", "kompo-vfs") or raise "Failed to install kompo-vfs"
+          system(brew, "tap", "ahogappa/kompo-vfs", "https://github.com/ahogappa/kompo-vfs.git") or raise "Failed to tap ahogappa/kompo-vfs"
+          system(brew, "install", "ahogappa/kompo-vfs/kompo-vfs") or raise "Failed to install kompo-vfs"
 
           @path = "#{`#{brew} --prefix kompo-vfs`.chomp}/lib"
           puts "kompo-vfs library path: #{@path}"
@@ -126,19 +130,24 @@ module Kompo
 
     private
 
-    def homebrew_supported?
-      # Check if current arch/os combination is supported by Homebrew formula
-      arch = `uname -m`.chomp
-      os = `uname -s`.chomp
+    def darwin?
+      RUBY_PLATFORM.include?("darwin") || `uname -s`.chomp == "Darwin"
+    end
 
-      # Supported combinations (adjust based on actual formula support)
-      supported = [
-        %w[arm64 Darwin],
-        %w[x86_64 Darwin],
-        %w[x86_64 Linux]
-      ]
+    def check_homebrew_available!
+      # Check if brew is in PATH
+      brew_in_path, = Open3.capture2("which", "brew", err: File::NULL)
+      return unless brew_in_path.chomp.empty?
 
-      supported.include?([arch, os])
+      # Check common Homebrew installation paths (including ARM64 at /opt/homebrew)
+      return if HomebrewPath::COMMON_BREW_PATHS.any? { |p| File.executable?(p) }
+
+      raise <<~ERROR
+        Homebrew is required on macOS but not installed.
+        Please install Homebrew first: https://brew.sh
+
+        For local development, you can use --local-vfs-path option instead.
+      ERROR
     end
   end
 end
