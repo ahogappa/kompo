@@ -288,24 +288,24 @@ class MakeFsCTest < Minitest::Test
 
       # Count occurrences of the entrypoint path in PATHS
       paths_match = content.match(/const char PATHS\[\] = \{([^}]+)\}/)
-      assert paths_match, 'Should have PATHS array'
-      decoded_paths = paths_match[1].split(',').map(&:to_i).pack('C*')
+      assert paths_match, "Should have PATHS array"
+      decoded_paths = paths_match[1].split(",").map(&:to_i).pack("C*")
 
       # The entrypoint should only appear once, not twice
       # Split by null character and count occurrences
       path_list = decoded_paths.split("\0")
       entrypoint_count = path_list.count { |p| p == entrypoint }
-      assert_equal 1, entrypoint_count, 'Entrypoint should only be embedded once'
+      assert_equal 1, entrypoint_count, "Entrypoint should only be embedded once"
     end
   end
 
   def test_make_fs_c_skips_duplicate_files_in_directory
     Dir.mktmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
-      lib_dir = File.join(work_dir, 'lib')
+      lib_dir = File.join(work_dir, "lib")
       FileUtils.mkdir_p(lib_dir)
-      app_file = File.join(lib_dir, 'app.rb')
-      File.write(app_file, 'class App; end')
+      app_file = File.join(lib_dir, "app.rb")
+      File.write(app_file, "class App; end")
 
       # Add the same directory twice to simulate duplicate
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, additional_paths: [lib_dir, lib_dir])
@@ -316,13 +316,13 @@ class MakeFsCTest < Minitest::Test
       content = File.read(path)
 
       paths_match = content.match(/const char PATHS\[\] = \{([^}]+)\}/)
-      assert paths_match, 'Should have PATHS array'
-      decoded_paths = paths_match[1].split(',').map(&:to_i).pack('C*')
+      assert paths_match, "Should have PATHS array"
+      decoded_paths = paths_match[1].split(",").map(&:to_i).pack("C*")
 
       # app.rb should only appear once
       path_list = decoded_paths.split("\0")
-      app_count = path_list.count { |p| p.end_with?('app.rb') }
-      assert_equal 1, app_count, 'app.rb should only be embedded once'
+      app_count = path_list.count { |p| p.end_with?("app.rb") }
+      assert_equal 1, app_count, "app.rb should only be embedded once"
     end
   end
 

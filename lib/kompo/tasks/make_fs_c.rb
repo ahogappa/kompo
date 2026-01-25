@@ -67,7 +67,7 @@ module Kompo
             add_file(expand_path)
           end
         end
-        duplicate_info = @duplicate_count.positive? ? " (#{@duplicate_count} duplicates skipped)" : ''
+        duplicate_info = @duplicate_count.positive? ? " (#{@duplicate_count} duplicates skipped)" : ""
         puts "Collected #{@file_sizes.size - 1} files#{duplicate_info}"
       end
 
