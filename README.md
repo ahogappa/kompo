@@ -33,21 +33,36 @@ $ gem install kompo
 
 ## Usage
 
-### prerequisites
-Install [kompo-vfs](https://github.com/ahogappa/kompo-vfs).
+### Prerequisites
 
-#### Homebrew
+Kompo requires [kompo-vfs](https://github.com/ahogappa/kompo-vfs).
+
+#### macOS (Homebrew required)
+
+On macOS, [Homebrew](https://brew.sh) is required to install kompo-vfs:
+
 ```sh
 $ brew tap ahogappa/kompo-vfs https://github.com/ahogappa/kompo-vfs.git
 $ brew install ahogappa/kompo-vfs/kompo-vfs
 ```
 
-### Building
-To build komp-vfs, you need to have cargo installation.
+#### Linux
+
+On Linux, kompo-vfs is automatically built from source. You need to have Cargo (Rust) installed:
+
+```sh
+$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+#### For Development
+
+If you want to use a local build of kompo-vfs, build it manually and use the `--local-vfs-path` option:
+
 ```sh
 $ git clone https://github.com/ahogappa/kompo-vfs.git
 $ cd kompo-vfs
 $ cargo build --release
+$ kompo --local-vfs-path=/path/to/kompo-vfs ...
 ```
 
 ## Options

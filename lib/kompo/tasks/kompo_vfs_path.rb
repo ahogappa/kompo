@@ -7,8 +7,8 @@ module Kompo
   # Section to get the kompo-vfs library path.
   # Priority:
   #   1. Local directory (if specified via context[:local_kompo_vfs_path])
-  #   2. Homebrew (install if needed)
-  #   3. Source build (fallback if Homebrew doesn't support arch/os)
+  #   2. macOS: Homebrew (required)
+  #   3. Linux: Build from source
   class KompoVfsPath < Taski::Section
     interfaces :path
 
@@ -16,10 +16,13 @@ module Kompo
       # Priority 1: Local directory if specified
       return FromLocal if Taski.args[:local_kompo_vfs_path]
 
-      # # Priority 2: Homebrew if supported
-      return FromHomebrew if homebrew_supported?
+      # macOS: Homebrew is required
+      if darwin?
+        check_homebrew_available!
+        return FromHomebrew
+      end
 
-      # # Priority 3: Build from source
+      # Linux: Build from source
       FromSource
     end
 
@@ -126,19 +129,21 @@ module Kompo
 
     private
 
-    def homebrew_supported?
-      # Check if current arch/os combination is supported by Homebrew formula
-      arch = `uname -m`.chomp
-      os = `uname -s`.chomp
+    def darwin?
+      RUBY_PLATFORM.include?("darwin") || `uname -s`.chomp == "Darwin"
+    end
 
-      # Supported combinations (adjust based on actual formula support)
-      supported = [
-        %w[arm64 Darwin],
-        %w[x86_64 Darwin],
-        %w[x86_64 Linux]
-      ]
+    def check_homebrew_available!
+      brew_path = `which brew 2>/dev/null`.chomp
 
-      supported.include?([arch, os])
+      return unless brew_path.empty?
+
+      raise <<~ERROR
+        Homebrew is required on macOS but not installed.
+        Please install Homebrew first: https://brew.sh
+
+        For local development, you can use --local-vfs-path option instead.
+      ERROR
     end
   end
 end
