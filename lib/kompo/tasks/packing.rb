@@ -90,7 +90,7 @@ module Kompo
         command = build_command(work_dir, deps, ext_paths, enc_files)
 
         if Taski.args[:dry_run]
-          Taski.message(Shellwords.join(command))
+          Taski.message("cd #{Shellwords.escape(work_dir)} && #{Shellwords.join(command)}")
           return
         end
 
@@ -176,7 +176,7 @@ module Kompo
         command = build_command(work_dir, deps, ext_paths, enc_files)
 
         if Taski.args[:dry_run]
-          Taski.message(Shellwords.join(command))
+          Taski.message("cd #{Shellwords.escape(work_dir)} && #{Shellwords.join(command)}")
           return
         end
 
