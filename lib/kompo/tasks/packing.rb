@@ -90,7 +90,6 @@ module Kompo
         command = build_command(work_dir, deps, ext_paths, enc_files)
 
         if Taski.args[:dry_run]
-          puts "Compile command (macOS):"
           Taski.message(Shellwords.join(command))
           return
         end
@@ -177,7 +176,6 @@ module Kompo
         command = build_command(work_dir, deps, ext_paths, enc_files)
 
         if Taski.args[:dry_run]
-          puts "Compile command (Linux):"
           Taski.message(Shellwords.join(command))
           return
         end
