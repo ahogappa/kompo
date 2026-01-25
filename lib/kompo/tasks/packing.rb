@@ -51,9 +51,12 @@ module Kompo
       end
 
       def get_extlibs(ruby_build_path, ruby_version)
-        exts_mk_files = Dir.glob(File.join(ruby_build_path, "ruby-#{ruby_version}", "ext", "**", "exts.mk"))
-        exts_mk_files.flat_map do |file|
-          File.read(file).scan(/^EXTLIBS\s+= (.*)/).flatten
+        ruby_build_dir = File.join(ruby_build_path, "ruby-#{ruby_version}")
+
+        # Extract LIBS from ext/*/Makefile and .bundle/gems/*/ext/*/Makefile
+        makefiles = Dir.glob(File.join(ruby_build_dir, "{ext/*,.bundle/gems/*/ext/*}", "Makefile"))
+        makefiles.flat_map do |file|
+          File.read(file).scan(/^LIBS\s*=\s*(.*)/).flatten
         end.compact.flat_map { |l| l.split(" ") }.uniq
       end
 
