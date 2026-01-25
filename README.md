@@ -62,10 +62,13 @@ Options:
         --ruby-source=PATH       Path to Ruby source tarball or directory
         --no-cache               Build Ruby from source, ignoring cache
         --no-stdlib              Exclude Ruby standard library from binary
+        --no-gemfile             Skip Gemfile processing (no bundle install)
         --local-vfs-path=PATH    Path to local kompo-vfs for development
         --clean[=VERSION]        Clean cache (current version by default, or specify VERSION, or "all")
+        --dry-run                Show final compile command without executing it
     -t, --tree                   Show task dependency tree and exit
-    -h, --help                   Show help message
+    -v, --version                Show version
+    -h, --help                   Show this help message
 
 Files:
     Additional files and directories to include in the binary
@@ -81,9 +84,12 @@ Files:
 | `--ruby-source` | Use a local Ruby source instead of downloading. Useful for custom Ruby builds. |
 | `--no-cache` | Force a fresh Ruby build, ignoring any cached version. |
 | `--no-stdlib` | Reduce binary size by excluding Ruby standard library. Only use if your app doesn't need stdlib. |
+| `--no-gemfile` | Skip Gemfile processing and bundle install. Useful when your project doesn't use Bundler. |
 | `--local-vfs-path` | Use a local kompo-vfs build instead of Homebrew installation. Useful for development. |
 | `--clean` | Remove cached Ruby builds. Use `--clean=all` to remove all versions. |
+| `--dry-run` | Show the final compile command without executing it. Useful for debugging build issues. |
 | `-t, --tree` | Display the task dependency graph and exit without building. |
+| `-v, --version` | Display the kompo version and exit. |
 
 ### Examples
 
@@ -137,14 +143,18 @@ node_modules/   # Ignore node_modules
 - Patterns are matched against paths relative to the project root
 - Comments and empty lines are ignored
 
-## examples
+## Samples
 
-* hello
-  * simple hello world script.
-* sinatra_and_sqlite
-  * simple sinatra app with sqlite3.
-* rails
-  * simple Rails 7.1 application.
+Sample applications demonstrating various use cases are available in the [samples](./samples) directory:
+
+* [hello](./samples/hello)
+  * Simple hello world script.
+* [native_gems](./samples/native_gems)
+  * Demonstrates native extension gems (nokogiri, sqlite3, and msgpack).
+* [sinatra_and_sqlite](./samples/sinatra_and_sqlite)
+  * Simple Sinatra app with SQLite3.
+* [rails](./samples/rails/sample)
+  * Simple Rails application.
 
 ## Development
 

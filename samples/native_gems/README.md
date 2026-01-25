@@ -1,14 +1,15 @@
 # Native Gems Sample
 
-A sample application that uses native extension gems (sqlite3 and msgpack) to verify kompo can correctly bundle and run binaries with native dependencies.
+A sample application that uses native extension gems (nokogiri, sqlite3, and msgpack) to verify kompo can correctly bundle and run binaries with native dependencies.
 
 ## What it does
 
-1. Creates an in-memory SQLite database
-2. Serializes user data using MessagePack
-3. Stores serialized data in SQLite
-4. Retrieves and deserializes the data
-5. Outputs the results
+1. Parses HTML using Nokogiri
+2. Creates an in-memory SQLite database
+3. Serializes user data using MessagePack
+4. Stores serialized data in SQLite
+5. Retrieves and deserializes the data
+6. Outputs the results
 
 ## Build
 
@@ -21,6 +22,10 @@ kompo -o .
 
 ```text
 === Native Gems Test ===
+
+--- Nokogiri Test ---
+Title: Hello
+Paragraph: World
 
 --- SQLite3 Test ---
 --- MessagePack Test ---
@@ -37,5 +42,5 @@ User 2: Bob
   Permissions: read
   Active: true
 
-SUCCESS: sqlite3 and msgpack are working correctly!
+SUCCESS: nokogiri, sqlite3 and msgpack are working correctly!
 ```
