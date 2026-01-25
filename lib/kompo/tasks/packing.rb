@@ -84,6 +84,12 @@ module Kompo
 
         command = build_command(work_dir, deps, ext_paths, enc_files)
 
+        if Taski.args[:dry_run]
+          puts "Compile command (macOS):"
+          puts Shellwords.join(command)
+          return
+        end
+
         group("Compiling binary (macOS)") do
           system(*command) or raise "Failed to compile final binary"
           puts "Binary size: #{File.size(@output_path) / 1024 / 1024} MB"
@@ -164,6 +170,12 @@ module Kompo
         @output_path = CollectDependencies.output_path
 
         command = build_command(work_dir, deps, ext_paths, enc_files)
+
+        if Taski.args[:dry_run]
+          puts "Compile command (Linux):"
+          puts Shellwords.join(command)
+          return
+        end
 
         group("Compiling binary (Linux)") do
           system(*command) or raise "Failed to compile final binary"
