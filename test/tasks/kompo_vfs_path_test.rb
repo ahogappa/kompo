@@ -73,7 +73,7 @@ class KompoVfsPathTest < Minitest::Test
 
   def test_kompo_vfs_version_check_passes_when_version_satisfies
     Dir.mktmpdir do |tmpdir|
-      File.write(File.join(tmpdir, "KOMPO_VFS_VERSION"), "0.5.0")
+      File.write(File.join(tmpdir, "KOMPO_VFS_VERSION"), "0.5.1")
       # Should not raise
       Kompo::KompoVfsVersionCheck.verify!(tmpdir)
     end
@@ -94,7 +94,7 @@ class KompoVfsPathTest < Minitest::Test
         Kompo::KompoVfsVersionCheck.verify!(tmpdir)
       end
       assert_includes error.message, "0.4.0 is too old"
-      assert_includes error.message, "Required: >= 0.5.0"
+      assert_includes error.message, "Required: >= 0.5.1"
     end
   end
 
