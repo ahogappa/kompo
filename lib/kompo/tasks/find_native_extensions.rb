@@ -59,10 +59,19 @@ module Kompo
           next
         end
 
-        # Skip if already added as bundled gem
-        if @extensions.any? { |e| e[:gem_ext_name] == gem_ext_name }
-          puts "skip: #{gem_ext_name} is already added as bundled gem"
-          next
+        # Check if already added (e.g., as bundled gem)
+        # Prefer Gemfile versions over prebuilt bundled gems
+        existing = @extensions.find { |e| e[:gem_ext_name] == gem_ext_name }
+        if existing
+          if existing[:is_prebuilt]
+            # Replace prebuilt bundled gem with Gemfile version
+            puts "replacing: #{gem_ext_name} prebuilt bundled gem with Gemfile version"
+            @extensions.delete(existing)
+          else
+            # Already added as non-prebuilt, skip
+            puts "skip: #{gem_ext_name} is already added"
+            next
+          end
         end
 
         cargo_toml = File.join(dir_name, 'Cargo.toml')
@@ -101,7 +110,8 @@ module Kompo
         end
 
         # Verify that .o files exist (pre-built)
-        o_files = Dir.glob(File.join(dir_name, '*.o'))
+        # Search recursively since object files may be in subdirectories
+        o_files = Dir.glob(File.join(dir_name, '**', '*.o'))
         if o_files.empty?
           puts "skip: #{gem_ext_name} has no pre-built .o files"
           next

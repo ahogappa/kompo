@@ -115,6 +115,60 @@ class FindNativeExtensionsTest < Minitest::Test
     end
   end
 
+  def test_find_native_extensions_prefers_gemfile_over_prebuilt_bundled
+    Dir.mktmpdir do |tmpdir|
+      bundle_dir, ruby_install_dir, ruby_build_path = setup_extension_dirs(tmpdir)
+
+      # Create prebuilt bundled gem
+      bundled_gems_dir = File.join(ruby_build_path, "ruby-3.4.1", ".bundle", "gems")
+      bundled_ext_dir = File.join(bundled_gems_dir, "bigdecimal-3.1.0", "ext", "bigdecimal")
+      FileUtils.mkdir_p(bundled_ext_dir)
+      File.write(File.join(bundled_ext_dir, "extconf.rb"), "require 'mkmf'")
+      File.write(File.join(bundled_ext_dir, "bigdecimal.o"), "")
+
+      # Create Gemfile gem with same name but different version
+      gemfile_ext_dir = File.join(bundle_dir, "gems", "bigdecimal-4.0.0", "ext", "bigdecimal")
+      FileUtils.mkdir_p(gemfile_ext_dir)
+      File.write(File.join(gemfile_ext_dir, "extconf.rb"), "require 'mkmf'")
+
+      mock_extension_tasks(ruby_install_dir, ruby_build_path, bundle_dir)
+
+      extensions = Kompo::FindNativeExtensions.extensions
+
+      # Should have exactly one bigdecimal entry
+      bigdecimal_exts = extensions.select { |e| e[:gem_ext_name] == "bigdecimal" }
+      assert_equal 1, bigdecimal_exts.size, "Expected exactly one bigdecimal extension"
+
+      # Should be the Gemfile version (not prebuilt)
+      ext = bigdecimal_exts.first
+      refute ext[:is_prebuilt], "Expected Gemfile version to replace prebuilt bundled gem"
+      assert_equal gemfile_ext_dir, ext[:dir_name], "Expected dir_name to be from Gemfile version"
+    end
+  end
+
+  def test_find_native_extensions_finds_bundled_gems_with_nested_o_files
+    Dir.mktmpdir do |tmpdir|
+      bundle_dir, ruby_install_dir, ruby_build_path = setup_extension_dirs(tmpdir)
+
+      # Create bundled gem with .o files in subdirectory (like lib/)
+      bundled_gems_dir = File.join(ruby_build_path, "ruby-3.4.1", ".bundle", "gems")
+      fiddle_ext_dir = File.join(bundled_gems_dir, "fiddle-1.1.0", "ext", "fiddle")
+      fiddle_lib_dir = File.join(fiddle_ext_dir, "lib")
+      FileUtils.mkdir_p(fiddle_lib_dir)
+      File.write(File.join(fiddle_ext_dir, "extconf.rb"), "require 'mkmf'")
+      # .o files are in lib/ subdirectory
+      File.write(File.join(fiddle_lib_dir, "fiddle.o"), "")
+
+      mock_extension_tasks(ruby_install_dir, ruby_build_path, bundle_dir)
+
+      extensions = Kompo::FindNativeExtensions.extensions
+
+      fiddle_ext = extensions.find { |e| e[:gem_ext_name] == "fiddle" }
+      assert fiddle_ext, "Expected to find fiddle bundled gem with nested .o files"
+      assert fiddle_ext[:is_prebuilt], "Expected bundled gem to be marked as pre-built"
+    end
+  end
+
   private
 
   def setup_extension_dirs(tmpdir)
