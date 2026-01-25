@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'fileutils'
-require_relative 'kompo_vfs_version_check'
+require "fileutils"
+require_relative "kompo_vfs_version_check"
 
 module Kompo
   # Section to get the kompo-vfs library path.
@@ -27,15 +27,15 @@ module Kompo
     class FromLocal < Taski::Task
       def run
         local_path = Taski.args[:local_kompo_vfs_path]
-        raise 'Local kompo-vfs path not specified' unless local_path
+        raise "Local kompo-vfs path not specified" unless local_path
         raise "Local kompo-vfs path does not exist: #{local_path}" unless Dir.exist?(local_path)
 
         puts "Building kompo-vfs from local directory: #{local_path}"
         cargo = CargoPath.path
 
-        raise 'Failed to build kompo-vfs' unless system(cargo, 'build', '--release', chdir: local_path)
+        raise "Failed to build kompo-vfs" unless system(cargo, "build", "--release", chdir: local_path)
 
-        @path = File.join(local_path, 'target', 'release')
+        @path = File.join(local_path, "target", "release")
         puts "kompo-vfs library path: #{@path}"
 
         KompoVfsVersionCheck.verify!(@path)
@@ -63,7 +63,7 @@ module Kompo
           unless missing_libs.empty?
             installed_version = `#{brew} list --versions kompo-vfs`.chomp.split.last
             raise "kompo-vfs #{installed_version} is outdated. Please run: brew upgrade kompo-vfs\n" \
-                  "Missing libraries: #{missing_libs.join(', ')}"
+                  "Missing libraries: #{missing_libs.join(", ")}"
           end
 
           puts "kompo-vfs library path: #{@path}"
@@ -76,9 +76,9 @@ module Kompo
       class Install < Taski::Task
         def run
           brew = HomebrewPath.path
-          puts 'Installing kompo-vfs via Homebrew...'
-          system(brew, 'tap', 'ahogappa/kompo') or raise 'Failed to tap ahogappa/kompo'
-          system(brew, 'install', 'kompo-vfs') or raise 'Failed to install kompo-vfs'
+          puts "Installing kompo-vfs via Homebrew..."
+          system(brew, "tap", "ahogappa/kompo") or raise "Failed to tap ahogappa/kompo"
+          system(brew, "install", "kompo-vfs") or raise "Failed to install kompo-vfs"
 
           @path = "#{`#{brew} --prefix kompo-vfs`.chomp}/lib"
           puts "kompo-vfs library path: #{@path}"
@@ -100,24 +100,24 @@ module Kompo
 
     # Build from source (requires Cargo)
     class FromSource < Taski::Task
-      REPO_URL = 'https://github.com/ahogappa/kompo-vfs'
+      REPO_URL = "https://github.com/ahogappa/kompo-vfs"
 
       def run
-        puts 'Building kompo-vfs from source...'
+        puts "Building kompo-vfs from source..."
         cargo = CargoPath.path
 
-        build_dir = File.expand_path('~/.kompo/kompo-vfs')
+        build_dir = File.expand_path("~/.kompo/kompo-vfs")
         FileUtils.mkdir_p(File.dirname(build_dir))
 
         if Dir.exist?(build_dir)
-          system('git', '-C', build_dir, 'pull', '--quiet')
+          system("git", "-C", build_dir, "pull", "--quiet")
         else
-          system('git', 'clone', REPO_URL, build_dir) or raise 'Failed to clone kompo-vfs repository'
+          system("git", "clone", REPO_URL, build_dir) or raise "Failed to clone kompo-vfs repository"
         end
 
-        system(cargo, 'build', '--release', chdir: build_dir) or raise 'Failed to build kompo-vfs'
+        system(cargo, "build", "--release", chdir: build_dir) or raise "Failed to build kompo-vfs"
 
-        @path = File.join(build_dir, 'target', 'release')
+        @path = File.join(build_dir, "target", "release")
         puts "kompo-vfs library path: #{@path}"
 
         KompoVfsVersionCheck.verify!(@path)

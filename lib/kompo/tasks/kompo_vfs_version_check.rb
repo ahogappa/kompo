@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative '../version'
+require_relative "../version"
 
 module Kompo
   # Verifies that the installed kompo-vfs version meets minimum requirements.
@@ -8,7 +8,7 @@ module Kompo
   module KompoVfsVersionCheck
     class IncompatibleVersionError < StandardError; end
 
-    VERSION_FILE = 'KOMPO_VFS_VERSION'
+    VERSION_FILE = "KOMPO_VFS_VERSION"
 
     def self.verify!(lib_path)
       actual_version = get_version(lib_path)

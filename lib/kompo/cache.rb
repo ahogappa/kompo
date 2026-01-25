@@ -1,19 +1,19 @@
 # frozen_string_literal: true
 
-require 'fileutils'
+require "fileutils"
 
 module Kompo
   # Clean the cache for specified Ruby version
   # @param version [String] Ruby version to clean, or "all" to clean all caches
   def self.clean_cache(version)
-    kompo_cache = File.expand_path('~/.kompo/cache')
+    kompo_cache = File.expand_path("~/.kompo/cache")
 
     unless Dir.exist?(kompo_cache)
       puts "Cache directory does not exist: #{kompo_cache}"
       return
     end
 
-    if version == 'all'
+    if version == "all"
       clean_all_caches(kompo_cache)
     else
       clean_version_cache(kompo_cache, version)
@@ -22,7 +22,7 @@ module Kompo
 
   # Clean all caches in the cache directory
   def self.clean_all_caches(kompo_cache)
-    entries = Dir.glob(File.join(kompo_cache, '*'))
+    entries = Dir.glob(File.join(kompo_cache, "*"))
     if entries.empty?
       puts "No caches found in #{kompo_cache}"
       return
@@ -33,7 +33,7 @@ module Kompo
       puts "Removed: #{entry}"
     end
 
-    puts 'All caches cleaned successfully'
+    puts "All caches cleaned successfully"
   end
   private_class_method :clean_all_caches
 
@@ -52,8 +52,8 @@ module Kompo
     real_version_cache = File.realpath(version_cache_dir)
 
     unless real_version_cache.start_with?(real_kompo_cache + File::SEPARATOR) ||
-           real_version_cache == real_kompo_cache
-      puts 'Error: Invalid cache path detected (possible path traversal)'
+        real_version_cache == real_kompo_cache
+      puts "Error: Invalid cache path detected (possible path traversal)"
       return
     end
 

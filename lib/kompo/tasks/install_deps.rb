@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'English'
+require "English"
 module Kompo
   # Section to handle platform-specific dependencies.
   # Switches implementation based on the current platform.
@@ -23,9 +23,9 @@ module Kompo
           InstallLibyaml.lib_path,
           InstallZlib.lib_path,
           InstallLibffi.lib_path
-        ].compact.join(' ')
+        ].compact.join(" ")
 
-        puts 'All Homebrew dependencies installed'
+        puts "All Homebrew dependencies installed"
       end
 
       # GMP library installation Section
@@ -37,8 +37,8 @@ module Kompo
           system("#{brew} list #{BREW_NAME} > /dev/null 2>&1") ? Installed : Install
         end
 
-        BREW_NAME = 'gmp'
-        MARKER_FILE = File.expand_path('~/.kompo_installed_gmp')
+        BREW_NAME = "gmp"
+        MARKER_FILE = File.expand_path("~/.kompo_installed_gmp")
 
         class Installed < Taski::Task
           def run
@@ -54,7 +54,7 @@ module Kompo
             brew = HomebrewPath.path
             puts "Installing #{BREW_NAME}..."
             system("#{brew} install #{BREW_NAME}") or raise "Failed to install #{BREW_NAME}"
-            File.write(MARKER_FILE, 'installed')
+            File.write(MARKER_FILE, "installed")
 
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
             @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
@@ -80,8 +80,8 @@ module Kompo
           system("#{brew} list #{BREW_NAME} > /dev/null 2>&1") ? Installed : Install
         end
 
-        BREW_NAME = 'openssl@3'
-        MARKER_FILE = File.expand_path('~/.kompo_installed_openssl')
+        BREW_NAME = "openssl@3"
+        MARKER_FILE = File.expand_path("~/.kompo_installed_openssl")
 
         class Installed < Taski::Task
           def run
@@ -97,7 +97,7 @@ module Kompo
             brew = HomebrewPath.path
             puts "Installing #{BREW_NAME}..."
             system("#{brew} install #{BREW_NAME}") or raise "Failed to install #{BREW_NAME}"
-            File.write(MARKER_FILE, 'installed')
+            File.write(MARKER_FILE, "installed")
 
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
             @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
@@ -123,8 +123,8 @@ module Kompo
           system("#{brew} list #{BREW_NAME} > /dev/null 2>&1") ? Installed : Install
         end
 
-        BREW_NAME = 'readline'
-        MARKER_FILE = File.expand_path('~/.kompo_installed_readline')
+        BREW_NAME = "readline"
+        MARKER_FILE = File.expand_path("~/.kompo_installed_readline")
 
         class Installed < Taski::Task
           def run
@@ -140,7 +140,7 @@ module Kompo
             brew = HomebrewPath.path
             puts "Installing #{BREW_NAME}..."
             system("#{brew} install #{BREW_NAME}") or raise "Failed to install #{BREW_NAME}"
-            File.write(MARKER_FILE, 'installed')
+            File.write(MARKER_FILE, "installed")
 
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
             @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
@@ -166,8 +166,8 @@ module Kompo
           system("#{brew} list #{BREW_NAME} > /dev/null 2>&1") ? Installed : Install
         end
 
-        BREW_NAME = 'libyaml'
-        MARKER_FILE = File.expand_path('~/.kompo_installed_libyaml')
+        BREW_NAME = "libyaml"
+        MARKER_FILE = File.expand_path("~/.kompo_installed_libyaml")
 
         class Installed < Taski::Task
           def run
@@ -183,7 +183,7 @@ module Kompo
             brew = HomebrewPath.path
             puts "Installing #{BREW_NAME}..."
             system("#{brew} install #{BREW_NAME}") or raise "Failed to install #{BREW_NAME}"
-            File.write(MARKER_FILE, 'installed')
+            File.write(MARKER_FILE, "installed")
 
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
             @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
@@ -209,8 +209,8 @@ module Kompo
           system("#{brew} list #{BREW_NAME} > /dev/null 2>&1") ? Installed : Install
         end
 
-        BREW_NAME = 'zlib'
-        MARKER_FILE = File.expand_path('~/.kompo_installed_zlib')
+        BREW_NAME = "zlib"
+        MARKER_FILE = File.expand_path("~/.kompo_installed_zlib")
 
         class Installed < Taski::Task
           def run
@@ -226,7 +226,7 @@ module Kompo
             brew = HomebrewPath.path
             puts "Installing #{BREW_NAME}..."
             system("#{brew} install #{BREW_NAME}") or raise "Failed to install #{BREW_NAME}"
-            File.write(MARKER_FILE, 'installed')
+            File.write(MARKER_FILE, "installed")
 
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
             @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
@@ -252,8 +252,8 @@ module Kompo
           system("#{brew} list #{BREW_NAME} > /dev/null 2>&1") ? Installed : Install
         end
 
-        BREW_NAME = 'libffi'
-        MARKER_FILE = File.expand_path('~/.kompo_installed_libffi')
+        BREW_NAME = "libffi"
+        MARKER_FILE = File.expand_path("~/.kompo_installed_libffi")
 
         class Installed < Taski::Task
           def run
@@ -269,7 +269,7 @@ module Kompo
             brew = HomebrewPath.path
             puts "Installing #{BREW_NAME}..."
             system("#{brew} install #{BREW_NAME}") or raise "Failed to install #{BREW_NAME}"
-            File.write(MARKER_FILE, 'installed')
+            File.write(MARKER_FILE, "installed")
 
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
             @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
@@ -291,30 +291,30 @@ module Kompo
     class ForLinux < Taski::Task
       def run
         unless pkg_config_available?
-          puts '[WARNING] pkg-config not found. Skipping dependency check.'
-          puts 'Install pkg-config to enable automatic dependency verification.'
-          @lib_paths = ''
+          puts "[WARNING] pkg-config not found. Skipping dependency check."
+          puts "Install pkg-config to enable automatic dependency verification."
+          @lib_paths = ""
           return
         end
 
         check_dependencies
         @lib_paths = collect_lib_paths
 
-        puts 'All required development libraries are installed.'
+        puts "All required development libraries are installed."
       end
 
       REQUIRED_LIBS = {
-        'openssl' => { pkg_config: 'openssl', apt: 'libssl-dev', yum: 'openssl-devel' },
-        'readline' => { pkg_config: 'readline', apt: 'libreadline-dev', yum: 'readline-devel' },
-        'zlib' => { pkg_config: 'zlib', apt: 'zlib1g-dev', yum: 'zlib-devel' },
-        'libyaml' => { pkg_config: 'yaml-0.1', apt: 'libyaml-dev', yum: 'libyaml-devel' },
-        'libffi' => { pkg_config: 'libffi', apt: 'libffi-dev', yum: 'libffi-devel' }
+        "openssl" => {pkg_config: "openssl", apt: "libssl-dev", yum: "openssl-devel"},
+        "readline" => {pkg_config: "readline", apt: "libreadline-dev", yum: "readline-devel"},
+        "zlib" => {pkg_config: "zlib", apt: "zlib1g-dev", yum: "zlib-devel"},
+        "libyaml" => {pkg_config: "yaml-0.1", apt: "libyaml-dev", yum: "libyaml-devel"},
+        "libffi" => {pkg_config: "libffi", apt: "libffi-dev", yum: "libffi-devel"}
       }.freeze
 
       private
 
       def pkg_config_available?
-        system('which pkg-config > /dev/null 2>&1')
+        system("which pkg-config > /dev/null 2>&1")
       end
 
       def check_dependencies
@@ -330,13 +330,13 @@ module Kompo
         paths = pkg_names.flat_map do |pkg|
           `pkg-config --libs-only-L #{pkg} 2>/dev/null`.chomp.split
         end
-        paths.uniq.join(' ')
+        paths.uniq.join(" ")
       end
 
       def build_error_message(missing)
-        lib_names = missing.keys.join(', ')
-        apt_packages = missing.values.map { |info| info[:apt] }.join(' ')
-        yum_packages = missing.values.map { |info| info[:yum] }.join(' ')
+        lib_names = missing.keys.join(", ")
+        apt_packages = missing.values.map { |info| info[:apt] }.join(" ")
+        yum_packages = missing.values.map { |info| info[:yum] }.join(" ")
 
         <<~MSG
           Missing required development libraries: #{lib_names}
@@ -359,7 +359,7 @@ module Kompo
     private
 
     def macos?
-      RUBY_PLATFORM.include?('darwin')
+      RUBY_PLATFORM.include?("darwin")
     end
   end
 end

@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require 'pathspec'
+require "pathspec"
 
 module Kompo
   # Handler for .kompoignore file
   # Uses pathspec gem for gitignore-compatible pattern matching
   class KompoIgnore
-    FILENAME = '.kompoignore'
+    FILENAME = ".kompoignore"
 
     def initialize(project_dir)
       @project_dir = project_dir

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'erb'
-require 'fileutils'
-require 'find'
+require "erb"
+require "fileutils"
+require "find"
 
 module Kompo
   # Struct to hold file data for embedding
@@ -30,7 +30,7 @@ module Kompo
 
     def run
       @work_dir = WorkDir.path
-      @path = File.join(@work_dir, 'fs.c')
+      @path = File.join(@work_dir, "fs.c")
 
       # Get original paths for Ruby standard library cache support
       # When Ruby is restored from cache, standard library paths are from the original build
@@ -48,7 +48,7 @@ module Kompo
       @paths = []
       @file_sizes = [0]
 
-      group('Collecting files') do
+      group("Collecting files") do
         embed_paths = collect_embed_paths
 
         embed_paths.each do |embed_path|
@@ -67,10 +67,10 @@ module Kompo
         puts "Collected #{@file_sizes.size - 1} files"
       end
 
-      group('Generating fs.c') do
+      group("Generating fs.c") do
         context = build_template_context
 
-        template_path = File.join(__dir__, '..', '..', 'fs.c.erb')
+        template_path = File.join(__dir__, "..", "..", "fs.c.erb")
         template = ERB.new(File.read(template_path))
         File.write(@path, template.result(binding))
         puts "Generated: fs.c (#{@file_bytes.size} bytes)"
@@ -81,7 +81,7 @@ module Kompo
       return unless @path && File.exist?(@path)
 
       FileUtils.rm_f(@path)
-      puts 'Cleaned up fs.c'
+      puts "Cleaned up fs.c"
     end
 
     private
@@ -97,8 +97,8 @@ module Kompo
       # 2. Gemfile, Gemfile.lock, and gemspec files (if exists)
       #    Created by: CopyGemfile
       if CopyGemfile.gemfile_exists
-        paths << File.join(@work_dir, 'Gemfile')
-        paths << File.join(@work_dir, 'Gemfile.lock')
+        paths << File.join(@work_dir, "Gemfile")
+        paths << File.join(@work_dir, "Gemfile.lock")
 
         # Include gemspec files for Bundler's gemspec directive
         paths += CopyGemfile.gemspec_paths
@@ -139,7 +139,7 @@ module Kompo
 
         # Skip certain file extensions
         next if SKIP_EXTENSIONS.any? { |ext| path.end_with?(ext) }
-        next if path.end_with?('selenium-manager')
+        next if path.end_with?("selenium-manager")
 
         # Skip files matching .kompoignore patterns
         next if should_ignore?(path)
@@ -157,7 +157,7 @@ module Kompo
       # Ruby standard library paths are outside work_dir and should not be filtered
       return false unless absolute_path.start_with?(@work_dir)
 
-      relative_path = absolute_path.sub("#{@work_dir}/", '')
+      relative_path = absolute_path.sub("#{@work_dir}/", "")
       if @kompo_ignore.ignore?(relative_path)
         puts "Ignoring (via .kompoignore): #{relative_path}"
         true
@@ -171,11 +171,11 @@ module Kompo
       # the same work_dir path is reused across builds via metadata.json
       # Ruby's $LOAD_PATH uses work_dir paths, so embedded files must match.
       embedded_path = if @current_ruby_install_dir != @original_ruby_install_dir && path.start_with?(@current_ruby_install_dir)
-                        # Ruby install dir path replacement for cache compatibility (when paths differ)
-                        path.sub(@current_ruby_install_dir, @original_ruby_install_dir)
-                      else
-                        path
-                      end
+        # Ruby install dir path replacement for cache compatibility (when paths differ)
+        path.sub(@current_ruby_install_dir, @original_ruby_install_dir)
+      else
+        path
+      end
 
       puts "#{path} -> #{embedded_path}" if path != embedded_path
 

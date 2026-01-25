@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'fileutils'
+require "fileutils"
 
 module Kompo
   # Copy project files (entrypoint and additional files) to working directory
@@ -10,7 +10,7 @@ module Kompo
     def run
       work_dir = WorkDir.path
       project_dir = Taski.args.fetch(:project_dir, Taski.env.working_directory) || Taski.env.working_directory
-      entrypoint = Taski.args.fetch(:entrypoint, 'main.rb')
+      entrypoint = Taski.args.fetch(:entrypoint, "main.rb")
       files = Taski.args.fetch(:files, [])
 
       # Copy entrypoint (preserve relative path structure)
@@ -54,7 +54,7 @@ module Kompo
 
         if File.directory?(src)
           # Special handling for "." - copy directory contents directly to work_dir
-          if file == '.' || real_src == real_project_dir
+          if file == "." || real_src == real_project_dir
             copy_directory_contents(src, work_dir)
             @additional_paths << work_dir
           else
@@ -90,7 +90,7 @@ module Kompo
         # Only delete if path is inside work_dir
         FileUtils.rm_rf(path) if expanded_path.start_with?(real_work_dir + File::SEPARATOR) && File.exist?(path)
       end
-      puts 'Cleaned up project files'
+      puts "Cleaned up project files"
     end
 
     private
