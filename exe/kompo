@@ -25,6 +25,7 @@ opt = OptionParser.new do |o|
   o.on("--clean[=VERSION]", 'Clean cache (current Ruby version by default, or specify VERSION, or "all")') do |v|
     args[:clean_cache] = v.nil? ? RUBY_VERSION : v
   end
+  o.on("--dry-run", "Show final compile command without executing it") { |_v| args[:dry_run] = true }
   o.on("-t", "--tree", "Show task dependency tree and exit") do
     puts Kompo::Packing.tree
     exit(0)
