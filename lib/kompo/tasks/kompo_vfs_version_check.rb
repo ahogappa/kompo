@@ -37,7 +37,8 @@ module Kompo
         Required: >= #{required_version}
 
         Please upgrade:
-          Homebrew: brew upgrade kompo-vfs
+          Homebrew: brew update && brew upgrade kompo-vfs
+            (If upgrade fails, try: brew tap --force-auto-update ahogappa/kompo)
           Source: cd ~/.kompo/kompo-vfs && git pull && cargo build --release
       MSG
     end
@@ -48,7 +49,8 @@ module Kompo
         Your kompo-vfs installation may be outdated (< 0.5.0).
 
         Please upgrade:
-          Homebrew: brew upgrade kompo-vfs
+          Homebrew: brew update && brew upgrade kompo-vfs
+            (If upgrade fails, try: brew tap --force-auto-update ahogappa/kompo)
           Source: cd ~/.kompo/kompo-vfs && git pull && cargo build --release
       MSG
     end
