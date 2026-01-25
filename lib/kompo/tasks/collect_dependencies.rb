@@ -47,8 +47,6 @@ module Kompo
     private
 
     def collect_dependencies
-      # Install dependencies based on platform (Homebrew on macOS, pkg-config check on Linux)
-      InstallDeps.run
       deps_lib_paths = InstallDeps.lib_paths
 
       ruby_install_dir = InstallRuby.ruby_install_dir
