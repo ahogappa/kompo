@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'open3'
-require 'shellwords'
+require "open3"
+require "shellwords"
 
 module Kompo
   # Section to compile the final binary.
@@ -19,14 +19,14 @@ module Kompo
       private
 
       def get_ruby_cflags(ruby_install_dir)
-        ruby_pc = File.join(ruby_install_dir, 'lib', 'pkgconfig', 'ruby.pc')
-        output, = Open3.capture2('pkg-config', '--cflags', ruby_pc, err: File::NULL)
+        ruby_pc = File.join(ruby_install_dir, "lib", "pkgconfig", "ruby.pc")
+        output, = Open3.capture2("pkg-config", "--cflags", ruby_pc, err: File::NULL)
         Shellwords.split(output.chomp)
       end
 
       def get_ruby_mainlibs(ruby_install_dir)
-        ruby_pc = File.join(ruby_install_dir, 'lib', 'pkgconfig', 'ruby.pc')
-        output, = Open3.capture2('pkg-config', '--variable=MAINLIBS', ruby_pc, err: File::NULL)
+        ruby_pc = File.join(ruby_install_dir, "lib", "pkgconfig", "ruby.pc")
+        output, = Open3.capture2("pkg-config", "--variable=MAINLIBS", ruby_pc, err: File::NULL)
         output.chomp
       end
 
@@ -36,9 +36,9 @@ module Kompo
           content = File.read(makefile)
           ldflags = content.scan(/^ldflags\s+= (.*)/).flatten
           ldflags += content.scan(/^LDFLAGS\s+= (.*)/).flatten
-          ldflags.flat_map { |f| f.split(' ') }
+          ldflags.flat_map { |f| f.split(" ") }
         end
-        flags.uniq.select { |f| f.start_with?('-L') }
+        flags.uniq.select { |f| f.start_with?("-L") }
       end
 
       def get_libpath(work_dir, ruby_major_minor)
@@ -46,23 +46,23 @@ module Kompo
         makefiles.flat_map do |makefile|
           content = File.read(makefile)
           content.scan(/^LIBPATH = (.*)/).flatten
-        end.compact.flat_map { |p| p.split(' ') }.uniq
-                 .reject { |p| p.start_with?('-Wl,-rpath,') || !p.start_with?('-L/') }
+        end.compact.flat_map { |p| p.split(" ") }.uniq
+          .reject { |p| p.start_with?("-Wl,-rpath,") || !p.start_with?("-L/") }
       end
 
       def get_extlibs(ruby_build_path, ruby_version)
-        exts_mk_files = Dir.glob(File.join(ruby_build_path, "ruby-#{ruby_version}", 'ext', '**', 'exts.mk'))
+        exts_mk_files = Dir.glob(File.join(ruby_build_path, "ruby-#{ruby_version}", "ext", "**", "exts.mk"))
         exts_mk_files.flat_map do |file|
           File.read(file).scan(/^EXTLIBS\s+= (.*)/).flatten
-        end.compact.flat_map { |l| l.split(' ') }.uniq
+        end.compact.flat_map { |l| l.split(" ") }.uniq
       end
 
       def get_gem_libs(work_dir, ruby_major_minor)
         makefiles = Dir.glob("#{work_dir}/bundle/ruby/#{ruby_major_minor}.0/gems/*/ext/*/Makefile")
         makefiles.flat_map do |makefile|
           File.read(makefile).scan(/^LIBS = (.*)/).flatten
-        end.compact.flat_map { |l| l.split(' ') }.uniq
-                 .map { |l| l.start_with?('-l') ? l : "-l#{File.basename(l, '.a').delete_prefix('lib')}" }
+        end.compact.flat_map { |l| l.split(" ") }.uniq
+          .map { |l| l.start_with?("-l") ? l : "-l#{File.basename(l, ".a").delete_prefix("lib")}" }
       end
     end
 
@@ -84,8 +84,8 @@ module Kompo
 
         command = build_command(work_dir, deps, ext_paths, enc_files)
 
-        group('Compiling binary (macOS)') do
-          system(*command) or raise 'Failed to compile final binary'
+        group("Compiling binary (macOS)") do
+          system(*command) or raise "Failed to compile final binary"
           puts "Binary size: #{File.size(@output_path) / 1024 / 1024} MB"
         end
 
@@ -98,8 +98,8 @@ module Kompo
         ruby_static_lib = "-lruby.#{deps.ruby_major_minor}-static"
 
         [
-          'clang',
-          '-O3',
+          "clang",
+          "-O3",
           get_ruby_cflags(deps.ruby_install_dir),
           # IMPORTANT: kompo_lib must come FIRST to override Homebrew-installed versions
           "-L#{deps.kompo_lib}",
@@ -110,19 +110,19 @@ module Kompo
           # Add library paths for dependencies (Homebrew on macOS)
           Shellwords.split(deps.deps_lib_paths),
           get_libpath(work_dir, deps.ruby_major_minor),
-          '-fstack-protector-strong',
-          '-Wl,-dead_strip', # Remove unused code/data
-          '-Wl,-no_deduplicate',  # Allow duplicate symbols from Ruby YJIT and kompo-vfs
-          '-Wl,-export_dynamic',  # Export symbols to dynamic symbol table
+          "-fstack-protector-strong",
+          "-Wl,-dead_strip", # Remove unused code/data
+          "-Wl,-no_deduplicate",  # Allow duplicate symbols from Ruby YJIT and kompo-vfs
+          "-Wl,-export_dynamic",  # Export symbols to dynamic symbol table
           deps.main_c,
           deps.fs_c,
           # Link kompo_wrap FIRST (before Ruby) to override libc symbols
-          '-lkompo_wrap',
+          "-lkompo_wrap",
           ext_paths,
           enc_files,
           ruby_static_lib,
           get_libs(deps.ruby_install_dir, work_dir, deps.ruby_build_path, deps.ruby_version, deps.ruby_major_minor),
-          '-o', @output_path
+          "-o", @output_path
         ].flatten
       end
 
@@ -131,20 +131,20 @@ module Kompo
         ruby_std_gem_libs = get_extlibs(ruby_build_path, ruby_version)
         gem_libs = get_gem_libs(work_dir, ruby_major_minor)
 
-        all_libs = [main_libs.split(' '), gem_libs, ruby_std_gem_libs].flatten
-                                                                      .select { |l| l.match?(/-l\w/) }.uniq
-                                                                      .reject { |l| l == '-ldl' } # macOS doesn't have libdl
+        all_libs = [main_libs.split(" "), gem_libs, ruby_std_gem_libs].flatten
+          .select { |l| l.match?(/-l\w/) }.uniq
+          .reject { |l| l == "-ldl" } # macOS doesn't have libdl
 
         # Separate system libs from other libs
         other_libs = all_libs.reject { |l| SYSTEM_LIBS.any? { |sys| l == "-l#{sys}" } }
 
         [
           other_libs,
-          '-lkompo_fs',
+          "-lkompo_fs",
           # System libraries
           SYSTEM_LIBS.map { |l| "-l#{l}" },
           # Frameworks
-          FRAMEWORKS.flat_map { |f| ['-framework', f] }
+          FRAMEWORKS.flat_map { |f| ["-framework", f] }
         ].flatten
       end
     end
@@ -165,8 +165,8 @@ module Kompo
 
         command = build_command(work_dir, deps, ext_paths, enc_files)
 
-        group('Compiling binary (Linux)') do
-          system(*command) or raise 'Failed to compile final binary'
+        group("Compiling binary (Linux)") do
+          system(*command) or raise "Failed to compile final binary"
           puts "Binary size: #{File.size(@output_path) / 1024 / 1024} MB"
         end
 
@@ -177,12 +177,12 @@ module Kompo
 
       def build_command(work_dir, deps, ext_paths, enc_files)
         # Linux uses libruby-static.a (not libruby.X.Y-static.a like macOS)
-        ruby_static_lib = '-lruby-static'
+        ruby_static_lib = "-lruby-static"
 
         [
-          'gcc',
-          '-O3',
-          '-no-pie', # Required: Rust std lib is not built with PIC
+          "gcc",
+          "-O3",
+          "-no-pie", # Required: Rust std lib is not built with PIC
           get_ruby_cflags(deps.ruby_install_dir),
           # IMPORTANT: kompo_lib must come FIRST to override system-installed versions
           "-L#{deps.kompo_lib}",
@@ -193,17 +193,17 @@ module Kompo
           # Add library paths for dependencies (from pkg-config)
           Shellwords.split(deps.deps_lib_paths),
           get_libpath(work_dir, deps.ruby_major_minor),
-          '-fstack-protector-strong',
-          '-rdynamic', '-Wl,-export-dynamic',
+          "-fstack-protector-strong",
+          "-rdynamic", "-Wl,-export-dynamic",
           deps.main_c,
           deps.fs_c,
-          '-Wl,-Bstatic',
-          '-Wl,--start-group',
+          "-Wl,-Bstatic",
+          "-Wl,--start-group",
           ext_paths,
           enc_files,
           ruby_static_lib,
           get_libs(deps.ruby_install_dir, work_dir, deps.ruby_build_path, deps.ruby_version, deps.ruby_major_minor),
-          '-o', @output_path
+          "-o", @output_path
         ].flatten
       end
 
@@ -214,22 +214,22 @@ module Kompo
 
         dyn_link_libs = DYN_LINK_LIBS.map { |l| "-l#{l}" }
 
-        all_libs = [main_libs.split(' '), gem_libs, ruby_std_gem_libs].flatten
-                                                                      .select { |l| l.match?(/-l\w/) }.uniq
+        all_libs = [main_libs.split(" "), gem_libs, ruby_std_gem_libs].flatten
+          .select { |l| l.match?(/-l\w/) }.uniq
 
         static_libs, dyn_libs = all_libs.partition { |l| !dyn_link_libs.include?(l) }
 
-        dyn_libs << '-lc'
-        dyn_libs.unshift('-Wl,-Bdynamic')
+        dyn_libs << "-lc"
+        dyn_libs.unshift("-Wl,-Bdynamic")
 
-        [static_libs, '-Wl,--end-group', '-lkompo_fs', '-lkompo_wrap', dyn_libs].flatten
+        [static_libs, "-Wl,--end-group", "-lkompo_fs", "-lkompo_wrap", dyn_libs].flatten
       end
     end
 
     private
 
     def macos?
-      RUBY_PLATFORM.include?('darwin')
+      RUBY_PLATFORM.include?("darwin")
     end
   end
 end

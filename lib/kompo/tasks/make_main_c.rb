@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'erb'
-require 'fileutils'
+require "erb"
+require "fileutils"
 
 module Kompo
   # Generate main.c from ERB template
@@ -15,25 +15,25 @@ module Kompo
 
     def run
       work_dir = WorkDir.path
-      @path = File.join(work_dir, 'main.c')
+      @path = File.join(work_dir, "main.c")
 
       return if File.exist?(@path)
 
-      template_path = File.join(__dir__, '..', '..', 'main.c.erb')
+      template_path = File.join(__dir__, "..", "..", "main.c.erb")
       template = ERB.new(File.read(template_path))
 
       # Build context object for ERB template
       context = build_template_context
 
       File.write(@path, template.result(binding))
-      puts 'Generated: main.c'
+      puts "Generated: main.c"
     end
 
     def clean
       return unless @path && File.exist?(@path)
 
       FileUtils.rm_f(@path)
-      puts 'Cleaned up main.c'
+      puts "Cleaned up main.c"
     end
 
     private

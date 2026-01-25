@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative 'test_helper'
+require_relative "test_helper"
 
 class KompoIgnoreTest < Minitest::Test
   def setup
@@ -14,7 +14,7 @@ class KompoIgnoreTest < Minitest::Test
   private
 
   def create_ignore_file(content)
-    File.write(File.join(@temp_dir, '.kompoignore'), content)
+    File.write(File.join(@temp_dir, ".kompoignore"), content)
     Kompo::KompoIgnore.new(@temp_dir)
   end
 
@@ -30,32 +30,32 @@ class KompoIgnoreTest < Minitest::Test
 
   def test_ignore_returns_false_when_not_enabled
     ignore = Kompo::KompoIgnore.new(@temp_dir)
-    refute ignore.ignore?('test.log')
+    refute ignore.ignore?("test.log")
   end
 
   def test_ignore_matches_simple_glob_pattern
     ignore = create_ignore_file("*.log\n")
 
-    assert ignore.ignore?('test.log')
-    assert ignore.ignore?('debug.log')
-    refute ignore.ignore?('test.rb')
+    assert ignore.ignore?("test.log")
+    assert ignore.ignore?("debug.log")
+    refute ignore.ignore?("test.rb")
   end
 
   def test_ignore_matches_directory_pattern
     ignore = create_ignore_file("tmp/\n")
 
-    assert ignore.ignore?('tmp/test.rb')
-    assert ignore.ignore?('tmp/cache/data.txt')
-    refute ignore.ignore?('src/tmp.rb')
+    assert ignore.ignore?("tmp/test.rb")
+    assert ignore.ignore?("tmp/cache/data.txt")
+    refute ignore.ignore?("src/tmp.rb")
   end
 
   def test_ignore_matches_double_star_pattern
     ignore = create_ignore_file("**/cache/\n")
 
-    assert ignore.ignore?('cache/data.txt')
-    assert ignore.ignore?('app/cache/data.txt')
-    assert ignore.ignore?('deep/nested/cache/data.txt')
-    refute ignore.ignore?('src/cached.rb')
+    assert ignore.ignore?("cache/data.txt")
+    assert ignore.ignore?("app/cache/data.txt")
+    assert ignore.ignore?("deep/nested/cache/data.txt")
+    refute ignore.ignore?("src/cached.rb")
   end
 
   def test_ignore_handles_negation_pattern
@@ -64,9 +64,9 @@ class KompoIgnoreTest < Minitest::Test
       !important.log
     IGNORE
 
-    assert ignore.ignore?('test.log')
-    assert ignore.ignore?('debug.log')
-    refute ignore.ignore?('important.log')
+    assert ignore.ignore?("test.log")
+    assert ignore.ignore?("debug.log")
+    refute ignore.ignore?("important.log")
   end
 
   def test_ignore_handles_comments
@@ -77,9 +77,9 @@ class KompoIgnoreTest < Minitest::Test
       tmp/
     IGNORE
 
-    assert ignore.ignore?('test.log')
-    assert ignore.ignore?('tmp/file.txt')
-    refute ignore.ignore?('test.rb')
+    assert ignore.ignore?("test.log")
+    assert ignore.ignore?("tmp/file.txt")
+    refute ignore.ignore?("test.rb")
   end
 
   def test_ignore_handles_empty_lines
@@ -90,8 +90,8 @@ class KompoIgnoreTest < Minitest::Test
 
     IGNORE
 
-    assert ignore.ignore?('test.log')
-    assert ignore.ignore?('tmp/file.txt')
+    assert ignore.ignore?("test.log")
+    assert ignore.ignore?("tmp/file.txt")
   end
 
   def test_ignore_multiple_patterns
@@ -103,18 +103,18 @@ class KompoIgnoreTest < Minitest::Test
       test/
     IGNORE
 
-    assert ignore.ignore?('debug.log')
-    assert ignore.ignore?('cache.tmp')
-    assert ignore.ignore?('node_modules/package.json')
-    assert ignore.ignore?('spec/test_spec.rb')
-    assert ignore.ignore?('test/test_file.rb')
-    refute ignore.ignore?('app/main.rb')
+    assert ignore.ignore?("debug.log")
+    assert ignore.ignore?("cache.tmp")
+    assert ignore.ignore?("node_modules/package.json")
+    assert ignore.ignore?("spec/test_spec.rb")
+    assert ignore.ignore?("test/test_file.rb")
+    refute ignore.ignore?("app/main.rb")
   end
 
   def test_ignore_handles_path_with_leading_slash
     ignore = create_ignore_file("/config.local.yml\n")
 
-    assert ignore.ignore?('config.local.yml')
-    refute ignore.ignore?('subdir/config.local.yml')
+    assert ignore.ignore?("config.local.yml")
+    refute ignore.ignore?("subdir/config.local.yml")
   end
 end

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'open3'
+require "open3"
 
 module Kompo
   # Find native gem extensions that need to be built
@@ -23,13 +23,13 @@ module Kompo
       # Skip if --no-stdlib is specified (bundled gems are part of stdlib)
       no_stdlib = Taski.args.fetch(:no_stdlib, false)
       unless no_stdlib
-        bundled_gems_dir = File.join(ruby_build_path, "ruby-#{ruby_version}", '.bundle', 'gems')
+        bundled_gems_dir = File.join(ruby_build_path, "ruby-#{ruby_version}", ".bundle", "gems")
         find_bundled_gem_extensions(bundled_gems_dir, builtin_init_funcs)
       end
 
       # Skip user gems if no Gemfile
       unless CopyGemfile.gemfile_exists
-        puts 'No Gemfile, skipping user gem native extensions'
+        puts "No Gemfile, skipping user gem native extensions"
         puts "Found #{@extensions.size} native extensions to build"
         return
       end
@@ -37,7 +37,7 @@ module Kompo
       bundle_ruby_dir = BundleInstall.bundle_ruby_dir
 
       # Find all native extensions in installed gems
-      extconf_files = Dir.glob(File.join(bundle_ruby_dir, 'gems/**/extconf.rb'))
+      extconf_files = Dir.glob(File.join(bundle_ruby_dir, "gems/**/extconf.rb"))
 
       extconf_files.each do |extconf_path|
         dir_name = File.dirname(extconf_path)
@@ -52,8 +52,8 @@ module Kompo
         end
 
         # Skip if this extension is part of Ruby standard library
-        ruby_std_lib = dir_name.split('/').drop_while { |p| p != 'ext' }.join('/')
-        ruby_ext_objects = Dir.glob(File.join(ruby_build_path, "ruby-#{ruby_version}", 'ext', '**', '*.o'))
+        ruby_std_lib = dir_name.split("/").drop_while { |p| p != "ext" }.join("/")
+        ruby_ext_objects = Dir.glob(File.join(ruby_build_path, "ruby-#{ruby_version}", "ext", "**", "*.o"))
         if ruby_ext_objects.any? { |o| o.include?(ruby_std_lib) }
           puts "skip: #{gem_ext_name} is included in Ruby standard library"
           next
@@ -74,7 +74,7 @@ module Kompo
           end
         end
 
-        cargo_toml = File.join(dir_name, 'Cargo.toml')
+        cargo_toml = File.join(dir_name, "Cargo.toml")
         is_rust = File.exist?(cargo_toml)
 
         @extensions << {
@@ -96,7 +96,7 @@ module Kompo
     def find_bundled_gem_extensions(bundled_gems_dir, builtin_init_funcs)
       return unless Dir.exist?(bundled_gems_dir)
 
-      extconf_files = Dir.glob(File.join(bundled_gems_dir, '**/extconf.rb'))
+      extconf_files = Dir.glob(File.join(bundled_gems_dir, "**/extconf.rb"))
 
       extconf_files.each do |extconf_path|
         dir_name = File.dirname(extconf_path)
@@ -111,7 +111,7 @@ module Kompo
 
         # Verify that .o files exist (pre-built)
         # Search recursively since object files may be in subdirectories
-        o_files = Dir.glob(File.join(dir_name, '**', '*.o'))
+        o_files = Dir.glob(File.join(dir_name, "**", "*.o"))
         if o_files.empty?
           puts "skip: #{gem_ext_name} has no pre-built .o files"
           next
@@ -130,13 +130,13 @@ module Kompo
 
     # Extract Init_ function names from libruby-static using nm
     def get_builtin_init_functions(ruby_install_dir)
-      lib_dir = File.join(ruby_install_dir, 'lib')
-      static_lib = Dir.glob(File.join(lib_dir, 'libruby*-static.a')).first
+      lib_dir = File.join(ruby_install_dir, "lib")
+      static_lib = Dir.glob(File.join(lib_dir, "libruby*-static.a")).first
       return Set.new unless static_lib
 
       # Use nm to extract defined Init_ symbols (T = text/code section)
       # Use Open3.capture2 with array form to avoid shell injection
-      output, status = Open3.capture2('nm', static_lib, err: File::NULL)
+      output, status = Open3.capture2("nm", static_lib, err: File::NULL)
       return Set.new unless status.success?
 
       # Filter lines matching " T _?Init_" pattern and extract the symbol name
@@ -145,7 +145,7 @@ module Kompo
       symbols.map do |line|
         # Third whitespace-separated field is the symbol name
         symbol = line.split[2]
-        symbol&.delete_prefix('_')
+        symbol&.delete_prefix("_")
       end.compact.to_set
     end
   end
