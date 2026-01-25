@@ -3,6 +3,10 @@
 require "taski"
 require_relative "kompo/version"
 
+# Use simple progress mode for cleaner output
+# See taski library for details: https://github.com/ahogappa/taski
+Taski.progress_mode = :simple
+
 module Kompo
   # Fixed path prefix for Ruby installation
   # Using a fixed path ensures that cached Ruby binaries work correctly,
