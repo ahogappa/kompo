@@ -18,6 +18,7 @@ opt = OptionParser.new do |o|
   end
   o.on('--no-cache', 'Build Ruby from source, ignoring cache') { |_v| args[:no_cache] = true }
   o.on('--no-stdlib', 'Exclude Ruby standard library from binary') { |_v| args[:no_stdlib] = true }
+  o.on('--no-gemfile', 'Skip Gemfile processing (no bundle install)') { |_v| args[:no_gemfile] = true }
   o.on('--local-vfs-path=PATH', 'Path to local kompo-vfs for development') do |v|
     args[:local_kompo_vfs_path] = File.expand_path(v)
   end

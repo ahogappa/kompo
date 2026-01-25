@@ -113,6 +113,24 @@ class CopyGemfileTest < Minitest::Test
       assert File.exist?(File.join(work_dir, 'other_gem.gemspec'))
     end
   end
+
+  def test_copy_gemfile_skips_when_no_gemfile_option_specified
+    Dir.mktmpdir do |tmpdir|
+      work_dir = File.join(tmpdir, 'work')
+      project_dir = File.join(tmpdir, 'project')
+      FileUtils.mkdir_p([work_dir, project_dir])
+      # Create Gemfile in project_dir
+      File.write(File.join(project_dir, 'Gemfile'), "source 'https://rubygems.org'")
+
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_args(project_dir: project_dir, no_gemfile: true)
+
+      # gemfile_exists should be false even though Gemfile exists
+      refute Kompo::CopyGemfile.gemfile_exists
+      # Verify Gemfile was NOT copied to work_dir
+      refute File.exist?(File.join(work_dir, 'Gemfile'))
+    end
+  end
 end
 
 class CopyProjectFilesTest < Minitest::Test

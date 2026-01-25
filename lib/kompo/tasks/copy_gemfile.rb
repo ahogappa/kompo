@@ -11,6 +11,14 @@ module Kompo
       work_dir = WorkDir.path
       project_dir = Taski.args.fetch(:project_dir, Taski.env.working_directory) || Taski.env.working_directory
 
+      # Skip Gemfile processing if --no-gemfile is specified
+      if Taski.args[:no_gemfile]
+        puts 'Skipping Gemfile (--no-gemfile specified)'
+        @gemfile_exists = false
+        @gemspec_paths = []
+        return
+      end
+
       gemfile_path = File.join(project_dir, 'Gemfile')
       gemfile_lock_path = File.join(project_dir, 'Gemfile.lock')
 
