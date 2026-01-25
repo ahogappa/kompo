@@ -91,7 +91,7 @@ module Kompo
 
         if Taski.args[:dry_run]
           puts "Compile command (macOS):"
-          puts Shellwords.join(command)
+          Taski.message(Shellwords.join(command))
           return
         end
 
@@ -178,7 +178,7 @@ module Kompo
 
         if Taski.args[:dry_run]
           puts "Compile command (Linux):"
-          puts Shellwords.join(command)
+          Taski.message(Shellwords.join(command))
           return
         end
 
