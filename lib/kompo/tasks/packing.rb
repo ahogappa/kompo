@@ -56,8 +56,10 @@ module Kompo
         # Extract LIBS from ext/*/Makefile and .bundle/gems/*/ext/*/Makefile
         makefiles = Dir.glob(File.join(ruby_build_dir, "{ext/*,.bundle/gems/*/ext/*}", "Makefile"))
         makefiles.flat_map do |file|
-          File.read(file).scan(/^LIBS\s*=\s*(.*)/).flatten
-        end.compact.flat_map { |l| l.split(" ") }.uniq
+          # Read file, collapse line continuations, then match both "LIBS =" and "LIBS +="
+          content = File.read(file).gsub(/\\\n/, " ")
+          content.scan(/^LIBS\s*\+?=\s*(.*)/).flatten
+        end.compact.flat_map { |l| l.split }.uniq
       end
 
       def get_gem_libs(work_dir, ruby_major_minor)
