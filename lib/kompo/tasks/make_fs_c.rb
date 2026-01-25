@@ -47,6 +47,9 @@ module Kompo
       @file_bytes = []
       @paths = []
       @file_sizes = [0]
+      @added_paths = Set.new
+      @duplicate_count = 0
+      @verbose = Taski.args.fetch(:verbose, false)
 
       group("Collecting files") do
         embed_paths = collect_embed_paths
@@ -64,7 +67,8 @@ module Kompo
             add_file(expand_path)
           end
         end
-        puts "Collected #{@file_sizes.size - 1} files"
+        duplicate_info = @duplicate_count.positive? ? " (#{@duplicate_count} duplicates skipped)" : ""
+        puts "Collected #{@file_sizes.size - 1} files#{duplicate_info}"
       end
 
       group("Generating fs.c") do
@@ -167,6 +171,14 @@ module Kompo
     end
 
     def add_file(path)
+      # Skip duplicate files (same absolute path)
+      if @added_paths.include?(path)
+        @duplicate_count += 1
+        puts "skip: duplicate path #{path}" if @verbose
+        return
+      end
+      @added_paths.add(path)
+
       # Keep original paths for VFS - the caching system already ensures
       # the same work_dir path is reused across builds via metadata.json
       # Ruby's $LOAD_PATH uses work_dir paths, so embedded files must match.
