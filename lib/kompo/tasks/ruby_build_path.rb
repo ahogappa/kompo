@@ -14,7 +14,12 @@ module Kompo
     def impl
       return Installed if ruby_build_installed?
 
-      darwin? ? FromHomebrew : FromSource
+      if darwin?
+        check_homebrew_available!
+        return FromHomebrew
+      end
+
+      FromSource
     end
 
     # Use existing ruby-build installation
@@ -35,7 +40,8 @@ module Kompo
         puts "Installing ruby-build via Homebrew..."
         system(brew, "install", "ruby-build") or raise "Failed to install ruby-build"
 
-        @path = `#{brew} --prefix ruby-build`.chomp + "/bin/ruby-build"
+        prefix_output, = Open3.capture2(brew, "--prefix", "ruby-build", err: File::NULL)
+        @path = prefix_output.chomp + "/bin/ruby-build"
         raise "Failed to install ruby-build" unless File.executable?(@path)
 
         puts "ruby-build path: #{@path}"
@@ -74,6 +80,20 @@ module Kompo
 
     def darwin?
       RUBY_PLATFORM.include?("darwin") || `uname -s`.chomp == "Darwin"
+    end
+
+    def check_homebrew_available!
+      # Check if brew is in PATH
+      brew_in_path, = Open3.capture2("which", "brew", err: File::NULL)
+      return unless brew_in_path.chomp.empty?
+
+      # Check common Homebrew installation paths (including ARM64 at /opt/homebrew)
+      return if HomebrewPath::COMMON_BREW_PATHS.any? { |p| File.executable?(p) }
+
+      raise <<~ERROR
+        Homebrew is required on macOS but not installed.
+        Please install Homebrew first: https://brew.sh
+      ERROR
     end
   end
 end

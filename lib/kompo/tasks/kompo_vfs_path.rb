@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "open3"
 require_relative "kompo_vfs_version_check"
 
 module Kompo
@@ -80,8 +81,8 @@ module Kompo
         def run
           brew = HomebrewPath.path
           puts "Installing kompo-vfs via Homebrew..."
-          system(brew, "tap", "ahogappa/kompo") or raise "Failed to tap ahogappa/kompo"
-          system(brew, "install", "kompo-vfs") or raise "Failed to install kompo-vfs"
+          system(brew, "tap", "ahogappa/kompo-vfs", "https://github.com/ahogappa/kompo-vfs.git") or raise "Failed to tap ahogappa/kompo-vfs"
+          system(brew, "install", "ahogappa/kompo-vfs/kompo-vfs") or raise "Failed to install kompo-vfs"
 
           @path = "#{`#{brew} --prefix kompo-vfs`.chomp}/lib"
           puts "kompo-vfs library path: #{@path}"
@@ -134,9 +135,12 @@ module Kompo
     end
 
     def check_homebrew_available!
-      brew_path = `which brew 2>/dev/null`.chomp
+      # Check if brew is in PATH
+      brew_in_path, = Open3.capture2("which", "brew", err: File::NULL)
+      return unless brew_in_path.chomp.empty?
 
-      return unless brew_path.empty?
+      # Check common Homebrew installation paths (including ARM64 at /opt/homebrew)
+      return if HomebrewPath::COMMON_BREW_PATHS.any? { |p| File.executable?(p) }
 
       raise <<~ERROR
         Homebrew is required on macOS but not installed.
