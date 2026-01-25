@@ -103,7 +103,7 @@ GEM
       lint_roller (~> 1.1)
       rubocop-performance (~> 1.26.0)
     stringio (3.2.0)
-    taski (0.8.2)
+    taski (0.8.3)
       prism (~> 1.4)
       tsort
     traces (0.18.2)
