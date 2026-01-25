@@ -75,12 +75,8 @@ module Kompo
       end
 
       makefile_content = File.read(makefile_path)
-      prefix = makefile_content.scan(/target_prefix = (.*)/).flatten.first&.delete_prefix("/") || ""
-      target_name = makefile_content.scan(/TARGET_NAME = (.*)/).flatten.first || gem_ext_name
-
-      # Path for ruby_init_ext must match require path (without file extension)
-      ext_path = File.join(prefix, target_name).delete_prefix("/")
-      @exts << [ext_path, "Init_#{target_name}"]
+      prefix, target_name = parse_makefile_metadata(makefile_content, gem_ext_name)
+      add_extension_entry(prefix, target_name)
     end
 
     def register_extension(dir_name, gem_ext_name)
@@ -89,8 +85,7 @@ module Kompo
       if File.exist?(makefile_path)
         # C extension: parse Makefile
         makefile_content = File.read(makefile_path)
-        prefix = makefile_content.scan(/target_prefix = (.*)/).flatten.first&.delete_prefix("/") || ""
-        target_name = makefile_content.scan(/TARGET_NAME = (.*)/).flatten.first || gem_ext_name
+        prefix, target_name = parse_makefile_metadata(makefile_content, gem_ext_name)
       else
         # Rust extension: parse Cargo.toml
         cargo_toml_path = File.join(dir_name, "Cargo.toml")
@@ -108,9 +103,7 @@ module Kompo
         end
       end
 
-      # Path for ruby_init_ext must match require path (without file extension)
-      ext_path = File.join(prefix, target_name).delete_prefix("/")
-      @exts << [ext_path, "Init_#{target_name}"]
+      add_extension_entry(prefix, target_name)
     end
 
     # Parse Cargo.toml to extract target name
@@ -142,6 +135,21 @@ module Kompo
 
       # Prefer [lib].name over [package].name
       lib_name || package_name
+    end
+
+    # Parse Makefile to extract target_prefix and TARGET_NAME
+    # Returns [prefix, target_name] where prefix is empty string if not specified
+    def parse_makefile_metadata(makefile_content, fallback_name)
+      prefix = makefile_content.scan(/target_prefix = (.*)/).flatten.first&.delete_prefix("/") || ""
+      target_name = makefile_content.scan(/TARGET_NAME = (.*)/).flatten.first || fallback_name
+      [prefix, target_name]
+    end
+
+    # Add extension entry to @exts for ruby_init_ext()
+    # ext_path must match the require path (without file extension)
+    def add_extension_entry(prefix, target_name)
+      ext_path = File.join(prefix, target_name).delete_prefix("/")
+      @exts << [ext_path, "Init_#{target_name}"]
     end
 
     def build_rust_extension(dir_name, cargo_toml, gem_ext_name, work_dir)
@@ -188,8 +196,7 @@ module Kompo
 
       # Get full extension path (prefix/target_name) for proper directory structure
       # This ensures erb/escape and cgi/escape are stored in different directories
-      prefix = makefile_content.scan(/target_prefix = (.*)/).flatten.first&.delete_prefix("/") || ""
-      target_name = makefile_content.scan(/TARGET_NAME = (.*)/).flatten.first || gem_ext_name
+      prefix, target_name = parse_makefile_metadata(makefile_content, gem_ext_name)
       ext_path = File.join(prefix, target_name).delete_prefix("/")
       dest_ext_dir = File.join(work_dir, "ext", ext_path)
 
