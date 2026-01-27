@@ -5,8 +5,9 @@ module Kompo
   # Section to handle platform-specific dependencies.
   # Switches implementation based on the current platform.
   # Exports lib_paths for linker flags (e.g., "-L/usr/local/lib")
+  # Exports static_libs for static library full paths (macOS only)
   class InstallDeps < Taski::Section
-    interfaces :lib_paths
+    interfaces :lib_paths, :static_libs
 
     def impl
       macos? ? ForMacOS : ForLinux
@@ -22,15 +23,27 @@ module Kompo
           InstallReadline.lib_path,
           InstallLibyaml.lib_path,
           InstallZlib.lib_path,
-          InstallLibffi.lib_path
+          InstallLibffi.lib_path,
+          InstallXz.lib_path
         ].compact.join(" ")
+
+        # Collect static library paths for static linking
+        @static_libs = [
+          InstallGmp.static_libs,
+          InstallOpenssl.static_libs,
+          InstallReadline.static_libs,
+          InstallLibyaml.static_libs,
+          InstallZlib.static_libs,
+          InstallLibffi.static_libs,
+          InstallXz.static_libs
+        ].flatten.compact
 
         puts "All Homebrew dependencies installed"
       end
 
       # GMP library installation Section
       class InstallGmp < Taski::Section
-        interfaces :lib_path
+        interfaces :lib_path, :static_libs
 
         def impl
           brew = HomebrewPath.path
@@ -39,12 +52,17 @@ module Kompo
 
         BREW_NAME = "gmp"
         MARKER_FILE = File.expand_path("~/.kompo_installed_gmp")
+        STATIC_LIB_NAMES = %w[libgmp.a].freeze
 
         class Installed < Taski::Task
           def run
             brew = HomebrewPath.path
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
+            if $CHILD_STATUS.success? && !prefix.empty?
+              @lib_path = "-L#{prefix}/lib"
+              @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
+                .select { |path| File.exist?(path) }
+            end
             puts "#{BREW_NAME} is already installed"
           end
         end
@@ -57,7 +75,11 @@ module Kompo
             File.write(MARKER_FILE, "installed")
 
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
+            if $CHILD_STATUS.success? && !prefix.empty?
+              @lib_path = "-L#{prefix}/lib"
+              @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
+                .select { |path| File.exist?(path) }
+            end
           end
 
           def clean
@@ -73,7 +95,7 @@ module Kompo
 
       # OpenSSL library installation Section
       class InstallOpenssl < Taski::Section
-        interfaces :lib_path
+        interfaces :lib_path, :static_libs
 
         def impl
           brew = HomebrewPath.path
@@ -82,12 +104,17 @@ module Kompo
 
         BREW_NAME = "openssl@3"
         MARKER_FILE = File.expand_path("~/.kompo_installed_openssl")
+        STATIC_LIB_NAMES = %w[libssl.a libcrypto.a].freeze
 
         class Installed < Taski::Task
           def run
             brew = HomebrewPath.path
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
+            if $CHILD_STATUS.success? && !prefix.empty?
+              @lib_path = "-L#{prefix}/lib"
+              @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
+                .select { |path| File.exist?(path) }
+            end
             puts "#{BREW_NAME} is already installed"
           end
         end
@@ -100,7 +127,11 @@ module Kompo
             File.write(MARKER_FILE, "installed")
 
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
+            if $CHILD_STATUS.success? && !prefix.empty?
+              @lib_path = "-L#{prefix}/lib"
+              @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
+                .select { |path| File.exist?(path) }
+            end
           end
 
           def clean
@@ -116,7 +147,7 @@ module Kompo
 
       # Readline library installation Section
       class InstallReadline < Taski::Section
-        interfaces :lib_path
+        interfaces :lib_path, :static_libs
 
         def impl
           brew = HomebrewPath.path
@@ -125,12 +156,17 @@ module Kompo
 
         BREW_NAME = "readline"
         MARKER_FILE = File.expand_path("~/.kompo_installed_readline")
+        STATIC_LIB_NAMES = %w[libreadline.a libhistory.a].freeze
 
         class Installed < Taski::Task
           def run
             brew = HomebrewPath.path
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
+            if $CHILD_STATUS.success? && !prefix.empty?
+              @lib_path = "-L#{prefix}/lib"
+              @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
+                .select { |path| File.exist?(path) }
+            end
             puts "#{BREW_NAME} is already installed"
           end
         end
@@ -143,7 +179,11 @@ module Kompo
             File.write(MARKER_FILE, "installed")
 
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
+            if $CHILD_STATUS.success? && !prefix.empty?
+              @lib_path = "-L#{prefix}/lib"
+              @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
+                .select { |path| File.exist?(path) }
+            end
           end
 
           def clean
@@ -159,7 +199,7 @@ module Kompo
 
       # libyaml library installation Section
       class InstallLibyaml < Taski::Section
-        interfaces :lib_path
+        interfaces :lib_path, :static_libs
 
         def impl
           brew = HomebrewPath.path
@@ -168,12 +208,17 @@ module Kompo
 
         BREW_NAME = "libyaml"
         MARKER_FILE = File.expand_path("~/.kompo_installed_libyaml")
+        STATIC_LIB_NAMES = %w[libyaml.a].freeze
 
         class Installed < Taski::Task
           def run
             brew = HomebrewPath.path
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
+            if $CHILD_STATUS.success? && !prefix.empty?
+              @lib_path = "-L#{prefix}/lib"
+              @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
+                .select { |path| File.exist?(path) }
+            end
             puts "#{BREW_NAME} is already installed"
           end
         end
@@ -186,7 +231,11 @@ module Kompo
             File.write(MARKER_FILE, "installed")
 
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
+            if $CHILD_STATUS.success? && !prefix.empty?
+              @lib_path = "-L#{prefix}/lib"
+              @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
+                .select { |path| File.exist?(path) }
+            end
           end
 
           def clean
@@ -202,7 +251,7 @@ module Kompo
 
       # zlib library installation Section
       class InstallZlib < Taski::Section
-        interfaces :lib_path
+        interfaces :lib_path, :static_libs
 
         def impl
           brew = HomebrewPath.path
@@ -211,12 +260,17 @@ module Kompo
 
         BREW_NAME = "zlib"
         MARKER_FILE = File.expand_path("~/.kompo_installed_zlib")
+        STATIC_LIB_NAMES = %w[libz.a].freeze
 
         class Installed < Taski::Task
           def run
             brew = HomebrewPath.path
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
+            if $CHILD_STATUS.success? && !prefix.empty?
+              @lib_path = "-L#{prefix}/lib"
+              @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
+                .select { |path| File.exist?(path) }
+            end
             puts "#{BREW_NAME} is already installed"
           end
         end
@@ -229,7 +283,11 @@ module Kompo
             File.write(MARKER_FILE, "installed")
 
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
+            if $CHILD_STATUS.success? && !prefix.empty?
+              @lib_path = "-L#{prefix}/lib"
+              @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
+                .select { |path| File.exist?(path) }
+            end
           end
 
           def clean
@@ -245,7 +303,7 @@ module Kompo
 
       # libffi library installation Section
       class InstallLibffi < Taski::Section
-        interfaces :lib_path
+        interfaces :lib_path, :static_libs
 
         def impl
           brew = HomebrewPath.path
@@ -254,12 +312,17 @@ module Kompo
 
         BREW_NAME = "libffi"
         MARKER_FILE = File.expand_path("~/.kompo_installed_libffi")
+        STATIC_LIB_NAMES = %w[libffi.a].freeze
 
         class Installed < Taski::Task
           def run
             brew = HomebrewPath.path
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
+            if $CHILD_STATUS.success? && !prefix.empty?
+              @lib_path = "-L#{prefix}/lib"
+              @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
+                .select { |path| File.exist?(path) }
+            end
             puts "#{BREW_NAME} is already installed"
           end
         end
@@ -272,7 +335,63 @@ module Kompo
             File.write(MARKER_FILE, "installed")
 
             prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            @lib_path = "-L#{prefix}/lib" if $CHILD_STATUS.success? && !prefix.empty?
+            if $CHILD_STATUS.success? && !prefix.empty?
+              @lib_path = "-L#{prefix}/lib"
+              @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
+                .select { |path| File.exist?(path) }
+            end
+          end
+
+          def clean
+            return unless File.exist?(MARKER_FILE)
+
+            brew = HomebrewPath.path
+            puts "Uninstalling #{BREW_NAME} (installed by kompo)..."
+            system("#{brew} uninstall #{BREW_NAME}")
+            File.delete(MARKER_FILE) if File.exist?(MARKER_FILE)
+          end
+        end
+      end
+
+      # xz/lzma library installation Section
+      class InstallXz < Taski::Section
+        interfaces :lib_path, :static_libs
+
+        def impl
+          brew = HomebrewPath.path
+          system("#{brew} list #{BREW_NAME} > /dev/null 2>&1") ? Installed : Install
+        end
+
+        BREW_NAME = "xz"
+        MARKER_FILE = File.expand_path("~/.kompo_installed_xz")
+        STATIC_LIB_NAMES = %w[liblzma.a].freeze
+
+        class Installed < Taski::Task
+          def run
+            brew = HomebrewPath.path
+            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
+            if $CHILD_STATUS.success? && !prefix.empty?
+              @lib_path = "-L#{prefix}/lib"
+              @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
+                .select { |path| File.exist?(path) }
+            end
+            puts "#{BREW_NAME} is already installed"
+          end
+        end
+
+        class Install < Taski::Task
+          def run
+            brew = HomebrewPath.path
+            puts "Installing #{BREW_NAME}..."
+            system("#{brew} install #{BREW_NAME}") or raise "Failed to install #{BREW_NAME}"
+            File.write(MARKER_FILE, "installed")
+
+            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
+            if $CHILD_STATUS.success? && !prefix.empty?
+              @lib_path = "-L#{prefix}/lib"
+              @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
+                .select { |path| File.exist?(path) }
+            end
           end
 
           def clean
@@ -294,11 +413,13 @@ module Kompo
           puts "[WARNING] pkg-config not found. Skipping dependency check."
           puts "Install pkg-config to enable automatic dependency verification."
           @lib_paths = ""
+          @static_libs = []
           return
         end
 
         check_dependencies
         @lib_paths = collect_lib_paths
+        @static_libs = [] # Linux uses -Wl,-Bstatic instead of explicit paths
 
         puts "All required development libraries are installed."
       end

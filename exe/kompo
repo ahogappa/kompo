@@ -26,6 +26,9 @@ opt = OptionParser.new do |o|
     args[:clean_cache] = v.nil? ? RUBY_VERSION : v
   end
   o.on("--dry-run", "Show final compile command without executing it") { |_v| args[:dry_run] = true }
+  o.on("--dynamic-libs=LIBS", "Comma-separated list of libraries to link dynamically (e.g., ssl,crypto,gmp)") do |v|
+    args[:dynamic_libs] = v.split(",").map(&:strip)
+  end
   o.on("-t", "--tree", "Show task dependency tree and exit") do
     puts Kompo::Packing.tree
     exit(0)

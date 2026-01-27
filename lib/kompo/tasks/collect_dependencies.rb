@@ -11,7 +11,7 @@ module Kompo
     Dependencies = Struct.new(
       :ruby_install_dir, :ruby_version, :ruby_major_minor,
       :ruby_build_path, :ruby_lib, :kompo_lib,
-      :main_c, :fs_c, :exts_dir, :deps_lib_paths,
+      :main_c, :fs_c, :exts_dir, :deps_lib_paths, :static_libs,
       keyword_init: true
     )
 
@@ -48,6 +48,7 @@ module Kompo
 
     def collect_dependencies
       deps_lib_paths = InstallDeps.lib_paths
+      static_libs = InstallDeps.static_libs
 
       ruby_install_dir = InstallRuby.ruby_install_dir
       ruby_version = InstallRuby.ruby_version
@@ -72,7 +73,8 @@ module Kompo
         main_c: main_c,
         fs_c: fs_c,
         exts_dir: exts_dir,
-        deps_lib_paths: deps_lib_paths
+        deps_lib_paths: deps_lib_paths,
+        static_libs: static_libs
       )
     end
 
