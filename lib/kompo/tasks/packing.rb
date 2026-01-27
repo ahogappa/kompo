@@ -257,12 +257,21 @@ module Kompo
         ruby_std_gem_libs = get_extlibs(ruby_build_path, ruby_version)
         gem_libs = get_gem_libs(work_dir, ruby_major_minor)
 
-        dyn_link_libs = DYN_LINK_LIBS.map { |l| "-l#{l}" }
+        # System libraries that must always be dynamically linked
+        system_dyn_libs = DYN_LINK_LIBS.map { |l| "-l#{l}" }
+
+        # User-specified libraries to remain dynamically linked
+        user_dynamic_libs = Taski.args.fetch(:dynamic_libs, [])
+        user_dynamic_lib_flags = user_dynamic_libs.map { |name| "-l#{name}" }
 
         all_libs = [main_libs.split(" "), gem_libs, ruby_std_gem_libs].flatten
           .select { |l| l.match?(/-l\w/) }.uniq
 
-        static_libs, dyn_libs = all_libs.partition { |l| !dyn_link_libs.include?(l) }
+        # Partition into static and dynamic
+        # Dynamic: system libs + user-specified dynamic libs
+        static_libs, dyn_libs = all_libs.partition do |l|
+          !system_dyn_libs.include?(l) && !user_dynamic_lib_flags.include?(l)
+        end
 
         dyn_libs << "-lc"
         dyn_libs.unshift("-Wl,-Bdynamic")
