@@ -75,7 +75,7 @@ module Kompo
     class ForMacOS < Taski::Task
       include CommonHelpers
 
-      # macOS system libraries
+      # macOS system libraries (always dynamically linked)
       SYSTEM_LIBS = %w[pthread m c].freeze
       # macOS frameworks
       FRAMEWORKS = %w[Foundation CoreFoundation Security].freeze
@@ -131,12 +131,12 @@ module Kompo
           ext_paths,
           enc_files,
           ruby_static_lib,
-          get_libs(deps.ruby_install_dir, work_dir, deps.ruby_build_path, deps.ruby_version, deps.ruby_major_minor),
+          get_libs(deps.ruby_install_dir, work_dir, deps.ruby_build_path, deps.ruby_version, deps.ruby_major_minor, deps.static_libs),
           "-o", @output_path
         ].flatten
       end
 
-      def get_libs(ruby_install_dir, work_dir, ruby_build_path, ruby_version, ruby_major_minor)
+      def get_libs(ruby_install_dir, work_dir, ruby_build_path, ruby_version, ruby_major_minor, static_libs)
         main_libs = get_ruby_mainlibs(ruby_install_dir)
         ruby_std_gem_libs = get_extlibs(ruby_build_path, ruby_version)
         gem_libs = get_gem_libs(work_dir, ruby_major_minor)
@@ -148,14 +148,44 @@ module Kompo
         # Separate system libs from other libs
         other_libs = all_libs.reject { |l| SYSTEM_LIBS.any? { |sys| l == "-l#{sys}" } }
 
+        # Build a lookup table from -l<name> flag to static library full path
+        # e.g., {"-lgmp" => "/opt/homebrew/opt/gmp/lib/libgmp.a", ...}
+        static_lib_map = build_static_lib_map(static_libs)
+
+        # Get list of libraries that should remain dynamically linked
+        dynamic_libs = Taski.args.fetch(:dynamic_libs, [])
+        dynamic_lib_flags = dynamic_libs.map { |name| "-l#{name}" }
+
+        # Replace dynamic library flags with static library paths where available
+        # Skip static linking for libraries specified in --dynamic-libs option
+        resolved_libs = other_libs.map do |lib_flag|
+          # Keep as dynamic if specified in --dynamic-libs
+          next lib_flag if dynamic_lib_flags.include?(lib_flag)
+
+          static_lib_map[lib_flag] || lib_flag
+        end
+
         [
-          other_libs,
+          resolved_libs,
           "-lkompo_fs",
           # System libraries
           SYSTEM_LIBS.map { |l| "-l#{l}" },
           # Frameworks
           FRAMEWORKS.flat_map { |f| ["-framework", f] }
         ].flatten
+      end
+
+      # Build a map from -l<name> flag to static library full path
+      # e.g., {"-lgmp" => "/opt/homebrew/opt/gmp/lib/libgmp.a", ...}
+      # Automatically derives the flag from the library filename (lib<name>.a -> -l<name>)
+      def build_static_lib_map(static_libs)
+        return {} if static_libs.nil? || static_libs.empty?
+
+        static_libs.to_h do |path|
+          basename = File.basename(path, ".a") # "libgmp.a" -> "libgmp"
+          lib_name = basename.delete_prefix("lib") # "libgmp" -> "gmp"
+          ["-l#{lib_name}", path]
+        end
       end
     end
 

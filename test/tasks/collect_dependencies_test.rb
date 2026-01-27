@@ -24,7 +24,7 @@ class CollectDependenciesTest < Minitest::Test
       mock_task(Kompo::MakeMainC, path: File.join(work_dir, "main.c"))
       mock_task(Kompo::MakeFsC, path: File.join(work_dir, "fs.c"))
       mock_task(Kompo::BuildNativeGem, exts_dir: nil, exts: [])
-      mock_task(Kompo::InstallDeps, lib_paths: "")
+      mock_task(Kompo::InstallDeps, lib_paths: "", static_libs: [])
       mock_args(project_dir: project_dir, output_dir: output_dir)
 
       output_path = Kompo::CollectDependencies.output_path
@@ -51,7 +51,7 @@ class CollectDependenciesTest < Minitest::Test
       mock_task(Kompo::MakeMainC, path: File.join(work_dir, "main.c"))
       mock_task(Kompo::MakeFsC, path: File.join(work_dir, "fs.c"))
       mock_task(Kompo::BuildNativeGem, exts_dir: nil, exts: [])
-      mock_task(Kompo::InstallDeps, lib_paths: "")
+      mock_task(Kompo::InstallDeps, lib_paths: "", static_libs: [])
       mock_args(project_dir: project_dir, output_dir: output_file)
 
       output_path = Kompo::CollectDependencies.output_path
@@ -78,7 +78,7 @@ class CollectDependenciesTest < Minitest::Test
       mock_task(Kompo::MakeMainC, path: "/test/main.c")
       mock_task(Kompo::MakeFsC, path: "/test/fs.c")
       mock_task(Kompo::BuildNativeGem, exts_dir: "/test/exts", exts: ["ext1"])
-      mock_task(Kompo::InstallDeps, lib_paths: "")
+      mock_task(Kompo::InstallDeps, lib_paths: "", static_libs: [])
       mock_args(project_dir: project_dir, output_dir: output_dir)
 
       # Access deps through exported value
