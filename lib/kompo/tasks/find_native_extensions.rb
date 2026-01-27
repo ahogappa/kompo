@@ -19,12 +19,15 @@ module Kompo
       # Get Init functions already defined in libruby-static
       builtin_init_funcs = get_builtin_init_functions(ruby_install_dir)
 
+      # Get extension paths registered in Ruby's extinit.c (e.g., "json/ext/generator")
+      builtin_ext_paths = get_builtin_ext_paths(ruby_build_path, ruby_version)
+
       # Find bundled gems with native extensions (Ruby 4.0+)
       # Skip if --no-stdlib is specified (bundled gems are part of stdlib)
       no_stdlib = Taski.args.fetch(:no_stdlib, false)
       unless no_stdlib
         bundled_gems_dir = File.join(ruby_build_path, "ruby-#{ruby_version}", ".bundle", "gems")
-        find_bundled_gem_extensions(bundled_gems_dir, builtin_init_funcs)
+        find_bundled_gem_extensions(bundled_gems_dir, builtin_init_funcs, builtin_ext_paths)
       end
 
       # Skip user gems if no Gemfile
@@ -48,6 +51,15 @@ module Kompo
         init_func = "Init_#{gem_ext_name}"
         if builtin_init_funcs.include?(init_func)
           puts "skip: #{gem_ext_name} is already built into Ruby (#{init_func} found in libruby-static)"
+          next
+        end
+
+        # Skip if this extension is registered in Ruby's extinit.c
+        # Extract extension path from gem's extconf.rb location
+        # e.g., ".../json-2.18.0/ext/json/ext/generator" -> "json/ext/generator"
+        ext_path = extract_gem_ext_path(dir_name)
+        if ext_path && builtin_ext_paths.include?(ext_path)
+          puts "skip: #{gem_ext_name} is already registered in Ruby (#{ext_path} found in extinit.c)"
           next
         end
 
@@ -93,7 +105,7 @@ module Kompo
 
     # Find native extensions in Ruby's bundled gems directory (Ruby 4.0+)
     # These are pre-built during Ruby compilation
-    def find_bundled_gem_extensions(bundled_gems_dir, builtin_init_funcs)
+    def find_bundled_gem_extensions(bundled_gems_dir, builtin_init_funcs, builtin_ext_paths)
       return unless Dir.exist?(bundled_gems_dir)
 
       extconf_files = Dir.glob(File.join(bundled_gems_dir, "**/extconf.rb"))
@@ -106,6 +118,13 @@ module Kompo
         init_func = "Init_#{gem_ext_name}"
         if builtin_init_funcs.include?(init_func)
           puts "skip: #{gem_ext_name} is already built into Ruby (#{init_func} found in libruby-static)"
+          next
+        end
+
+        # Skip if this extension is registered in Ruby's extinit.c
+        ext_path = extract_gem_ext_path(dir_name)
+        if ext_path && builtin_ext_paths.include?(ext_path)
+          puts "skip: #{gem_ext_name} is already registered in Ruby (#{ext_path} found in extinit.c)"
           next
         end
 
@@ -128,6 +147,32 @@ module Kompo
       end
     end
 
+    # Extract extension paths from gem's extconf.rb location
+    # e.g., ".../json-2.18.0/ext/json/ext/generator" -> "json/ext/generator"
+    def extract_gem_ext_path(dir_name)
+      # Find the first "ext" directory in the path and take everything after it
+      # Use index (first match) not rindex (last match) because gem paths like
+      # "json-2.18.0/ext/json/ext/generator" have nested ext directories
+      parts = dir_name.split("/")
+      ext_index = parts.index("ext")
+      return nil unless ext_index && ext_index < parts.length - 1
+
+      parts[(ext_index + 1)..].join("/")
+    end
+
+    # Extract extension paths registered in Ruby's extinit.c
+    # Returns a Set of paths like "json/ext/generator", "cgi/escape", etc.
+    def get_builtin_ext_paths(ruby_build_path, ruby_version)
+      extinit_path = File.join(ruby_build_path, "ruby-#{ruby_version}", "ext", "extinit.c")
+      return Set.new unless File.exist?(extinit_path)
+
+      content = File.read(extinit_path)
+
+      # Parse lines like: init(Init_json_ext_generator, "json/ext/generator");
+      paths = content.scan(/init\([^,]+,\s*"([^"]+)"\)/).flatten
+      paths.to_set
+    end
+
     # Extract Init_ function names from libruby-static using nm
     def get_builtin_init_functions(ruby_install_dir)
       lib_dir = File.join(ruby_install_dir, "lib")
@@ -136,8 +181,10 @@ module Kompo
 
       # Use nm to extract defined Init_ symbols (T = text/code section)
       # Use Open3.capture2 with array form to avoid shell injection
-      output, status = Open3.capture2("nm", static_lib, err: File::NULL)
-      return Set.new unless status.success?
+      # Note: nm may return non-zero exit status due to LLVM version mismatch
+      # but still output valid symbols, so we check output instead of status
+      output, _status = Open3.capture2("nm", static_lib, err: File::NULL)
+      return Set.new if output.empty?
 
       # Filter lines matching " T _?Init_" pattern and extract the symbol name
       # macOS prefixes symbols with underscore, Linux does not
