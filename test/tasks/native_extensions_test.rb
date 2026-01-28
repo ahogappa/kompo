@@ -222,11 +222,13 @@ class BuildNativeGemWithMockTest < Minitest::Test
   include TaskTestHelpers
 
   def setup
+    super
     @mock = setup_mock_command_runner
   end
 
   def teardown
     teardown_mock_command_runner
+    super
   end
 
   def test_build_prebuilt_extension_registers_from_makefile
