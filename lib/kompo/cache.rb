@@ -5,9 +5,8 @@ require "fileutils"
 module Kompo
   # Clean the cache for specified Ruby version
   # @param version [String] Ruby version to clean, or "all" to clean all caches
-  def self.clean_cache(version)
-    kompo_cache = File.expand_path("~/.kompo/cache")
-
+  # @param kompo_cache [String] Cache directory path (default: ~/.kompo/cache)
+  def self.clean_cache(version, kompo_cache: File.expand_path("~/.kompo/cache"))
     unless Dir.exist?(kompo_cache)
       puts "Cache directory does not exist: #{kompo_cache}"
       return

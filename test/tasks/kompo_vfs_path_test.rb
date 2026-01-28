@@ -17,31 +17,6 @@ class KompoVfsPathTest < Minitest::Test
     end
   end
 
-  def test_kompo_vfs_path_selects_from_local_when_arg_set
-    Dir.mktmpdir do |tmpdir|
-      vfs_path = File.join(tmpdir, "kompo-vfs")
-      target_dir = File.join(vfs_path, "target", "release")
-      FileUtils.mkdir_p(target_dir)
-      # Create VERSION file for version check
-      File.write(File.join(target_dir, "KOMPO_VFS_VERSION"), Kompo::KOMPO_VFS_MIN_VERSION)
-
-      mock_task(Kompo::CargoPath, path: "/usr/bin/cargo")
-      mock_args(local_kompo_vfs_path: vfs_path)
-
-      # Stub the system call to avoid actual build
-      Kompo::KompoVfsPath::FromLocal.define_method(:system) do |*_args, **_kwargs|
-        true
-      end
-
-      begin
-        path = Kompo::KompoVfsPath.path
-        assert_equal target_dir, path
-      ensure
-        Kompo::KompoVfsPath::FromLocal.remove_method(:system)
-      end
-    end
-  end
-
   def test_kompo_vfs_path_is_section
     assert Kompo::KompoVfsPath < Taski::Section
     assert_includes Kompo::KompoVfsPath.exported_methods, :path

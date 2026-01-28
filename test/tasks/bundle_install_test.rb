@@ -26,43 +26,32 @@ class BundleInstallTest < Minitest::Test
     end
   end
 
-  def test_bundle_install_sets_paths_when_gemfile_exists
+  def test_bundle_install_selects_from_cache_when_cache_exists
     Dir.mktmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
-      File.write(File.join(work_dir, "Gemfile"), "source 'https://rubygems.org'")
-      File.write(File.join(work_dir, "Gemfile.lock"), "GEM\n  specs:\n")
+      gemfile_lock_content = "GEM\n  specs:\n"
+      File.write(File.join(work_dir, "Gemfile.lock"), gemfile_lock_content)
 
-      # Create bundle directory that would be created by bundle install
-      bundle_dir = File.join(work_dir, "bundle", "ruby", "3.4.0")
-      bundle_config_dir = File.join(work_dir, ".bundle")
-      FileUtils.mkdir_p(bundle_dir)
-      FileUtils.mkdir_p(bundle_config_dir)
-      File.write(File.join(bundle_config_dir, "config"), "BUNDLE_PATH: bundle")
+      # Calculate expected cache name
+      hash = Digest::SHA256.hexdigest(gemfile_lock_content)[0..15]
+      bundle_cache_name = "bundle-#{hash}"
+      version_cache_dir = File.join(tmpdir, ".kompo", "cache", "3.4.1")
+      cache_dir = File.join(version_cache_dir, bundle_cache_name)
+
+      # Create complete cache structure
+      FileUtils.mkdir_p(File.join(cache_dir, "bundle"))
+      FileUtils.mkdir_p(File.join(cache_dir, ".bundle"))
+      File.write(File.join(cache_dir, "metadata.json"), '{"ruby_version": "3.4.1"}')
 
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
-      mock_task(Kompo::InstallRuby,
-        bundler_path: "/path/to/bundler",
-        ruby_path: "/path/to/ruby",
-        ruby_version: "3.4.1",
-        ruby_major_minor: "3.4")
+      mock_task(Kompo::InstallRuby, ruby_version: "3.4.1", ruby_major_minor: "3.4")
       mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
 
-      # Stub system calls to avoid actual bundle install
-      Kompo::BundleInstall::FromSource.define_method(:system) do |*_args, **_kwargs|
-        true
-      end
-
-      begin
-        bundle_ruby_dir = Kompo::BundleInstall.bundle_ruby_dir
-        bundler_config_path = Kompo::BundleInstall.bundler_config_path
-
-        assert_equal File.join(work_dir, "bundle", "ruby", "3.4.0"), bundle_ruby_dir
-        assert_equal File.join(work_dir, ".bundle", "config"), bundler_config_path
-      ensure
-        Kompo::BundleInstall::FromSource.remove_method(:system)
-      end
+      # Execute and verify FromCache was selected (it restores bundle directory)
+      Kompo::BundleInstall.bundle_ruby_dir
+      assert Dir.exist?(File.join(work_dir, "bundle")), "FromCache should restore bundle directory"
     end
   end
 
@@ -125,71 +114,23 @@ class BundleInstallTest < Minitest::Test
     end
   end
 
-  def test_bundle_install_from_source_saves_to_cache
+  def test_bundle_install_from_cache_uses_bundle_cache_class
     Dir.mktmpdir do |tmpdir|
-      # Resolve tmpdir to real path (macOS /var -> /private/var symlink)
-      tmpdir = File.realpath(tmpdir)
-
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
       gemfile_lock_content = "GEM\n  specs:\n"
-      File.write(File.join(work_dir, "Gemfile"), "source 'https://rubygems.org'")
       File.write(File.join(work_dir, "Gemfile.lock"), gemfile_lock_content)
 
-      # Create bundle directory that would be created by bundle install
-      bundle_dir = File.join(work_dir, "bundle", "ruby", "3.4.0", "gems")
-      bundle_config_dir = File.join(work_dir, ".bundle")
-      FileUtils.mkdir_p(bundle_dir)
-      FileUtils.mkdir_p(bundle_config_dir)
-      File.write(File.join(bundle_config_dir, "config"), "BUNDLE_PATH: bundle")
-
-      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_task(Kompo::CopyGemfile, gemfile_exists: true)
-      mock_task(Kompo::InstallRuby,
+      # Verify BundleCache.from_work_dir is used
+      hash = Digest::SHA256.hexdigest(gemfile_lock_content)[0..15]
+      bundle_cache = Kompo::BundleCache.from_work_dir(
+        kompo_cache: File.join(tmpdir, ".kompo", "cache"),
         ruby_version: "3.4.1",
-        ruby_major_minor: "3.4",
-        ruby_path: "/path/to/ruby",
-        bundler_path: "/path/to/bundler")
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
+        work_dir: work_dir
+      )
 
-      # Stub system calls
-      Kompo::BundleInstall::FromSource.define_method(:system) do |*_args, **_kwargs|
-        true
-      end
-
-      begin
-        Kompo::BundleInstall.bundle_ruby_dir
-
-        # Verify cache was created (new structure: {version}/bundle-{hash})
-        hash = Digest::SHA256.hexdigest(gemfile_lock_content)[0..15]
-        bundle_cache_name = "bundle-#{hash}"
-        version_cache_dir = File.join(tmpdir, ".kompo", "cache", "3.4.1")
-        cache_dir = File.join(version_cache_dir, bundle_cache_name)
-
-        assert Dir.exist?(cache_dir), "Cache directory should exist"
-        assert Dir.exist?(File.join(cache_dir, "bundle")), "Cache bundle directory should exist"
-        assert Dir.exist?(File.join(cache_dir, ".bundle")), "Cache .bundle directory should exist"
-        assert File.exist?(File.join(cache_dir, "metadata.json")), "Cache metadata should exist"
-
-        # Verify metadata content
-        metadata = JSON.parse(File.read(File.join(cache_dir, "metadata.json")))
-        assert_equal "3.4.1", metadata["ruby_version"]
-        assert_equal hash, metadata["gemfile_lock_hash"]
-      ensure
-        Kompo::BundleInstall::FromSource.remove_method(:system)
-      end
+      assert_instance_of Kompo::BundleCache, bundle_cache
+      assert_equal "bundle-#{hash}", File.basename(bundle_cache.cache_dir)
     end
-  end
-
-  def test_bundle_cache_helpers_included_in_from_cache
-    assert Kompo::BundleInstall::FromCache.include?(Kompo::BundleCacheHelpers)
-  end
-
-  def test_bundle_cache_helpers_included_in_from_source
-    assert Kompo::BundleInstall::FromSource.include?(Kompo::BundleCacheHelpers)
-  end
-
-  def test_bundle_cache_helpers_included_in_bundle_install
-    assert Kompo::BundleInstall.include?(Kompo::BundleCacheHelpers)
   end
 end

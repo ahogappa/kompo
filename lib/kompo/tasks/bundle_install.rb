@@ -1,38 +1,14 @@
 # frozen_string_literal: true
 
 require "fileutils"
-require "digest"
-require "json"
 require "bundler"
+require_relative "../bundle_cache"
 
 module Kompo
-  # Shared helpers for bundle cache operations
-  module BundleCacheHelpers
-    private
-
-    def compute_bundle_cache_name
-      hash = compute_gemfile_lock_hash
-      return nil unless hash
-
-      "bundle-#{hash}"
-    end
-
-    def compute_gemfile_lock_hash
-      work_dir = WorkDir.path
-      gemfile_lock_path = File.join(work_dir, "Gemfile.lock")
-      return nil unless File.exist?(gemfile_lock_path)
-
-      content = File.read(gemfile_lock_path)
-      Digest::SHA256.hexdigest(content)[0..15]
-    end
-  end
-
   # Run bundle install --path bundle in work directory
   # Uses standard Bundler (not standalone mode) so Bundler.require works
   # Supports caching based on Gemfile.lock hash and Ruby version
   class BundleInstall < Taski::Section
-    include BundleCacheHelpers
-
     interfaces :bundle_ruby_dir, :bundler_config_path
 
     def impl
@@ -47,8 +23,6 @@ module Kompo
 
     # Restore bundle from cache
     class FromCache < Taski::Task
-      include BundleCacheHelpers
-
       def run
         work_dir = WorkDir.path
         ruby_major_minor = InstallRuby.ruby_major_minor
@@ -58,23 +32,17 @@ module Kompo
 
         kompo_cache = Taski.args.fetch(:kompo_cache, File.expand_path("~/.kompo/cache"))
         ruby_version = InstallRuby.ruby_version
-        version_cache_dir = File.join(kompo_cache, ruby_version)
 
-        bundle_cache_name = compute_bundle_cache_name
-        raise "Gemfile.lock not found in #{work_dir}" unless bundle_cache_name
-
-        cache_dir = File.join(version_cache_dir, bundle_cache_name)
+        bundle_cache = BundleCache.from_work_dir(
+          kompo_cache: kompo_cache,
+          ruby_version: ruby_version,
+          work_dir: work_dir
+        )
+        raise "Gemfile.lock not found in #{work_dir}" unless bundle_cache
 
         group("Restoring bundle from cache") do
-          # Clean up existing files in case work_dir is reused
-          FileUtils.rm_rf(File.join(work_dir, "bundle")) if Dir.exist?(File.join(work_dir, "bundle"))
-          FileUtils.rm_rf(File.join(work_dir, ".bundle")) if Dir.exist?(File.join(work_dir, ".bundle"))
-
-          # Copy from cache
-          FileUtils.cp_r(File.join(cache_dir, "bundle"), File.join(work_dir, "bundle"))
-          FileUtils.cp_r(File.join(cache_dir, ".bundle"), File.join(work_dir, ".bundle"))
-
-          puts "Restored from: #{cache_dir}"
+          bundle_cache.restore(work_dir)
+          puts "Restored from: #{bundle_cache.cache_dir}"
         end
 
         puts "Bundle restored from cache"
@@ -95,8 +63,6 @@ module Kompo
 
     # Run bundle install and save to cache
     class FromSource < Taski::Task
-      include BundleCacheHelpers
-
       def run
         work_dir = WorkDir.path
         bundler = InstallRuby.bundler_path
@@ -160,32 +126,19 @@ module Kompo
       end
 
       def save_to_cache(work_dir)
-        bundle_cache_name = compute_bundle_cache_name
-        return unless bundle_cache_name
-
         kompo_cache = Taski.args.fetch(:kompo_cache, File.expand_path("~/.kompo/cache"))
         ruby_version = InstallRuby.ruby_version
-        version_cache_dir = File.join(kompo_cache, ruby_version)
-        cache_dir = File.join(version_cache_dir, bundle_cache_name)
+
+        bundle_cache = BundleCache.from_work_dir(
+          kompo_cache: kompo_cache,
+          ruby_version: ruby_version,
+          work_dir: work_dir
+        )
+        return unless bundle_cache
 
         group("Saving bundle to cache") do
-          # Remove old cache if exists
-          FileUtils.rm_rf(cache_dir) if Dir.exist?(cache_dir)
-          FileUtils.mkdir_p(cache_dir)
-
-          # Copy to cache
-          FileUtils.cp_r(File.join(work_dir, "bundle"), File.join(cache_dir, "bundle"))
-          FileUtils.cp_r(File.join(work_dir, ".bundle"), File.join(cache_dir, ".bundle"))
-
-          # Save metadata
-          metadata = {
-            "ruby_version" => ruby_version,
-            "gemfile_lock_hash" => compute_gemfile_lock_hash,
-            "created_at" => Time.now.iso8601
-          }
-          File.write(File.join(cache_dir, "metadata.json"), JSON.pretty_generate(metadata))
-
-          puts "Saved to: #{cache_dir}"
+          bundle_cache.save(work_dir)
+          puts "Saved to: #{bundle_cache.cache_dir}"
         end
       end
     end
@@ -206,19 +159,18 @@ module Kompo
     private
 
     def cache_exists?
-      bundle_cache_name = compute_bundle_cache_name
-      return false unless bundle_cache_name
-
       kompo_cache = Taski.args.fetch(:kompo_cache, File.expand_path("~/.kompo/cache"))
       ruby_version = InstallRuby.ruby_version
-      version_cache_dir = File.join(kompo_cache, ruby_version)
-      cache_dir = File.join(version_cache_dir, bundle_cache_name)
+      work_dir = WorkDir.path
 
-      cache_bundle_dir = File.join(cache_dir, "bundle")
-      cache_bundle_config = File.join(cache_dir, ".bundle")
-      cache_metadata = File.join(cache_dir, "metadata.json")
+      bundle_cache = BundleCache.from_work_dir(
+        kompo_cache: kompo_cache,
+        ruby_version: ruby_version,
+        work_dir: work_dir
+      )
+      return false unless bundle_cache
 
-      Dir.exist?(cache_bundle_dir) && Dir.exist?(cache_bundle_config) && File.exist?(cache_metadata)
+      bundle_cache.exists?
     end
   end
 end
