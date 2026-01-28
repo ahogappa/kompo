@@ -139,12 +139,14 @@ class KompoVfsPathFromHomebrewInstalledTest < Minitest::Test
   include TaskTestHelpers
 
   def setup
+    super
     @mock = setup_mock_command_runner
     mock_task(Kompo::HomebrewPath, path: "/opt/homebrew/bin/brew")
   end
 
   def teardown
     teardown_mock_command_runner
+    super
   end
 
   def test_installed_gets_prefix_and_verifies_libs
@@ -187,12 +189,14 @@ class KompoVfsPathFromHomebrewInstallWithMockTest < Minitest::Test
   include TaskTestHelpers
 
   def setup
+    super
     @mock = setup_mock_command_runner
     mock_task(Kompo::HomebrewPath, path: "/opt/homebrew/bin/brew")
   end
 
   def teardown
     teardown_mock_command_runner
+    super
   end
 
   def test_install_taps_and_installs
