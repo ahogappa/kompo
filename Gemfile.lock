@@ -43,6 +43,7 @@ GEM
     mini_portile2 (2.8.9)
     minitest (6.0.1)
       prism (~> 1.5)
+    minitest-mock (5.27.0)
     parallel (1.27.0)
     parser (3.3.10.1)
       ast (~> 2.4.1)
@@ -123,6 +124,7 @@ DEPENDENCIES
   debug
   kompo!
   minitest
+  minitest-mock
   rake (~> 13.0)
   simplecov
   standard

@@ -34,6 +34,7 @@ if ENV["COVERAGE"]
 end
 
 require "minitest/autorun"
+require "minitest/mock"
 require "tmpdir"
 require "fileutils"
 require "json"

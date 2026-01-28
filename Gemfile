@@ -11,6 +11,7 @@ gem "taski", "~> 0.8.0"
 group :development, :test do
   gem "debug"
   gem "minitest"
+  gem "minitest-mock"
   gem "simplecov", require: false
   gem "standard"
 end
