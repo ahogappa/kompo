@@ -39,6 +39,7 @@ class HomebrewPathInstallCleanTest < Minitest::Test
   include TaskTestHelpers
 
   def setup
+    super
     @mock = setup_mock_command_runner
     @marker_file = Kompo::HomebrewPath::Install::MARKER_FILE
     File.delete(@marker_file) if File.exist?(@marker_file)
@@ -47,6 +48,7 @@ class HomebrewPathInstallCleanTest < Minitest::Test
   def teardown
     teardown_mock_command_runner
     File.delete(@marker_file) if File.exist?(@marker_file)
+    super
   end
 
   def test_clean_uninstalls_when_marker_exists
@@ -70,43 +72,56 @@ class HomebrewPathInstallCleanTest < Minitest::Test
   end
 end
 
-class HomebrewImplSelectionTest < Minitest::Test
+class HomebrewPathTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
 
   def setup
+    super
     @mock = setup_mock_command_runner
   end
 
   def teardown
     teardown_mock_command_runner
+    super
   end
 
-  def test_impl_selects_installed_when_brew_in_path
-    @mock.stub(["brew"], output: "/opt/homebrew/bin/brew", success: true)
+  def test_uses_installed_when_which_returns_path
+    @mock.stub(["brew"], output: "/opt/homebrew/bin/brew")
 
-    section = Kompo::HomebrewPath.new
-    impl = section.impl
+    capture_io { Kompo::HomebrewPath.run }
 
     assert @mock.called?(:which, "brew")
-    assert_equal Kompo::HomebrewPath::Installed, impl
   end
 
-  def test_impl_selects_installed_when_brew_in_common_paths
-    # Even when which returns nil, if a common path exists, Installed is chosen
-    @mock.stub(["brew"], output: "", success: false)
+  def test_uses_installed_when_brew_in_common_paths
+    # which returns nil, but File.executable? returns true for common path
+    executable_mock = ::Minitest::Mock.new
+    executable_mock.expect(:call, false, [String])  # homebrew_installed? first path check
+    executable_mock.expect(:call, true, [String])   # homebrew_installed? second path check (found)
+    executable_mock.expect(:call, true, [String])   # Installed.run fallback check
 
-    # Verify that if COMMON_BREW_PATHS exist on filesystem, Installed is selected
-    # This test just documents the expected behavior - the impl method
-    # checks COMMON_BREW_PATHS via File.executable?, so if brew exists at
-    # /opt/homebrew/bin/brew, it will return Installed
-    section = Kompo::HomebrewPath.new
-    impl = section.impl
+    File.stub(:executable?, executable_mock) do
+      capture_io { Kompo::HomebrewPath.run }
 
-    assert @mock.called?(:which, "brew")
-    # On systems with Homebrew installed, this returns Installed
-    # On systems without Homebrew, this returns Install
-    # Both are valid - we just verify the which call happened
-    assert [Kompo::HomebrewPath::Installed, Kompo::HomebrewPath::Install].include?(impl)
+      assert @mock.called?(:which, "brew")
+    end
+    executable_mock.verify
+  end
+
+  def test_uses_install_when_brew_not_found
+    # which returns nil and File.executable? returns false, then true after install
+    executable_mock = ::Minitest::Mock.new
+    executable_mock.expect(:call, false, [String])  # homebrew_installed? first path
+    executable_mock.expect(:call, false, [String])  # homebrew_installed? second path
+    executable_mock.expect(:call, true, [String])   # Install.run check after install
+
+    File.stub(:executable?, executable_mock) do
+      capture_io { Kompo::HomebrewPath.run }
+
+      assert @mock.called?(:which, "brew")
+      assert @mock.called?(:run, "/bin/bash", "-c")
+    end
+    executable_mock.verify
   end
 end
