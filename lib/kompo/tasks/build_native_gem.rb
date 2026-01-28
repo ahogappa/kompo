@@ -2,6 +2,7 @@
 
 require "fileutils"
 require "open3"
+require_relative "../extension_parser"
 
 module Kompo
   # Build native gem extensions (C extensions and Rust extensions)
@@ -75,7 +76,7 @@ module Kompo
       end
 
       makefile_content = File.read(makefile_path)
-      prefix, target_name = parse_makefile_metadata(makefile_content, gem_ext_name)
+      prefix, target_name = ExtensionParser.parse_makefile_metadata(makefile_content, gem_ext_name)
       add_extension_entry(prefix, target_name)
     end
 
@@ -85,7 +86,7 @@ module Kompo
       if File.exist?(makefile_path)
         # C extension: parse Makefile
         makefile_content = File.read(makefile_path)
-        prefix, target_name = parse_makefile_metadata(makefile_content, gem_ext_name)
+        prefix, target_name = ExtensionParser.parse_makefile_metadata(makefile_content, gem_ext_name)
       else
         # Rust extension: parse Cargo.toml
         cargo_toml_path = File.join(dir_name, "Cargo.toml")
@@ -96,7 +97,7 @@ module Kompo
 
         cargo_content = File.read(cargo_toml_path)
         prefix = "" # Rust extensions typically don't have a prefix
-        target_name = parse_cargo_toml_target_name(cargo_content)
+        target_name = ExtensionParser.parse_cargo_toml_target_name(cargo_content)
         unless target_name
           raise "Cannot determine target name for #{gem_ext_name} in #{dir_name}: " \
                 "Cargo.toml lacks [lib].name or [package].name"
@@ -104,45 +105,6 @@ module Kompo
       end
 
       add_extension_entry(prefix, target_name)
-    end
-
-    # Parse Cargo.toml to extract target name
-    # Prefers [lib].name over [package].name
-    def parse_cargo_toml_target_name(content)
-      current_section = nil
-      lib_name = nil
-      package_name = nil
-
-      content.each_line do |line|
-        line = line.strip
-
-        # Match section headers like [package], [lib], etc.
-        if line =~ /^\[([^\]]+)\]$/
-          current_section = ::Regexp.last_match(1)
-          next
-        end
-
-        # Match name = "value" or name = 'value'
-        if line =~ /^name\s*=\s*["']([^"']+)["']$/
-          case current_section
-          when "lib"
-            lib_name = ::Regexp.last_match(1)
-          when "package"
-            package_name = ::Regexp.last_match(1)
-          end
-        end
-      end
-
-      # Prefer [lib].name over [package].name
-      lib_name || package_name
-    end
-
-    # Parse Makefile to extract target_prefix and TARGET_NAME
-    # Returns [prefix, target_name] where prefix is empty string if not specified
-    def parse_makefile_metadata(makefile_content, fallback_name)
-      prefix = makefile_content.scan(/target_prefix = (.*)/).flatten.first&.delete_prefix("/") || ""
-      target_name = makefile_content.scan(/TARGET_NAME = (.*)/).flatten.first || fallback_name
-      [prefix, target_name]
     end
 
     # Add extension entry to @exts for ruby_init_ext()
@@ -196,7 +158,7 @@ module Kompo
 
       # Get full extension path (prefix/target_name) for proper directory structure
       # This ensures erb/escape and cgi/escape are stored in different directories
-      prefix, target_name = parse_makefile_metadata(makefile_content, gem_ext_name)
+      prefix, target_name = ExtensionParser.parse_makefile_metadata(makefile_content, gem_ext_name)
       ext_path = File.join(prefix, target_name).delete_prefix("/")
       dest_ext_dir = File.join(work_dir, "ext", ext_path)
 

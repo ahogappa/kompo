@@ -29,6 +29,9 @@ opt = OptionParser.new do |o|
   o.on("--dynamic-libs=LIBS", "Comma-separated list of libraries to link dynamically (e.g., ssl,crypto,gmp)") do |v|
     args[:dynamic_libs] = v.split(",").map(&:strip)
   end
+  o.on("--cache-dir=PATH", "Cache directory (default: ~/.kompo/cache)") do |v|
+    args[:cache_dir] = File.expand_path(v)
+  end
   o.on("-t", "--tree", "Show task dependency tree and exit") do
     puts Kompo::Packing.tree
     exit(0)
@@ -50,7 +53,9 @@ opt.parse!(ARGV)
 args[:files] = ARGV
 
 if args[:clean_cache]
-  Kompo.clean_cache(args[:clean_cache])
+  clean_opts = {}
+  clean_opts[:cache_dir] = args[:cache_dir] if args[:cache_dir]
+  Kompo.clean_cache(args[:clean_cache], **clean_opts)
 else
   Kompo::Packing.run_and_clean(args:)
 end
