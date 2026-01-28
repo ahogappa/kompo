@@ -117,9 +117,6 @@ module Kompo
       def clang_compiler?
         output = `cc --version 2>&1`
         output.include?("clang")
-      rescue Errno::ENOENT => e
-        warn "cc command not found: #{e.message}"
-        false
       rescue => e
         warn "Error checking compiler: #{e.message}"
         false
@@ -152,7 +149,6 @@ module Kompo
       end
 
       def clean
-        # Nothing to clean
       end
     end
 
