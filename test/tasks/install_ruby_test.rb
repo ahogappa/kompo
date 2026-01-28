@@ -153,3 +153,44 @@ class InstallRubyTest < Minitest::Test
     end
   end
 end
+
+class InstallRubyFromCacheRubyPcFixTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def test_from_cache_fixes_ruby_pc
+    Dir.mktmpdir do |tmpdir|
+      version_cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
+      cache_install_dir = File.join(version_cache_dir, "ruby")
+      pkgconfig_dir = File.join(cache_install_dir, "lib", "pkgconfig")
+      FileUtils.mkdir_p(pkgconfig_dir)
+      FileUtils.mkdir_p(File.join(cache_install_dir, "bin"))
+
+      # Create ruby.pc with old prefix
+      File.write(File.join(pkgconfig_dir, "ruby.pc"), <<~PC)
+        prefix=/old/cache/path
+        exec_prefix=${prefix}
+        libdir=${exec_prefix}/lib
+      PC
+
+      # Create bin files
+      File.write(File.join(cache_install_dir, "bin", "ruby"), "#!/bin/sh\necho ruby")
+      FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "ruby"))
+
+      # Create metadata
+      metadata = {"ruby_version" => RUBY_VERSION, "work_dir" => tmpdir}
+      File.write(File.join(version_cache_dir, "metadata.json"), JSON.generate(metadata))
+
+      mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
+      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
+
+      # Trigger task execution via public API
+      ruby_install_dir = Kompo::InstallRuby.ruby_install_dir
+
+      # Verify ruby.pc was updated (observable external behavior)
+      ruby_pc_content = File.read(File.join(ruby_install_dir, "lib", "pkgconfig", "ruby.pc"))
+      assert_includes ruby_pc_content, "prefix=#{ruby_install_dir}"
+      refute_includes ruby_pc_content, "/old/cache/path"
+    end
+  end
+end

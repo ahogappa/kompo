@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "open3"
-
 module Kompo
   # Find native gem extensions that need to be built
   # Exports:
@@ -180,15 +178,15 @@ module Kompo
       return Set.new unless static_lib
 
       # Use nm to extract defined Init_ symbols (T = text/code section)
-      # Use Open3.capture2 with array form to avoid shell injection
+      # Use command_runner.capture with array form to avoid shell injection
       # Note: nm may return non-zero exit status due to LLVM version mismatch
       # but still output valid symbols, so we check output instead of status
-      output, _status = Open3.capture2("nm", static_lib, err: File::NULL)
-      return Set.new if output.empty?
+      result = Kompo.command_runner.capture("nm", static_lib, suppress_stderr: true)
+      return Set.new if result.output.empty?
 
       # Filter lines matching " T _?Init_" pattern and extract the symbol name
       # macOS prefixes symbols with underscore, Linux does not
-      symbols = output.lines.select { |line| line.match?(/ T _?Init_/) }
+      symbols = result.output.lines.select { |line| line.match?(/ T _?Init_/) }
       symbols.map do |line|
         # Third whitespace-separated field is the symbol name
         symbol = line.split[2]

@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "open3"
 require "shellwords"
 
 module Kompo
@@ -20,14 +19,14 @@ module Kompo
 
       def get_ruby_cflags(ruby_install_dir)
         ruby_pc = File.join(ruby_install_dir, "lib", "pkgconfig", "ruby.pc")
-        output, = Open3.capture2("pkg-config", "--cflags", ruby_pc, err: File::NULL)
-        Shellwords.split(output.chomp)
+        result = Kompo.command_runner.capture("pkg-config", "--cflags", ruby_pc, suppress_stderr: true)
+        Shellwords.split(result.chomp)
       end
 
       def get_ruby_mainlibs(ruby_install_dir)
         ruby_pc = File.join(ruby_install_dir, "lib", "pkgconfig", "ruby.pc")
-        output, = Open3.capture2("pkg-config", "--variable=MAINLIBS", ruby_pc, err: File::NULL)
-        output.chomp
+        result = Kompo.command_runner.capture("pkg-config", "--variable=MAINLIBS", ruby_pc, suppress_stderr: true)
+        result.chomp
       end
 
       def get_ldflags(work_dir, ruby_major_minor)
@@ -95,7 +94,7 @@ module Kompo
         end
 
         group("Compiling binary (macOS)") do
-          system(*command) or raise "Failed to compile final binary"
+          Kompo.command_runner.run(*command, error_message: "Failed to compile final binary")
           puts "Binary size: #{File.size(@output_path) / 1024 / 1024} MB"
         end
 
@@ -211,7 +210,7 @@ module Kompo
         end
 
         group("Compiling binary (Linux)") do
-          system(*command) or raise "Failed to compile final binary"
+          Kompo.command_runner.run(*command, error_message: "Failed to compile final binary")
           puts "Binary size: #{File.size(@output_path) / 1024 / 1024} MB"
         end
 

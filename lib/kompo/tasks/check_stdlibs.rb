@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "open3"
-
 module Kompo
   # Get Ruby standard library paths from installed Ruby
   class CheckStdlibs < Taski::Task
@@ -34,12 +32,12 @@ module Kompo
         puts "Including gem specifications: #{gems_specs_root}" if Dir.exist?(gems_specs_root)
       else
         # Fallback to $: paths if stdlib root doesn't exist
-        output, status = Open3.capture2(ruby, "-e", "puts $:", err: File::NULL)
-        unless status.success?
-          raise "Failed to get Ruby standard library paths: exit code #{status.exitstatus}, output: #{output}"
+        result = Kompo.command_runner.capture(ruby, "-e", "puts $:", suppress_stderr: true)
+        unless result.success?
+          raise "Failed to get Ruby standard library paths: exit code #{result.exit_code}, output: #{result.output}"
         end
 
-        raw_paths = output.split("\n").reject(&:empty?)
+        raw_paths = result.output.split("\n").reject(&:empty?)
 
         @paths = raw_paths.map do |path|
           next nil unless path.start_with?("/")

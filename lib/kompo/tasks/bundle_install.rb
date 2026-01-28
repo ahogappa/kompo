@@ -89,9 +89,16 @@ module Kompo
           # Set BUNDLE_PATH to "bundle" - standard Bundler reads .bundle/config
           # and finds gems in {BUNDLE_PATH}/ruby/X.X.X/gems/
           # Use ruby to execute bundler to avoid shebang issues
-          system({"BUNDLE_GEMFILE" => gemfile_path}, ruby, bundler, "config", "set", "--local", "path",
-            "bundle") or raise "Failed to set bundle path"
-          system(env, ruby, bundler, "install") or raise "Failed to run bundle install"
+          Kompo.command_runner.run(
+            ruby, bundler, "config", "set", "--local", "path", "bundle",
+            env: {"BUNDLE_GEMFILE" => gemfile_path},
+            error_message: "Failed to set bundle path"
+          )
+          Kompo.command_runner.run(
+            ruby, bundler, "install",
+            env: env,
+            error_message: "Failed to run bundle install"
+          )
         end
 
         puts "Bundle installed successfully"
@@ -115,8 +122,8 @@ module Kompo
       private
 
       def clang_compiler?
-        output = `cc --version 2>&1`
-        output.include?("clang")
+        result = Kompo.command_runner.capture_all("cc", "--version")
+        result.output.include?("clang")
       rescue => e
         warn "Error checking compiler: #{e.message}"
         false

@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "open3"
-
 module Kompo
   # Section to get the Homebrew path.
   # Switches implementation based on whether Homebrew is already installed.
@@ -18,15 +16,9 @@ module Kompo
     # Use existing Homebrew installation
     class Installed < Taski::Task
       def run
-        # First check PATH
-        brew_in_path, = Open3.capture2("which", "brew", err: File::NULL)
-        brew_in_path = brew_in_path.chomp
-        @path = if brew_in_path.empty?
-          # Fallback to common installation paths
+        # First check PATH, then fallback to common installation paths
+        @path = Kompo.command_runner.which("brew") ||
           HomebrewPath::COMMON_BREW_PATHS.find { |p| File.executable?(p) }
-        else
-          brew_in_path
-        end
         puts "Homebrew path: #{@path}"
       end
     end
@@ -34,14 +26,18 @@ module Kompo
     # Install Homebrew
     class Install < Taski::Task
       MARKER_FILE = File.expand_path("~/.kompo_installed_homebrew")
+      INSTALL_SCRIPT_URL = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
 
       def run
         puts "Homebrew not found. Installing..."
-        system('/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"')
+        Kompo.command_runner.run(
+          "/bin/bash", "-c",
+          "$(curl -fsSL #{INSTALL_SCRIPT_URL})"
+        )
 
-        brew_in_path, = Open3.capture2("which", "brew", err: File::NULL)
-        @path = brew_in_path.chomp
-        if @path.empty?
+        brew_in_path = Kompo.command_runner.which("brew")
+        @path = brew_in_path
+        if @path.nil? || @path.empty?
           # Check common installation paths
           HomebrewPath::COMMON_BREW_PATHS.each do |p|
             if File.executable?(p)
@@ -63,7 +59,11 @@ module Kompo
         return unless File.exist?(MARKER_FILE)
 
         puts "Uninstalling Homebrew (installed by kompo)..."
-        system('NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)"')
+        Kompo.command_runner.run(
+          "/bin/bash", "-c",
+          "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)",
+          env: {"NONINTERACTIVE" => "1"}
+        )
         File.delete(MARKER_FILE) if File.exist?(MARKER_FILE)
         puts "Homebrew uninstalled"
       end
@@ -73,8 +73,8 @@ module Kompo
 
     def homebrew_installed?
       # Check if brew is in PATH
-      brew_in_path, = Open3.capture2("which", "brew", err: File::NULL)
-      return true unless brew_in_path.chomp.empty?
+      brew_in_path = Kompo.command_runner.which("brew")
+      return true if brew_in_path
 
       # Check common installation paths
       COMMON_BREW_PATHS.any? { |p| File.executable?(p) }

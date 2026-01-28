@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "English"
 module Kompo
   # Section to handle platform-specific dependencies.
   # Switches implementation based on the current platform.
@@ -47,7 +46,7 @@ module Kompo
 
         def impl
           brew = HomebrewPath.path
-          system("#{brew} list #{BREW_NAME} > /dev/null 2>&1") ? Installed : Install
+          brew_package_installed?(brew, BREW_NAME) ? Installed : Install
         end
 
         BREW_NAME = "gmp"
@@ -57,8 +56,9 @@ module Kompo
         class Installed < Taski::Task
           def run
             brew = HomebrewPath.path
-            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            if $CHILD_STATUS.success? && !prefix.empty?
+            result = Kompo.command_runner.capture(brew, "--prefix", BREW_NAME, suppress_stderr: true)
+            if result.success? && !result.chomp.empty?
+              prefix = result.chomp
               @lib_path = "-L#{prefix}/lib"
               @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
                 .select { |path| File.exist?(path) }
@@ -71,11 +71,12 @@ module Kompo
           def run
             brew = HomebrewPath.path
             puts "Installing #{BREW_NAME}..."
-            system("#{brew} install #{BREW_NAME}") or raise "Failed to install #{BREW_NAME}"
+            Kompo.command_runner.run(brew, "install", BREW_NAME, error_message: "Failed to install #{BREW_NAME}")
             File.write(MARKER_FILE, "installed")
 
-            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            if $CHILD_STATUS.success? && !prefix.empty?
+            result = Kompo.command_runner.capture(brew, "--prefix", BREW_NAME, suppress_stderr: true)
+            if result.success? && !result.chomp.empty?
+              prefix = result.chomp
               @lib_path = "-L#{prefix}/lib"
               @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
                 .select { |path| File.exist?(path) }
@@ -87,7 +88,7 @@ module Kompo
 
             brew = HomebrewPath.path
             puts "Uninstalling #{BREW_NAME} (installed by kompo)..."
-            system("#{brew} uninstall #{BREW_NAME}")
+            Kompo.command_runner.run(brew, "uninstall", BREW_NAME)
             File.delete(MARKER_FILE) if File.exist?(MARKER_FILE)
           end
         end
@@ -99,7 +100,7 @@ module Kompo
 
         def impl
           brew = HomebrewPath.path
-          system("#{brew} list #{BREW_NAME} > /dev/null 2>&1") ? Installed : Install
+          brew_package_installed?(brew, BREW_NAME) ? Installed : Install
         end
 
         BREW_NAME = "openssl@3"
@@ -109,8 +110,9 @@ module Kompo
         class Installed < Taski::Task
           def run
             brew = HomebrewPath.path
-            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            if $CHILD_STATUS.success? && !prefix.empty?
+            result = Kompo.command_runner.capture(brew, "--prefix", BREW_NAME, suppress_stderr: true)
+            if result.success? && !result.chomp.empty?
+              prefix = result.chomp
               @lib_path = "-L#{prefix}/lib"
               @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
                 .select { |path| File.exist?(path) }
@@ -123,11 +125,12 @@ module Kompo
           def run
             brew = HomebrewPath.path
             puts "Installing #{BREW_NAME}..."
-            system("#{brew} install #{BREW_NAME}") or raise "Failed to install #{BREW_NAME}"
+            Kompo.command_runner.run(brew, "install", BREW_NAME, error_message: "Failed to install #{BREW_NAME}")
             File.write(MARKER_FILE, "installed")
 
-            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            if $CHILD_STATUS.success? && !prefix.empty?
+            result = Kompo.command_runner.capture(brew, "--prefix", BREW_NAME, suppress_stderr: true)
+            if result.success? && !result.chomp.empty?
+              prefix = result.chomp
               @lib_path = "-L#{prefix}/lib"
               @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
                 .select { |path| File.exist?(path) }
@@ -139,7 +142,7 @@ module Kompo
 
             brew = HomebrewPath.path
             puts "Uninstalling #{BREW_NAME} (installed by kompo)..."
-            system("#{brew} uninstall #{BREW_NAME}")
+            Kompo.command_runner.run(brew, "uninstall", BREW_NAME)
             File.delete(MARKER_FILE) if File.exist?(MARKER_FILE)
           end
         end
@@ -151,7 +154,7 @@ module Kompo
 
         def impl
           brew = HomebrewPath.path
-          system("#{brew} list #{BREW_NAME} > /dev/null 2>&1") ? Installed : Install
+          brew_package_installed?(brew, BREW_NAME) ? Installed : Install
         end
 
         BREW_NAME = "readline"
@@ -161,8 +164,9 @@ module Kompo
         class Installed < Taski::Task
           def run
             brew = HomebrewPath.path
-            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            if $CHILD_STATUS.success? && !prefix.empty?
+            result = Kompo.command_runner.capture(brew, "--prefix", BREW_NAME, suppress_stderr: true)
+            if result.success? && !result.chomp.empty?
+              prefix = result.chomp
               @lib_path = "-L#{prefix}/lib"
               @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
                 .select { |path| File.exist?(path) }
@@ -175,11 +179,12 @@ module Kompo
           def run
             brew = HomebrewPath.path
             puts "Installing #{BREW_NAME}..."
-            system("#{brew} install #{BREW_NAME}") or raise "Failed to install #{BREW_NAME}"
+            Kompo.command_runner.run(brew, "install", BREW_NAME, error_message: "Failed to install #{BREW_NAME}")
             File.write(MARKER_FILE, "installed")
 
-            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            if $CHILD_STATUS.success? && !prefix.empty?
+            result = Kompo.command_runner.capture(brew, "--prefix", BREW_NAME, suppress_stderr: true)
+            if result.success? && !result.chomp.empty?
+              prefix = result.chomp
               @lib_path = "-L#{prefix}/lib"
               @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
                 .select { |path| File.exist?(path) }
@@ -191,7 +196,7 @@ module Kompo
 
             brew = HomebrewPath.path
             puts "Uninstalling #{BREW_NAME} (installed by kompo)..."
-            system("#{brew} uninstall #{BREW_NAME}")
+            Kompo.command_runner.run(brew, "uninstall", BREW_NAME)
             File.delete(MARKER_FILE) if File.exist?(MARKER_FILE)
           end
         end
@@ -203,7 +208,7 @@ module Kompo
 
         def impl
           brew = HomebrewPath.path
-          system("#{brew} list #{BREW_NAME} > /dev/null 2>&1") ? Installed : Install
+          brew_package_installed?(brew, BREW_NAME) ? Installed : Install
         end
 
         BREW_NAME = "libyaml"
@@ -213,8 +218,9 @@ module Kompo
         class Installed < Taski::Task
           def run
             brew = HomebrewPath.path
-            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            if $CHILD_STATUS.success? && !prefix.empty?
+            result = Kompo.command_runner.capture(brew, "--prefix", BREW_NAME, suppress_stderr: true)
+            if result.success? && !result.chomp.empty?
+              prefix = result.chomp
               @lib_path = "-L#{prefix}/lib"
               @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
                 .select { |path| File.exist?(path) }
@@ -227,11 +233,12 @@ module Kompo
           def run
             brew = HomebrewPath.path
             puts "Installing #{BREW_NAME}..."
-            system("#{brew} install #{BREW_NAME}") or raise "Failed to install #{BREW_NAME}"
+            Kompo.command_runner.run(brew, "install", BREW_NAME, error_message: "Failed to install #{BREW_NAME}")
             File.write(MARKER_FILE, "installed")
 
-            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            if $CHILD_STATUS.success? && !prefix.empty?
+            result = Kompo.command_runner.capture(brew, "--prefix", BREW_NAME, suppress_stderr: true)
+            if result.success? && !result.chomp.empty?
+              prefix = result.chomp
               @lib_path = "-L#{prefix}/lib"
               @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
                 .select { |path| File.exist?(path) }
@@ -243,7 +250,7 @@ module Kompo
 
             brew = HomebrewPath.path
             puts "Uninstalling #{BREW_NAME} (installed by kompo)..."
-            system("#{brew} uninstall #{BREW_NAME}")
+            Kompo.command_runner.run(brew, "uninstall", BREW_NAME)
             File.delete(MARKER_FILE) if File.exist?(MARKER_FILE)
           end
         end
@@ -255,7 +262,7 @@ module Kompo
 
         def impl
           brew = HomebrewPath.path
-          system("#{brew} list #{BREW_NAME} > /dev/null 2>&1") ? Installed : Install
+          brew_package_installed?(brew, BREW_NAME) ? Installed : Install
         end
 
         BREW_NAME = "zlib"
@@ -265,8 +272,9 @@ module Kompo
         class Installed < Taski::Task
           def run
             brew = HomebrewPath.path
-            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            if $CHILD_STATUS.success? && !prefix.empty?
+            result = Kompo.command_runner.capture(brew, "--prefix", BREW_NAME, suppress_stderr: true)
+            if result.success? && !result.chomp.empty?
+              prefix = result.chomp
               @lib_path = "-L#{prefix}/lib"
               @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
                 .select { |path| File.exist?(path) }
@@ -279,11 +287,12 @@ module Kompo
           def run
             brew = HomebrewPath.path
             puts "Installing #{BREW_NAME}..."
-            system("#{brew} install #{BREW_NAME}") or raise "Failed to install #{BREW_NAME}"
+            Kompo.command_runner.run(brew, "install", BREW_NAME, error_message: "Failed to install #{BREW_NAME}")
             File.write(MARKER_FILE, "installed")
 
-            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            if $CHILD_STATUS.success? && !prefix.empty?
+            result = Kompo.command_runner.capture(brew, "--prefix", BREW_NAME, suppress_stderr: true)
+            if result.success? && !result.chomp.empty?
+              prefix = result.chomp
               @lib_path = "-L#{prefix}/lib"
               @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
                 .select { |path| File.exist?(path) }
@@ -295,7 +304,7 @@ module Kompo
 
             brew = HomebrewPath.path
             puts "Uninstalling #{BREW_NAME} (installed by kompo)..."
-            system("#{brew} uninstall #{BREW_NAME}")
+            Kompo.command_runner.run(brew, "uninstall", BREW_NAME)
             File.delete(MARKER_FILE) if File.exist?(MARKER_FILE)
           end
         end
@@ -307,7 +316,7 @@ module Kompo
 
         def impl
           brew = HomebrewPath.path
-          system("#{brew} list #{BREW_NAME} > /dev/null 2>&1") ? Installed : Install
+          brew_package_installed?(brew, BREW_NAME) ? Installed : Install
         end
 
         BREW_NAME = "libffi"
@@ -317,8 +326,9 @@ module Kompo
         class Installed < Taski::Task
           def run
             brew = HomebrewPath.path
-            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            if $CHILD_STATUS.success? && !prefix.empty?
+            result = Kompo.command_runner.capture(brew, "--prefix", BREW_NAME, suppress_stderr: true)
+            if result.success? && !result.chomp.empty?
+              prefix = result.chomp
               @lib_path = "-L#{prefix}/lib"
               @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
                 .select { |path| File.exist?(path) }
@@ -331,11 +341,12 @@ module Kompo
           def run
             brew = HomebrewPath.path
             puts "Installing #{BREW_NAME}..."
-            system("#{brew} install #{BREW_NAME}") or raise "Failed to install #{BREW_NAME}"
+            Kompo.command_runner.run(brew, "install", BREW_NAME, error_message: "Failed to install #{BREW_NAME}")
             File.write(MARKER_FILE, "installed")
 
-            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            if $CHILD_STATUS.success? && !prefix.empty?
+            result = Kompo.command_runner.capture(brew, "--prefix", BREW_NAME, suppress_stderr: true)
+            if result.success? && !result.chomp.empty?
+              prefix = result.chomp
               @lib_path = "-L#{prefix}/lib"
               @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
                 .select { |path| File.exist?(path) }
@@ -347,7 +358,7 @@ module Kompo
 
             brew = HomebrewPath.path
             puts "Uninstalling #{BREW_NAME} (installed by kompo)..."
-            system("#{brew} uninstall #{BREW_NAME}")
+            Kompo.command_runner.run(brew, "uninstall", BREW_NAME)
             File.delete(MARKER_FILE) if File.exist?(MARKER_FILE)
           end
         end
@@ -359,7 +370,7 @@ module Kompo
 
         def impl
           brew = HomebrewPath.path
-          system("#{brew} list #{BREW_NAME} > /dev/null 2>&1") ? Installed : Install
+          brew_package_installed?(brew, BREW_NAME) ? Installed : Install
         end
 
         BREW_NAME = "xz"
@@ -369,8 +380,9 @@ module Kompo
         class Installed < Taski::Task
           def run
             brew = HomebrewPath.path
-            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            if $CHILD_STATUS.success? && !prefix.empty?
+            result = Kompo.command_runner.capture(brew, "--prefix", BREW_NAME, suppress_stderr: true)
+            if result.success? && !result.chomp.empty?
+              prefix = result.chomp
               @lib_path = "-L#{prefix}/lib"
               @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
                 .select { |path| File.exist?(path) }
@@ -383,11 +395,12 @@ module Kompo
           def run
             brew = HomebrewPath.path
             puts "Installing #{BREW_NAME}..."
-            system("#{brew} install #{BREW_NAME}") or raise "Failed to install #{BREW_NAME}"
+            Kompo.command_runner.run(brew, "install", BREW_NAME, error_message: "Failed to install #{BREW_NAME}")
             File.write(MARKER_FILE, "installed")
 
-            prefix = `#{brew} --prefix #{BREW_NAME} 2>/dev/null`.chomp
-            if $CHILD_STATUS.success? && !prefix.empty?
+            result = Kompo.command_runner.capture(brew, "--prefix", BREW_NAME, suppress_stderr: true)
+            if result.success? && !result.chomp.empty?
+              prefix = result.chomp
               @lib_path = "-L#{prefix}/lib"
               @static_libs = STATIC_LIB_NAMES.map { |name| File.join(prefix, "lib", name) }
                 .select { |path| File.exist?(path) }
@@ -399,11 +412,16 @@ module Kompo
 
             brew = HomebrewPath.path
             puts "Uninstalling #{BREW_NAME} (installed by kompo)..."
-            system("#{brew} uninstall #{BREW_NAME}")
+            Kompo.command_runner.run(brew, "uninstall", BREW_NAME)
             File.delete(MARKER_FILE) if File.exist?(MARKER_FILE)
           end
         end
       end
+
+      def self.brew_package_installed?(brew, package_name)
+        Kompo.command_runner.capture(brew, "list", package_name, suppress_stderr: true).success?
+      end
+      private_class_method :brew_package_installed?
     end
 
     # Linux implementation - checks dependencies using pkg-config
@@ -437,12 +455,16 @@ module Kompo
       private
 
       def pkg_config_available?
-        system("which pkg-config > /dev/null 2>&1")
+        Kompo.command_runner.which("pkg-config") != nil
+      end
+
+      def pkg_config_exists?(pkg_name)
+        Kompo.command_runner.capture("pkg-config", "--exists", pkg_name, suppress_stderr: true).success?
       end
 
       def check_dependencies
         missing = REQUIRED_LIBS.reject do |_, info|
-          info[:optional] || system("pkg-config --exists #{info[:pkg_config]} 2>/dev/null")
+          info[:optional] || pkg_config_exists?(info[:pkg_config])
         end
 
         raise build_error_message(missing) unless missing.empty?
@@ -450,10 +472,10 @@ module Kompo
 
       def collect_lib_paths
         pkg_names = REQUIRED_LIBS.values
-          .select { |info| system("pkg-config --exists #{info[:pkg_config]} 2>/dev/null") }
+          .select { |info| pkg_config_exists?(info[:pkg_config]) }
           .map { |info| info[:pkg_config] }
         paths = pkg_names.flat_map do |pkg|
-          `pkg-config --libs-only-L #{pkg} 2>/dev/null`.chomp.split
+          Kompo.command_runner.capture("pkg-config", "--libs-only-L", pkg, suppress_stderr: true).chomp.split
         end
         paths.uniq.join(" ")
       end
@@ -462,9 +484,12 @@ module Kompo
         static_libs = []
 
         REQUIRED_LIBS.each do |_, info|
-          next unless system("pkg-config --exists #{info[:pkg_config]} 2>/dev/null")
+          next unless pkg_config_exists?(info[:pkg_config])
 
-          libdir = `pkg-config --variable=libdir #{info[:pkg_config]} 2>/dev/null`.chomp
+          libdir = Kompo.command_runner.capture(
+            "pkg-config", "--variable=libdir", info[:pkg_config],
+            suppress_stderr: true
+          ).chomp
           next if libdir.empty?
 
           info[:static_libs]&.each do |lib_name|
