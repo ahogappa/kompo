@@ -89,6 +89,7 @@ class InstallGmpInstallCleanTest < Minitest::Test
   include TaskTestHelpers
 
   def setup
+    super
     @mock = setup_mock_command_runner
     @marker_file = Kompo::InstallDeps::ForMacOS::InstallGmp::MARKER_FILE
     mock_task(Kompo::HomebrewPath, path: "/opt/homebrew/bin/brew")
@@ -98,6 +99,7 @@ class InstallGmpInstallCleanTest < Minitest::Test
   def teardown
     teardown_mock_command_runner
     File.delete(@marker_file) if File.exist?(@marker_file)
+    super
   end
 
   def test_clean_uninstalls_when_marker_exists
