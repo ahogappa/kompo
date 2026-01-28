@@ -67,12 +67,14 @@ class PackingCommonHelpersTest < Minitest::Test
   end
 
   def setup
+    super
     @mock = setup_mock_command_runner
     @helper = TestHelper.new
   end
 
   def teardown
     teardown_mock_command_runner
+    super
   end
 
   def test_get_ruby_cflags
