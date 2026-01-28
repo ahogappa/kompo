@@ -30,11 +30,11 @@ module Kompo
         @bundle_ruby_dir = File.join(work_dir, "bundle", "ruby", "#{ruby_major_minor}.0")
         @bundler_config_path = File.join(work_dir, ".bundle", "config")
 
-        kompo_cache = Taski.args.fetch(:kompo_cache, File.expand_path("~/.kompo/cache"))
+        cache_dir = Taski.args.fetch(:cache_dir, DEFAULT_CACHE_DIR)
         ruby_version = InstallRuby.ruby_version
 
         bundle_cache = BundleCache.from_work_dir(
-          kompo_cache: kompo_cache,
+          cache_dir: cache_dir,
           ruby_version: ruby_version,
           work_dir: work_dir
         )
@@ -126,11 +126,11 @@ module Kompo
       end
 
       def save_to_cache(work_dir)
-        kompo_cache = Taski.args.fetch(:kompo_cache, File.expand_path("~/.kompo/cache"))
+        cache_dir = Taski.args.fetch(:cache_dir, DEFAULT_CACHE_DIR)
         ruby_version = InstallRuby.ruby_version
 
         bundle_cache = BundleCache.from_work_dir(
-          kompo_cache: kompo_cache,
+          cache_dir: cache_dir,
           ruby_version: ruby_version,
           work_dir: work_dir
         )
@@ -159,12 +159,12 @@ module Kompo
     private
 
     def cache_exists?
-      kompo_cache = Taski.args.fetch(:kompo_cache, File.expand_path("~/.kompo/cache"))
+      cache_dir = Taski.args.fetch(:cache_dir, DEFAULT_CACHE_DIR)
       ruby_version = InstallRuby.ruby_version
       work_dir = WorkDir.path
 
       bundle_cache = BundleCache.from_work_dir(
-        kompo_cache: kompo_cache,
+        cache_dir: cache_dir,
         ruby_version: ruby_version,
         work_dir: work_dir
       )

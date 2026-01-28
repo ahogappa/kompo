@@ -3,6 +3,7 @@
 require "fileutils"
 require "digest"
 require "json"
+require_relative "cache"
 
 module Kompo
   # Manages bundle cache operations for BundleInstall
@@ -10,26 +11,26 @@ module Kompo
   class BundleCache
     attr_reader :cache_dir
 
-    # @param kompo_cache [String] Base cache directory (e.g., ~/.kompo/cache)
+    # @param cache_dir [String] Base cache directory (e.g., ~/.kompo/cache)
     # @param ruby_version [String] Ruby version (e.g., "3.4.1")
     # @param gemfile_lock_hash [String] Hash of Gemfile.lock content
-    def initialize(kompo_cache:, ruby_version:, gemfile_lock_hash:)
-      @kompo_cache = kompo_cache
+    def initialize(cache_dir:, ruby_version:, gemfile_lock_hash:)
+      @base_cache_dir = cache_dir
       @ruby_version = ruby_version
       @hash = gemfile_lock_hash
-      @cache_dir = File.join(@kompo_cache, @ruby_version, "bundle-#{@hash}")
+      @cache_dir = File.join(@base_cache_dir, @ruby_version, "bundle-#{@hash}")
     end
 
     # Create BundleCache from work directory by computing Gemfile.lock hash
-    # @param kompo_cache [String] Base cache directory
+    # @param cache_dir [String] Base cache directory
     # @param ruby_version [String] Ruby version
     # @param work_dir [String] Work directory containing Gemfile.lock
     # @return [BundleCache, nil] BundleCache instance or nil if Gemfile.lock not found
-    def self.from_work_dir(kompo_cache:, ruby_version:, work_dir:)
+    def self.from_work_dir(cache_dir:, ruby_version:, work_dir:)
       hash = compute_gemfile_lock_hash(work_dir)
       return nil unless hash
 
-      new(kompo_cache: kompo_cache, ruby_version: ruby_version, gemfile_lock_hash: hash)
+      new(cache_dir: cache_dir, ruby_version: ruby_version, gemfile_lock_hash: hash)
     end
 
     # Compute SHA256 hash of Gemfile.lock (first 16 chars)

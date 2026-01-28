@@ -8,7 +8,7 @@ class CacheTest < Minitest::Test
       cache_dir = File.join(tmpdir, ".kompo", "cache")
 
       assert_output(/Cache directory does not exist/) do
-        Kompo.clean_cache("3.4.1", kompo_cache: cache_dir)
+        Kompo.clean_cache("3.4.1", cache_dir: cache_dir)
       end
     end
   end
@@ -22,7 +22,7 @@ class CacheTest < Minitest::Test
       File.write(File.join(version_dir, "ruby-3.4.1.tar.gz"), "dummy tarball")
 
       assert_output(/Removed.*3\.4\.1.*Cache for Ruby 3\.4\.1 cleaned successfully/m) do
-        Kompo.clean_cache("3.4.1", kompo_cache: cache_dir)
+        Kompo.clean_cache("3.4.1", cache_dir: cache_dir)
       end
 
       refute Dir.exist?(version_dir)
@@ -47,7 +47,7 @@ class CacheTest < Minitest::Test
       FileUtils.mkdir_p(File.join(bundle_cache_dir2, "bundle"))
 
       assert_output(/Removed.*3\.4\.1.*Cache for Ruby 3\.4\.1 cleaned successfully/m) do
-        Kompo.clean_cache("3.4.1", kompo_cache: cache_dir)
+        Kompo.clean_cache("3.4.1", cache_dir: cache_dir)
       end
 
       refute Dir.exist?(version_dir)
@@ -68,7 +68,7 @@ class CacheTest < Minitest::Test
       FileUtils.mkdir_p(File.join(version_400, "ruby"))
       FileUtils.mkdir_p(File.join(version_400, "bundle-xyz789"))
 
-      Kompo.clean_cache("3.4.1", kompo_cache: cache_dir)
+      Kompo.clean_cache("3.4.1", cache_dir: cache_dir)
 
       # 3.4.1 should be removed
       refute Dir.exist?(version_341)
@@ -83,7 +83,7 @@ class CacheTest < Minitest::Test
       FileUtils.mkdir_p(cache_dir)
 
       assert_output(/No cache found for Ruby 3\.4\.1/) do
-        Kompo.clean_cache("3.4.1", kompo_cache: cache_dir)
+        Kompo.clean_cache("3.4.1", cache_dir: cache_dir)
       end
     end
   end
@@ -97,7 +97,7 @@ class CacheTest < Minitest::Test
       FileUtils.mkdir_p(File.join(cache_dir, "4.0.0", "ruby"))
 
       assert_output(/All caches cleaned successfully/) do
-        Kompo.clean_cache("all", kompo_cache: cache_dir)
+        Kompo.clean_cache("all", cache_dir: cache_dir)
       end
 
       assert_empty Dir.glob(File.join(cache_dir, "*"))
@@ -110,7 +110,7 @@ class CacheTest < Minitest::Test
       FileUtils.mkdir_p(cache_dir)
 
       assert_output(/No caches found/) do
-        Kompo.clean_cache("all", kompo_cache: cache_dir)
+        Kompo.clean_cache("all", cache_dir: cache_dir)
       end
     end
   end

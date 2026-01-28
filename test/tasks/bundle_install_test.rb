@@ -47,7 +47,7 @@ class BundleInstallTest < Minitest::Test
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
       mock_task(Kompo::InstallRuby, ruby_version: "3.4.1", ruby_major_minor: "3.4")
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
+      mock_args(cache_dir: File.join(tmpdir, ".kompo", "cache"))
 
       # Execute and verify FromCache was selected (it restores bundle directory)
       Kompo::BundleInstall.bundle_ruby_dir
@@ -102,7 +102,7 @@ class BundleInstallTest < Minitest::Test
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
       mock_task(Kompo::InstallRuby, ruby_version: "3.4.1", ruby_major_minor: "3.4")
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
+      mock_args(cache_dir: File.join(tmpdir, ".kompo", "cache"))
 
       bundle_ruby_dir = Kompo::BundleInstall.bundle_ruby_dir
 
@@ -124,7 +124,7 @@ class BundleInstallTest < Minitest::Test
       # Verify BundleCache.from_work_dir is used
       hash = Digest::SHA256.hexdigest(gemfile_lock_content)[0..15]
       bundle_cache = Kompo::BundleCache.from_work_dir(
-        kompo_cache: File.join(tmpdir, ".kompo", "cache"),
+        cache_dir: File.join(tmpdir, ".kompo", "cache"),
         ruby_version: "3.4.1",
         work_dir: work_dir
       )

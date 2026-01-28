@@ -30,7 +30,7 @@ class BundleCacheTest < Minitest::Test
       File.write(File.join(tmpdir, "Gemfile.lock"), gemfile_lock_content)
 
       cache = Kompo::BundleCache.from_work_dir(
-        kompo_cache: "/tmp/cache",
+        cache_dir: "/tmp/cache",
         ruby_version: "3.4.1",
         work_dir: tmpdir
       )
@@ -44,7 +44,7 @@ class BundleCacheTest < Minitest::Test
   def test_from_work_dir_returns_nil_when_no_gemfile_lock
     Dir.mktmpdir do |tmpdir|
       cache = Kompo::BundleCache.from_work_dir(
-        kompo_cache: "/tmp/cache",
+        cache_dir: "/tmp/cache",
         ruby_version: "3.4.1",
         work_dir: tmpdir
       )
@@ -55,7 +55,7 @@ class BundleCacheTest < Minitest::Test
 
   def test_cache_dir_is_correct
     cache = Kompo::BundleCache.new(
-      kompo_cache: "/tmp/cache",
+      cache_dir: "/tmp/cache",
       ruby_version: "3.4.1",
       gemfile_lock_hash: "abc123"
     )
@@ -66,7 +66,7 @@ class BundleCacheTest < Minitest::Test
   def test_exists_returns_false_when_no_cache
     Dir.mktmpdir do |tmpdir|
       cache = Kompo::BundleCache.new(
-        kompo_cache: tmpdir,
+        cache_dir: tmpdir,
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -78,7 +78,7 @@ class BundleCacheTest < Minitest::Test
   def test_exists_returns_false_when_partial_cache
     Dir.mktmpdir do |tmpdir|
       cache = Kompo::BundleCache.new(
-        kompo_cache: tmpdir,
+        cache_dir: tmpdir,
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -93,7 +93,7 @@ class BundleCacheTest < Minitest::Test
   def test_exists_returns_true_when_complete_cache
     Dir.mktmpdir do |tmpdir|
       cache = Kompo::BundleCache.new(
-        kompo_cache: tmpdir,
+        cache_dir: tmpdir,
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -117,7 +117,7 @@ class BundleCacheTest < Minitest::Test
       File.write(File.join(work_dir, ".bundle", "config"), "BUNDLE_PATH: bundle")
 
       cache = Kompo::BundleCache.new(
-        kompo_cache: File.join(tmpdir, "cache"),
+        cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -140,7 +140,7 @@ class BundleCacheTest < Minitest::Test
       FileUtils.mkdir_p(File.join(work_dir, ".bundle"))
 
       cache = Kompo::BundleCache.new(
-        kompo_cache: File.join(tmpdir, "cache"),
+        cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -164,7 +164,7 @@ class BundleCacheTest < Minitest::Test
       File.write(File.join(work_dir, ".bundle", "config"), "NEW_CONFIG")
 
       cache = Kompo::BundleCache.new(
-        kompo_cache: File.join(tmpdir, "cache"),
+        cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -187,7 +187,7 @@ class BundleCacheTest < Minitest::Test
       tmpdir = File.realpath(tmpdir)
 
       cache = Kompo::BundleCache.new(
-        kompo_cache: File.join(tmpdir, "cache"),
+        cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -214,7 +214,7 @@ class BundleCacheTest < Minitest::Test
       tmpdir = File.realpath(tmpdir)
 
       cache = Kompo::BundleCache.new(
-        kompo_cache: File.join(tmpdir, "cache"),
+        cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -243,7 +243,7 @@ class BundleCacheTest < Minitest::Test
   def test_metadata_returns_nil_when_no_cache
     Dir.mktmpdir do |tmpdir|
       cache = Kompo::BundleCache.new(
-        kompo_cache: tmpdir,
+        cache_dir: tmpdir,
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -255,7 +255,7 @@ class BundleCacheTest < Minitest::Test
   def test_metadata_returns_parsed_json
     Dir.mktmpdir do |tmpdir|
       cache = Kompo::BundleCache.new(
-        kompo_cache: tmpdir,
+        cache_dir: tmpdir,
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )

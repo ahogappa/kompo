@@ -3,27 +3,30 @@
 require "fileutils"
 
 module Kompo
+  # Default cache directory
+  DEFAULT_CACHE_DIR = File.expand_path("~/.kompo/cache")
+
   # Clean the cache for specified Ruby version
   # @param version [String] Ruby version to clean, or "all" to clean all caches
-  # @param kompo_cache [String] Cache directory path (default: ~/.kompo/cache)
-  def self.clean_cache(version, kompo_cache: File.expand_path("~/.kompo/cache"))
-    unless Dir.exist?(kompo_cache)
-      puts "Cache directory does not exist: #{kompo_cache}"
+  # @param cache_dir [String] Cache directory path (default: ~/.kompo/cache)
+  def self.clean_cache(version, cache_dir: DEFAULT_CACHE_DIR)
+    unless Dir.exist?(cache_dir)
+      puts "Cache directory does not exist: #{cache_dir}"
       return
     end
 
     if version == "all"
-      clean_all_caches(kompo_cache)
+      clean_all_caches(cache_dir)
     else
-      clean_version_cache(kompo_cache, version)
+      clean_version_cache(cache_dir, version)
     end
   end
 
   # Clean all caches in the cache directory
-  def self.clean_all_caches(kompo_cache)
-    entries = Dir.glob(File.join(kompo_cache, "*"))
+  def self.clean_all_caches(cache_dir)
+    entries = Dir.glob(File.join(cache_dir, "*"))
     if entries.empty?
-      puts "No caches found in #{kompo_cache}"
+      puts "No caches found in #{cache_dir}"
       return
     end
 
@@ -38,20 +41,20 @@ module Kompo
 
   # Clean cache for a specific Ruby version
   # New structure: ~/.kompo/cache/{version}/ contains all caches for that version
-  def self.clean_version_cache(kompo_cache, version)
-    version_cache_dir = File.join(kompo_cache, version)
+  def self.clean_version_cache(cache_dir, version)
+    version_cache_dir = File.join(cache_dir, version)
 
     unless Dir.exist?(version_cache_dir)
       puts "No cache found for Ruby #{version}"
       return
     end
 
-    # Validate that version_cache_dir is under kompo_cache to prevent path traversal
-    real_kompo_cache = File.realpath(kompo_cache)
+    # Validate that version_cache_dir is under cache_dir to prevent path traversal
+    real_cache_dir = File.realpath(cache_dir)
     real_version_cache = File.realpath(version_cache_dir)
 
-    unless real_version_cache.start_with?(real_kompo_cache + File::SEPARATOR) ||
-        real_version_cache == real_kompo_cache
+    unless real_version_cache.start_with?(real_cache_dir + File::SEPARATOR) ||
+        real_version_cache == real_cache_dir
       puts "Error: Invalid cache path detected (possible path traversal)"
       return
     end
