@@ -49,8 +49,8 @@ module Kompo
                 @path = cached_work_dir
                 puts "Recreated cached work directory: #{@path}"
                 return
-              rescue Errno::EACCES, Errno::EPERM
-                # Permission denied - fall through to create new work_dir
+              rescue Errno::EACCES, Errno::EPERM, Errno::EROFS
+                # Permission denied or read-only filesystem - fall through to create new work_dir
                 warn "warn: Cannot recreate #{cached_work_dir} (permission denied), creating new work directory"
               end
             end
