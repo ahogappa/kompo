@@ -25,6 +25,7 @@ module Kompo
 
   # Utility classes
   autoload :KompoIgnore, "kompo/kompo_ignore"
+  autoload :BrewPackage, "kompo/brew_package"
 
   # Struct to hold file data for embedding (used by MakeFsC)
   autoload :KompoFile, "kompo/tasks/make_fs_c"

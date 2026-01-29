@@ -216,7 +216,7 @@ class InstallDepsForLinuxTest < Minitest::Test
     @mock.stub(["pkg-config", "--exists", "gmp"], output: "", success: false)
     @mock.stub(["pkg-config", "--exists", "liblzma"], output: "", success: false)
 
-    error = assert_raises(RuntimeError) do
+    error = assert_raises(Taski::AggregateError) do
       capture_io { Kompo::InstallDeps.lib_paths }
     end
 
