@@ -231,7 +231,7 @@ class BuildNativeGemWithMockTest < Minitest::Test
     super
   end
 
-  def test_build_prebuilt_extension_registers_from_makefile
+  def test_build_prebuilt_extension_does_not_run_extconf
     Dir.mktmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
@@ -245,6 +245,7 @@ class BuildNativeGemWithMockTest < Minitest::Test
       MAKEFILE
 
       mock_task(Kompo::WorkDir, path: work_dir)
+      mock_task(Kompo::InstallRuby, ruby_version: "3.4.1")
       mock_task(Kompo::FindNativeExtensions, extensions: [
         {
           dir_name: ext_dir,
@@ -253,13 +254,13 @@ class BuildNativeGemWithMockTest < Minitest::Test
           is_prebuilt: true
         }
       ])
+      mock_args(no_cache: true)
 
       capture_io { Kompo::BuildNativeGem.run }
 
-      exts = Kompo::BuildNativeGem.exts
-      assert_equal 1, exts.size
-      assert_equal "bigdecimal/bigdecimal", exts[0][0]
-      assert_equal "Init_bigdecimal", exts[0][1]
+      # Verify no extconf.rb or make commands were called for prebuilt extensions
+      refute @mock.called?(:capture_all, "ruby", "extconf.rb")
+      refute @mock.called?(:capture_all, "make")
     end
   end
 
@@ -288,6 +289,7 @@ class BuildNativeGemWithMockTest < Minitest::Test
         output: "Compiling...", success: true)
 
       mock_task(Kompo::WorkDir, path: work_dir)
+      mock_task(Kompo::InstallRuby, ruby_version: "3.4.1")
       mock_task(Kompo::FindNativeExtensions, extensions: [
         {
           dir_name: ext_dir,
@@ -296,6 +298,7 @@ class BuildNativeGemWithMockTest < Minitest::Test
           is_prebuilt: false
         }
       ])
+      mock_args(no_cache: true)
 
       # Create Makefile and .o files to simulate build
       File.write(File.join(ext_dir, "Makefile"), makefile_content)
@@ -334,6 +337,7 @@ class BuildNativeGemWithMockTest < Minitest::Test
 
       mock_task(Kompo::CargoPath, path: "/usr/local/bin/cargo")
       mock_task(Kompo::WorkDir, path: work_dir)
+      mock_task(Kompo::InstallRuby, ruby_version: "3.4.1")
       mock_task(Kompo::FindNativeExtensions, extensions: [
         {
           dir_name: ext_dir,
@@ -343,6 +347,7 @@ class BuildNativeGemWithMockTest < Minitest::Test
           cargo_toml: cargo_toml
         }
       ])
+      mock_args(no_cache: true)
 
       capture_io { Kompo::BuildNativeGem.run }
 
