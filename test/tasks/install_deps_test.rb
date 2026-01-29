@@ -17,74 +17,6 @@ class InstallDepsForMacOSTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
 
-  def test_returns_lib_paths_with_mocked_dependencies
-    skip unless RUBY_PLATFORM.include?("darwin")
-
-    # Mock all internal dependency Sections
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallGmp, lib_path: "-L/opt/homebrew/opt/gmp/lib", static_libs: ["/opt/homebrew/opt/gmp/lib/libgmp.a"])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallOpenssl, lib_path: "-L/opt/homebrew/opt/openssl@3/lib", static_libs: ["/opt/homebrew/opt/openssl@3/lib/libssl.a"])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallReadline, lib_path: "-L/opt/homebrew/opt/readline/lib", static_libs: [])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallLibyaml, lib_path: "-L/opt/homebrew/opt/libyaml/lib", static_libs: [])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallZlib, lib_path: "-L/opt/homebrew/opt/zlib/lib", static_libs: [])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallLibffi, lib_path: "-L/opt/homebrew/opt/libffi/lib", static_libs: [])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallXz, lib_path: "-L/opt/homebrew/opt/xz/lib", static_libs: [])
-
-    lib_paths = nil
-    capture_io { lib_paths = Kompo::InstallDeps.lib_paths }
-
-    # Verify lib_paths contains all -L flags joined
-    assert_match(/-L\/opt\/homebrew\/opt\/gmp\/lib/, lib_paths)
-    assert_match(/-L\/opt\/homebrew\/opt\/openssl@3\/lib/, lib_paths)
-    assert_match(/-L\/opt\/homebrew\/opt\/readline\/lib/, lib_paths)
-  end
-
-  def test_returns_static_libs_with_mocked_dependencies
-    skip unless RUBY_PLATFORM.include?("darwin")
-
-    # Mock all internal dependency Sections
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallGmp, lib_path: "-L/lib", static_libs: ["/lib/libgmp.a"])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallOpenssl, lib_path: "-L/lib", static_libs: ["/lib/libssl.a", "/lib/libcrypto.a"])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallReadline, lib_path: "-L/lib", static_libs: ["/lib/libreadline.a"])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallLibyaml, lib_path: "-L/lib", static_libs: ["/lib/libyaml.a"])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallZlib, lib_path: "-L/lib", static_libs: ["/lib/libz.a"])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallLibffi, lib_path: "-L/lib", static_libs: ["/lib/libffi.a"])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallXz, lib_path: "-L/lib", static_libs: ["/lib/liblzma.a"])
-
-    static_libs = nil
-    capture_io { static_libs = Kompo::InstallDeps.static_libs }
-
-    # Verify static_libs is array containing all static lib paths
-    assert_kind_of Array, static_libs
-    assert_includes static_libs, "/lib/libgmp.a"
-    assert_includes static_libs, "/lib/libssl.a"
-    assert_includes static_libs, "/lib/libcrypto.a"
-    assert_equal 8, static_libs.size
-  end
-
-  def test_handles_nil_lib_path
-    skip unless RUBY_PLATFORM.include?("darwin")
-
-    # Some packages might not have lib_path (nil case)
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallGmp, lib_path: nil, static_libs: [])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallOpenssl, lib_path: "-L/lib", static_libs: [])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallReadline, lib_path: nil, static_libs: [])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallLibyaml, lib_path: nil, static_libs: [])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallZlib, lib_path: nil, static_libs: [])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallLibffi, lib_path: nil, static_libs: [])
-    mock_task(Kompo::InstallDeps::ForMacOS::InstallXz, lib_path: nil, static_libs: [])
-
-    lib_paths = nil
-    capture_io { lib_paths = Kompo::InstallDeps.lib_paths }
-
-    # Verify only non-nil paths are included
-    assert_equal "-L/lib", lib_paths
-  end
-end
-
-class InstallGmpTest < Minitest::Test
-  include Taski::TestHelper::Minitest
-  include TaskTestHelpers
-
   def setup
     super
     @mock = setup_mock_command_runner
@@ -95,62 +27,124 @@ class InstallGmpTest < Minitest::Test
     super
   end
 
-  def test_installed_returns_lib_path_when_package_exists
+  def test_returns_lib_paths_when_packages_installed
     skip unless RUBY_PLATFORM.include?("darwin")
 
     mock_task(Kompo::HomebrewPath, path: "/opt/homebrew/bin/brew")
 
-    # Package is installed
-    @mock.stub(["/opt/homebrew/bin/brew", "list", "gmp"], output: "", success: true)
-    @mock.stub(["/opt/homebrew/bin/brew", "--prefix", "gmp"], output: "/opt/homebrew/opt/gmp")
+    # Mock all packages as installed
+    Kompo::InstallDeps::ForMacOS::PACKAGES.each_value do |package|
+      @mock.stub(["/opt/homebrew/bin/brew", "list", package.name], output: "", success: true)
+      @mock.stub(["/opt/homebrew/bin/brew", "--prefix", package.name], output: "/opt/homebrew/opt/#{package.name}")
+    end
 
-    lib_path = nil
-    capture_io { lib_path = Kompo::InstallDeps::ForMacOS::InstallGmp.lib_path }
+    lib_paths = nil
+    capture_io { lib_paths = Kompo::InstallDeps.lib_paths }
 
-    assert_equal "-L/opt/homebrew/opt/gmp/lib", lib_path
+    assert_match(/-L\/opt\/homebrew\/opt\/gmp\/lib/, lib_paths)
+    assert_match(/-L\/opt\/homebrew\/opt\/openssl@3\/lib/, lib_paths)
   end
 
-  def test_installed_returns_static_libs_when_files_exist
+  def test_returns_static_libs_when_files_exist
     skip unless RUBY_PLATFORM.include?("darwin")
 
     mock_task(Kompo::HomebrewPath, path: "/opt/homebrew/bin/brew")
 
     Dir.mktmpdir do |tmpdir|
+      # Create lib directory with static libs
       lib_dir = File.join(tmpdir, "lib")
       FileUtils.mkdir_p(lib_dir)
       FileUtils.touch(File.join(lib_dir, "libgmp.a"))
+      FileUtils.touch(File.join(lib_dir, "libssl.a"))
+      FileUtils.touch(File.join(lib_dir, "libcrypto.a"))
 
-      @mock.stub(["/opt/homebrew/bin/brew", "list", "gmp"], output: "", success: true)
-      @mock.stub(["/opt/homebrew/bin/brew", "--prefix", "gmp"], output: tmpdir)
+      # Mock all packages as installed, pointing to tmpdir
+      Kompo::InstallDeps::ForMacOS::PACKAGES.each_value do |package|
+        @mock.stub(["/opt/homebrew/bin/brew", "list", package.name], output: "", success: true)
+        @mock.stub(["/opt/homebrew/bin/brew", "--prefix", package.name], output: tmpdir)
+      end
 
       static_libs = nil
-      capture_io { static_libs = Kompo::InstallDeps::ForMacOS::InstallGmp.static_libs }
+      capture_io { static_libs = Kompo::InstallDeps.static_libs }
 
-      assert_equal [File.join(lib_dir, "libgmp.a")], static_libs
+      assert_kind_of Array, static_libs
+      assert_includes static_libs, File.join(lib_dir, "libgmp.a")
+      assert_includes static_libs, File.join(lib_dir, "libssl.a")
     end
   end
 
-  def test_install_runs_brew_install_when_package_not_installed
+  def test_installs_packages_when_not_installed
     skip unless RUBY_PLATFORM.include?("darwin")
 
     mock_task(Kompo::HomebrewPath, path: "/opt/homebrew/bin/brew")
 
-    marker_file = Kompo::InstallDeps::ForMacOS::InstallGmp::MARKER_FILE
-    File.delete(marker_file) if File.exist?(marker_file)
+    # Clean up marker files before test
+    Kompo::InstallDeps::ForMacOS::PACKAGES.each_value do |package|
+      File.delete(package.marker_file) if File.exist?(package.marker_file)
+    end
 
     begin
-      # Package is not installed
-      @mock.stub(["/opt/homebrew/bin/brew", "list", "gmp"], output: "", success: false)
-      @mock.stub(["/opt/homebrew/bin/brew", "install", "gmp"], output: "", success: true)
-      @mock.stub(["/opt/homebrew/bin/brew", "--prefix", "gmp"], output: "/opt/homebrew/opt/gmp")
+      # Mock all packages as not installed
+      Kompo::InstallDeps::ForMacOS::PACKAGES.each_value do |package|
+        @mock.stub(["/opt/homebrew/bin/brew", "list", package.name], output: "", success: false)
+        @mock.stub(["/opt/homebrew/bin/brew", "install", package.name], output: "", success: true)
+        @mock.stub(["/opt/homebrew/bin/brew", "--prefix", package.name], output: "/opt/homebrew/opt/#{package.name}")
+      end
 
-      lib_path = nil
-      capture_io { lib_path = Kompo::InstallDeps::ForMacOS::InstallGmp.lib_path }
+      capture_io { Kompo::InstallDeps.lib_paths }
 
-      assert @mock.called?(:run, "/opt/homebrew/bin/brew", "install", "gmp")
-      assert_equal "-L/opt/homebrew/opt/gmp/lib", lib_path
+      # Verify install was called for each package
+      Kompo::InstallDeps::ForMacOS::PACKAGES.each_value do |package|
+        assert @mock.called?(:run, "/opt/homebrew/bin/brew", "install", package.name),
+          "Expected brew install #{package.name} to be called"
+      end
     ensure
-      File.delete(marker_file) if File.exist?(marker_file)
+      # Clean up marker files after test
+      Kompo::InstallDeps::ForMacOS::PACKAGES.each_value do |package|
+        File.delete(package.marker_file) if File.exist?(package.marker_file)
+      end
+    end
+  end
+
+  def test_clean_uninstalls_kompo_installed_packages
+    skip unless RUBY_PLATFORM.include?("darwin")
+
+    mock_task(Kompo::HomebrewPath, path: "/opt/homebrew/bin/brew")
+
+    # Create marker files to simulate kompo-installed packages
+    test_packages = [:gmp, :openssl]
+    test_packages.each do |key|
+      package = Kompo::InstallDeps::ForMacOS::PACKAGES[key]
+      File.write(package.marker_file, "installed")
+      @mock.stub(["/opt/homebrew/bin/brew", "uninstall", package.name], output: "", success: true)
+    end
+
+    begin
+      # First run to select impl, then clean
+      Kompo::InstallDeps::ForMacOS::PACKAGES.each_value do |package|
+        @mock.stub(["/opt/homebrew/bin/brew", "list", package.name], output: "", success: true)
+        @mock.stub(["/opt/homebrew/bin/brew", "--prefix", package.name], output: "/opt/homebrew/opt/#{package.name}")
+      end
+
+      task = nil
+      capture_io do
+        Kompo::InstallDeps.lib_paths
+        task = Kompo::InstallDeps::ForMacOS.new
+        task.clean
+      end
+
+      # Verify uninstall was called for packages with marker files
+      test_packages.each do |key|
+        package = Kompo::InstallDeps::ForMacOS::PACKAGES[key]
+        assert @mock.called?(:run, "/opt/homebrew/bin/brew", "uninstall", package.name),
+          "Expected brew uninstall #{package.name} to be called"
+      end
+    ensure
+      # Clean up marker files
+      test_packages.each do |key|
+        package = Kompo::InstallDeps::ForMacOS::PACKAGES[key]
+        File.delete(package.marker_file) if File.exist?(package.marker_file)
+      end
     end
   end
 end
