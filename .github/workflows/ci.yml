@@ -101,9 +101,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.kompo/cache
-          key: kompo-ruby-${{ runner.os }}-3.4-v8-${{ hashFiles('lib/kompo.rb') }}
-          restore-keys: |
-            kompo-ruby-${{ runner.os }}-3.4-v8-
+          # Don't use restore-keys to avoid restoring incompatible caches with different work_dir paths
+          # The cache includes work_dir path which is temp directory specific to each CI run
+          key: kompo-ruby-${{ runner.os }}-3.4-v9-${{ hashFiles('lib/kompo.rb') }}
 
       - name: Install native_gems dependencies
         run: |

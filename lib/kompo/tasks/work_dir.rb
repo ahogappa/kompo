@@ -51,6 +51,8 @@ module Kompo
                 return
               rescue Errno::EACCES, Errno::EPERM, Errno::EROFS
                 # Permission denied or read-only filesystem - fall through to create new work_dir
+                # Note: This may cause issues if the cached Ruby has hardcoded paths to the old work_dir.
+                # In CI, consider using exact cache key matches (no restore-keys) to avoid this issue.
                 warn "warn: Cannot recreate #{cached_work_dir} (permission denied), creating new work directory"
               end
             end
