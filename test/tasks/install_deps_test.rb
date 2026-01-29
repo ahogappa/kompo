@@ -81,6 +81,80 @@ class InstallDepsForMacOSTest < Minitest::Test
   end
 end
 
+class InstallGmpTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def setup
+    super
+    @mock = setup_mock_command_runner
+  end
+
+  def teardown
+    teardown_mock_command_runner
+    super
+  end
+
+  def test_installed_returns_lib_path_when_package_exists
+    skip unless RUBY_PLATFORM.include?("darwin")
+
+    mock_task(Kompo::HomebrewPath, path: "/opt/homebrew/bin/brew")
+
+    # Package is installed
+    @mock.stub(["/opt/homebrew/bin/brew", "list", "gmp"], output: "", success: true)
+    @mock.stub(["/opt/homebrew/bin/brew", "--prefix", "gmp"], output: "/opt/homebrew/opt/gmp")
+
+    lib_path = nil
+    capture_io { lib_path = Kompo::InstallDeps::ForMacOS::InstallGmp.lib_path }
+
+    assert_equal "-L/opt/homebrew/opt/gmp/lib", lib_path
+  end
+
+  def test_installed_returns_static_libs_when_files_exist
+    skip unless RUBY_PLATFORM.include?("darwin")
+
+    mock_task(Kompo::HomebrewPath, path: "/opt/homebrew/bin/brew")
+
+    Dir.mktmpdir do |tmpdir|
+      lib_dir = File.join(tmpdir, "lib")
+      FileUtils.mkdir_p(lib_dir)
+      FileUtils.touch(File.join(lib_dir, "libgmp.a"))
+
+      @mock.stub(["/opt/homebrew/bin/brew", "list", "gmp"], output: "", success: true)
+      @mock.stub(["/opt/homebrew/bin/brew", "--prefix", "gmp"], output: tmpdir)
+
+      static_libs = nil
+      capture_io { static_libs = Kompo::InstallDeps::ForMacOS::InstallGmp.static_libs }
+
+      assert_equal [File.join(lib_dir, "libgmp.a")], static_libs
+    end
+  end
+
+  def test_install_runs_brew_install_when_package_not_installed
+    skip unless RUBY_PLATFORM.include?("darwin")
+
+    mock_task(Kompo::HomebrewPath, path: "/opt/homebrew/bin/brew")
+
+    marker_file = Kompo::InstallDeps::ForMacOS::InstallGmp::MARKER_FILE
+    File.delete(marker_file) if File.exist?(marker_file)
+
+    begin
+      # Package is not installed
+      @mock.stub(["/opt/homebrew/bin/brew", "list", "gmp"], output: "", success: false)
+      @mock.stub(["/opt/homebrew/bin/brew", "install", "gmp"], output: "", success: true)
+      @mock.stub(["/opt/homebrew/bin/brew", "--prefix", "gmp"], output: "/opt/homebrew/opt/gmp")
+
+      lib_path = nil
+      capture_io { lib_path = Kompo::InstallDeps::ForMacOS::InstallGmp.lib_path }
+
+      assert @mock.called?(:run, "/opt/homebrew/bin/brew", "install", "gmp")
+      assert_equal "-L/opt/homebrew/opt/gmp/lib", lib_path
+    ensure
+      File.delete(marker_file) if File.exist?(marker_file)
+    end
+  end
+end
+
 class InstallDepsForLinuxTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers

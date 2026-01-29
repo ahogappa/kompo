@@ -12,6 +12,13 @@ module Kompo
       macos? ? ForMacOS : ForLinux
     end
 
+    # Helper module for Homebrew package checks
+    module BrewPackageHelper
+      def self.installed?(brew, package_name)
+        Kompo.command_runner.capture(brew, "list", package_name, suppress_stderr: true).success?
+      end
+    end
+
     # macOS implementation - installs dependencies via Homebrew
     class ForMacOS < Taski::Task
       def run
@@ -46,7 +53,7 @@ module Kompo
 
         def impl
           brew = HomebrewPath.path
-          brew_package_installed?(brew, BREW_NAME) ? Installed : Install
+          BrewPackageHelper.installed?(brew, BREW_NAME) ? Installed : Install
         end
 
         BREW_NAME = "gmp"
@@ -100,7 +107,7 @@ module Kompo
 
         def impl
           brew = HomebrewPath.path
-          brew_package_installed?(brew, BREW_NAME) ? Installed : Install
+          BrewPackageHelper.installed?(brew, BREW_NAME) ? Installed : Install
         end
 
         BREW_NAME = "openssl@3"
@@ -154,7 +161,7 @@ module Kompo
 
         def impl
           brew = HomebrewPath.path
-          brew_package_installed?(brew, BREW_NAME) ? Installed : Install
+          BrewPackageHelper.installed?(brew, BREW_NAME) ? Installed : Install
         end
 
         BREW_NAME = "readline"
@@ -208,7 +215,7 @@ module Kompo
 
         def impl
           brew = HomebrewPath.path
-          brew_package_installed?(brew, BREW_NAME) ? Installed : Install
+          BrewPackageHelper.installed?(brew, BREW_NAME) ? Installed : Install
         end
 
         BREW_NAME = "libyaml"
@@ -262,7 +269,7 @@ module Kompo
 
         def impl
           brew = HomebrewPath.path
-          brew_package_installed?(brew, BREW_NAME) ? Installed : Install
+          BrewPackageHelper.installed?(brew, BREW_NAME) ? Installed : Install
         end
 
         BREW_NAME = "zlib"
@@ -316,7 +323,7 @@ module Kompo
 
         def impl
           brew = HomebrewPath.path
-          brew_package_installed?(brew, BREW_NAME) ? Installed : Install
+          BrewPackageHelper.installed?(brew, BREW_NAME) ? Installed : Install
         end
 
         BREW_NAME = "libffi"
@@ -370,7 +377,7 @@ module Kompo
 
         def impl
           brew = HomebrewPath.path
-          brew_package_installed?(brew, BREW_NAME) ? Installed : Install
+          BrewPackageHelper.installed?(brew, BREW_NAME) ? Installed : Install
         end
 
         BREW_NAME = "xz"
@@ -417,11 +424,6 @@ module Kompo
           end
         end
       end
-
-      def self.brew_package_installed?(brew, package_name)
-        Kompo.command_runner.capture(brew, "list", package_name, suppress_stderr: true).success?
-      end
-      private_class_method :brew_package_installed?
     end
 
     # Linux implementation - checks dependencies using pkg-config
