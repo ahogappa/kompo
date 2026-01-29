@@ -15,21 +15,13 @@ class PackingStructureTest < Minitest::Test
   end
 end
 
-class PackingCommonHelpersTest < Minitest::Test
+class PackingForMacOSDryRunTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
-
-  # Use a test helper class that includes CommonHelpers
-  class TestHelper
-    include Kompo::Packing::CommonHelpers
-
-    public :get_ruby_cflags, :get_ruby_mainlibs, :get_ldflags, :get_libpath, :get_extlibs, :get_gem_libs
-  end
 
   def setup
     super
     @mock = setup_mock_command_runner
-    @helper = TestHelper.new
   end
 
   def teardown
@@ -37,121 +29,136 @@ class PackingCommonHelpersTest < Minitest::Test
     super
   end
 
-  def test_get_ruby_cflags
-    @mock.stub(["pkg-config", "--cflags", "/install/lib/pkgconfig/ruby.pc"],
-      output: "-I/install/include/ruby-3.4 -DRUBY_EXPORT", success: true)
+  def test_dry_run_does_not_execute_clang
+    skip unless RUBY_PLATFORM.include?("darwin")
 
-    cflags = @helper.get_ruby_cflags("/install")
-
-    assert_includes cflags, "-I/install/include/ruby-3.4"
-    assert_includes cflags, "-DRUBY_EXPORT"
-  end
-
-  def test_get_ruby_mainlibs
-    @mock.stub(["pkg-config", "--variable=MAINLIBS", "/install/lib/pkgconfig/ruby.pc"],
-      output: "-lpthread -lm -lz", success: true)
-
-    mainlibs = @helper.get_ruby_mainlibs("/install")
-
-    assert_equal "-lpthread -lm -lz", mainlibs
-  end
-
-  def test_get_ldflags
     Dir.mktmpdir do |tmpdir|
       work_dir = tmpdir
-      gem_ext_dir = File.join(work_dir, "bundle", "ruby", "3.4.0", "gems", "testgem-1.0", "ext", "testgem")
-      FileUtils.mkdir_p(gem_ext_dir)
-      File.write(File.join(gem_ext_dir, "Makefile"), <<~MAKEFILE)
-        ldflags  = -L/opt/local/lib
-        LDFLAGS  = -L/usr/local/lib -ltest
-      MAKEFILE
+      ruby_build_dir = File.join(tmpdir, "ruby-build", "ruby-3.4.1")
+      ruby_install_dir = File.join(tmpdir, "ruby-install")
+      kompo_lib = File.join(tmpdir, "kompo-lib")
+      output_path = File.join(tmpdir, "output", "myapp")
 
-      ldflags = @helper.get_ldflags(work_dir, "3.4")
+      # Create required directories
+      FileUtils.mkdir_p(ruby_build_dir)
+      FileUtils.mkdir_p(File.join(ruby_install_dir, "lib", "pkgconfig"))
+      FileUtils.mkdir_p(File.join(tmpdir, "output"))
+      FileUtils.mkdir_p(kompo_lib)
 
-      assert_includes ldflags, "-L/opt/local/lib"
-      assert_includes ldflags, "-L/usr/local/lib"
-      refute_includes ldflags, "-ltest"
+      # Create main.c and fs.c files
+      main_c = File.join(tmpdir, "main.c")
+      fs_c = File.join(tmpdir, "fs.c")
+      File.write(main_c, "int main() { return 0; }")
+      File.write(fs_c, "// fs")
+
+      # Mock CollectDependencies
+      deps = Kompo::CollectDependencies::Dependencies.new(
+        ruby_install_dir: ruby_install_dir,
+        ruby_version: "3.4.1",
+        ruby_major_minor: "3.4",
+        ruby_build_path: File.join(tmpdir, "ruby-build"),
+        ruby_lib: File.join(ruby_install_dir, "lib"),
+        kompo_lib: kompo_lib,
+        main_c: main_c,
+        fs_c: fs_c,
+        exts_dir: File.join(tmpdir, "exts"),
+        deps_lib_paths: "-L/opt/homebrew/opt/gmp/lib",
+        static_libs: ["/opt/homebrew/opt/gmp/lib/libgmp.a"]
+      )
+
+      mock_task(Kompo::CollectDependencies,
+        work_dir: work_dir,
+        deps: deps,
+        ext_paths: [],
+        enc_files: [],
+        output_path: output_path)
+
+      mock_args(dry_run: true)
+
+      # Mock pkg-config calls
+      @mock.stub(["pkg-config", "--cflags", "#{ruby_install_dir}/lib/pkgconfig/ruby.pc"],
+        output: "-I#{ruby_install_dir}/include")
+      @mock.stub(["pkg-config", "--variable=MAINLIBS", "#{ruby_install_dir}/lib/pkgconfig/ruby.pc"],
+        output: "-lpthread -lm")
+
+      capture_io { Kompo::Packing.run }
+
+      # Verify clang was NOT actually called (dry_run skips execution)
+      refute @mock.called?(:run, "clang"), "clang should not be executed in dry_run mode"
     end
   end
+end
 
-  def test_get_libpath
+class PackingForLinuxDryRunTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def setup
+    super
+    @mock = setup_mock_command_runner
+  end
+
+  def teardown
+    teardown_mock_command_runner
+    super
+  end
+
+  def test_dry_run_does_not_execute_gcc
+    skip if RUBY_PLATFORM.include?("darwin")
+
     Dir.mktmpdir do |tmpdir|
       work_dir = tmpdir
-      gem_ext_dir = File.join(work_dir, "bundle", "ruby", "3.4.0", "gems", "testgem-1.0", "ext", "testgem")
-      FileUtils.mkdir_p(gem_ext_dir)
-      File.write(File.join(gem_ext_dir, "Makefile"), <<~MAKEFILE)
-        LIBPATH = -L/usr/local/lib -Wl,-rpath,/something
-      MAKEFILE
+      ruby_build_dir = File.join(tmpdir, "ruby-build", "ruby-3.4.1")
+      ruby_install_dir = File.join(tmpdir, "ruby-install")
+      kompo_lib = File.join(tmpdir, "kompo-lib")
+      output_path = File.join(tmpdir, "output", "myapp")
 
-      libpath = @helper.get_libpath(work_dir, "3.4")
+      # Create required directories
+      FileUtils.mkdir_p(ruby_build_dir)
+      FileUtils.mkdir_p(File.join(ruby_install_dir, "lib", "pkgconfig"))
+      FileUtils.mkdir_p(File.join(tmpdir, "output"))
+      FileUtils.mkdir_p(kompo_lib)
 
-      assert_includes libpath, "-L/usr/local/lib"
-      refute libpath.any? { |p| p.include?("-Wl,-rpath") }
-    end
-  end
+      # Create main.c and fs.c files
+      main_c = File.join(tmpdir, "main.c")
+      fs_c = File.join(tmpdir, "fs.c")
+      File.write(main_c, "int main() { return 0; }")
+      File.write(fs_c, "// fs")
 
-  def test_get_extlibs
-    Dir.mktmpdir do |tmpdir|
-      ruby_build_dir = File.join(tmpdir, "ruby-3.4.1")
-      ext_dir = File.join(ruby_build_dir, "ext", "openssl")
-      FileUtils.mkdir_p(ext_dir)
-      File.write(File.join(ext_dir, "Makefile"), <<~MAKEFILE)
-        LIBS = -lssl -lcrypto
-      MAKEFILE
+      # Mock CollectDependencies
+      deps = Kompo::CollectDependencies::Dependencies.new(
+        ruby_install_dir: ruby_install_dir,
+        ruby_version: "3.4.1",
+        ruby_major_minor: "3.4",
+        ruby_build_path: File.join(tmpdir, "ruby-build"),
+        ruby_lib: File.join(ruby_install_dir, "lib"),
+        kompo_lib: kompo_lib,
+        main_c: main_c,
+        fs_c: fs_c,
+        exts_dir: File.join(tmpdir, "exts"),
+        deps_lib_paths: "-L/usr/lib/x86_64-linux-gnu",
+        static_libs: []
+      )
 
-      libs = @helper.get_extlibs(tmpdir, "3.4.1")
+      mock_task(Kompo::CollectDependencies,
+        work_dir: work_dir,
+        deps: deps,
+        ext_paths: [],
+        enc_files: [],
+        output_path: output_path)
 
-      assert_includes libs, "-lssl"
-      assert_includes libs, "-lcrypto"
-    end
-  end
+      mock_args(dry_run: true)
 
-  def test_get_extlibs_with_libs_assignment
-    Dir.mktmpdir do |tmpdir|
-      ruby_build_dir = File.join(tmpdir, "ruby-3.4.1")
-      ext_dir = File.join(ruby_build_dir, "ext", "zlib")
-      FileUtils.mkdir_p(ext_dir)
-      File.write(File.join(ext_dir, "Makefile"), <<~MAKEFILE)
-        LIBS += -lz
-      MAKEFILE
+      # Mock pkg-config calls
+      @mock.stub(["pkg-config", "--cflags", "#{ruby_install_dir}/lib/pkgconfig/ruby.pc"],
+        output: "-I#{ruby_install_dir}/include")
+      @mock.stub(["pkg-config", "--variable=MAINLIBS", "#{ruby_install_dir}/lib/pkgconfig/ruby.pc"],
+        output: "-lpthread -ldl -lm")
 
-      libs = @helper.get_extlibs(tmpdir, "3.4.1")
+      capture_io { Kompo::Packing.run }
 
-      assert_includes libs, "-lz"
-    end
-  end
-
-  def test_get_gem_libs
-    Dir.mktmpdir do |tmpdir|
-      work_dir = tmpdir
-      gem_ext_dir = File.join(work_dir, "bundle", "ruby", "3.4.0", "gems", "testgem-1.0", "ext", "testgem")
-      FileUtils.mkdir_p(gem_ext_dir)
-      File.write(File.join(gem_ext_dir, "Makefile"), <<~MAKEFILE)
-        LIBS = -ltest -lhelper
-      MAKEFILE
-
-      libs = @helper.get_gem_libs(work_dir, "3.4")
-
-      assert_includes libs, "-ltest"
-      assert_includes libs, "-lhelper"
-    end
-  end
-
-  def test_get_gem_libs_with_static_lib_path
-    Dir.mktmpdir do |tmpdir|
-      work_dir = tmpdir
-      gem_ext_dir = File.join(work_dir, "bundle", "ruby", "3.4.0", "gems", "testgem-1.0", "ext", "testgem")
-      FileUtils.mkdir_p(gem_ext_dir)
-      # Some Makefiles have full paths to static libraries
-      File.write(File.join(gem_ext_dir, "Makefile"), <<~MAKEFILE)
-        LIBS = /usr/local/lib/libfoo.a -lbar
-      MAKEFILE
-
-      libs = @helper.get_gem_libs(work_dir, "3.4")
-
-      # Static lib path should be converted to -l flag
-      assert_includes libs, "-lfoo"
-      assert_includes libs, "-lbar"
+      # Verify gcc was NOT actually called (dry_run skips execution)
+      refute @mock.called?(:run, "gcc"), "gcc should not be executed in dry_run mode"
     end
   end
 end
