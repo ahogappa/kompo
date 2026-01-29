@@ -22,6 +22,7 @@ require "digest"
 
 # Now load kompo (tasks will have TaskExtension prepended)
 require_relative "../lib/kompo"
+require_relative "support/mock_command_runner"
 
 # Force load all autoloaded constants for accurate coverage measurement
 if ENV["COVERAGE"]
@@ -33,6 +34,7 @@ if ENV["COVERAGE"]
 end
 
 require "minitest/autorun"
+require "minitest/mock"
 require "tmpdir"
 require "fileutils"
 require "json"
@@ -58,5 +60,18 @@ module TaskTestHelpers
     mock_task(Kompo::WorkDir, path: work_dir, original_dir: original_dir)
     mock_standard_ruby
     mock_task(Kompo::BundleInstall, bundler_config_path: nil, bundle_ruby_dir: nil)
+  end
+
+  # Setup MockCommandRunner for testing command executions
+  # Returns the mock instance so tests can add stubs
+  def setup_mock_command_runner
+    @mock_command_runner = MockCommandRunner.new
+    Kompo.command_runner = @mock_command_runner
+    @mock_command_runner
+  end
+
+  # Restore original CommandRunner after test
+  def teardown_mock_command_runner
+    Kompo.command_runner = nil
   end
 end

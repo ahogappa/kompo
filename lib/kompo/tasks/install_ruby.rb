@@ -2,7 +2,6 @@
 
 require "fileutils"
 require "json"
-require "open3"
 require "time"
 
 module Kompo
@@ -100,8 +99,8 @@ module Kompo
         fix_ruby_pc(@ruby_install_dir)
 
         puts "Ruby #{@ruby_version} restored from cache"
-        version_output, = Open3.capture2(@ruby_path, "--version", err: File::NULL)
-        puts "Ruby version: #{version_output.chomp}"
+        result = Kompo.command_runner.capture(@ruby_path, "--version", suppress_stderr: true)
+        puts "Ruby version: #{result.chomp}"
       end
 
       def clean
@@ -173,8 +172,8 @@ module Kompo
         end
 
         puts "Ruby installed at: #{@ruby_install_dir}"
-        version_output, = Open3.capture2(@ruby_path, "--version", err: File::NULL)
-        puts "Ruby version: #{version_output.chomp}"
+        result = Kompo.command_runner.capture(@ruby_path, "--version", suppress_stderr: true)
+        puts "Ruby version: #{result.chomp}"
       end
 
       def clean
@@ -264,7 +263,7 @@ module Kompo
           # This is necessary because ruby-build's make install runs rbinstall.rb,
           # which loads rubygems, which loads bundler if BUNDLE_GEMFILE is set.
           Bundler.with_unbundled_env do
-            system(env, *command) or raise "Failed to build Ruby"
+            Kompo.command_runner.run(*command, env: env, error_message: "Failed to build Ruby")
           end
         end
 
@@ -362,8 +361,8 @@ module Kompo
       end
 
       def check_ruby_version_availability(ruby_build)
-        output, status = Open3.capture2(ruby_build, "--definitions", err: File::NULL)
-        available_versions = status.success? ? output.split("\n").map(&:strip) : []
+        result = Kompo.command_runner.capture(ruby_build, "--definitions", suppress_stderr: true)
+        available_versions = result.success? ? result.output.split("\n").map(&:strip) : []
 
         return if available_versions.include?(@ruby_version)
 

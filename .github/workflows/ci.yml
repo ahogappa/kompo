@@ -87,16 +87,23 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install openssl readline libyaml libffi sqlite3
-          # sqlite3 is keg-only, so we need to add it to PKG_CONFIG_PATH
-          echo "PKG_CONFIG_PATH=$(brew --prefix sqlite3)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+          # sqlite3 is keg-only, so we need to configure paths for both pkg-config and compiler
+          # System SQLite doesn't have load_extension support, so we must use Homebrew's
+          SQLITE_PREFIX=$(brew --prefix sqlite3)
+          echo "PKG_CONFIG_PATH=${SQLITE_PREFIX}/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+          echo "LDFLAGS=-L${SQLITE_PREFIX}/lib $LDFLAGS" >> $GITHUB_ENV
+          echo "CPPFLAGS=-I${SQLITE_PREFIX}/include $CPPFLAGS" >> $GITHUB_ENV
+          # C_INCLUDE_PATH ensures homebrew headers are found before system headers
+          echo "C_INCLUDE_PATH=${SQLITE_PREFIX}/include" >> $GITHUB_ENV
+          echo "LIBRARY_PATH=${SQLITE_PREFIX}/lib" >> $GITHUB_ENV
 
       - name: Cache kompo Ruby build
         uses: actions/cache@v4
         with:
           path: ~/.kompo/cache
-          key: kompo-ruby-${{ runner.os }}-3.4-v8-${{ hashFiles('lib/kompo.rb') }}
-          restore-keys: |
-            kompo-ruby-${{ runner.os }}-3.4-v8-
+          # Don't use restore-keys to avoid restoring incompatible caches with different work_dir paths
+          # The cache includes work_dir path which is temp directory specific to each CI run
+          key: kompo-ruby-${{ runner.os }}-3.4-v9-${{ hashFiles('lib/kompo.rb') }}
 
       - name: Install native_gems dependencies
         run: |

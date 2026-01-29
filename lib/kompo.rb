@@ -2,12 +2,22 @@
 
 require "taski"
 require_relative "kompo/version"
+require_relative "kompo/command_runner"
 
 # Use simple progress mode for cleaner output
 # See taski library for details: https://github.com/ahogappa/taski
 Taski.progress_mode = :simple
 
 module Kompo
+  class << self
+    # Command runner for executing external commands
+    # Can be overridden in tests with a mock implementation
+    def command_runner
+      @command_runner ||= CommandRunner
+    end
+
+    attr_writer :command_runner
+  end
   # Fixed path prefix for Ruby installation
   # Using a fixed path ensures that cached Ruby binaries work correctly,
   # since Ruby has hardcoded paths for standard library locations.
@@ -15,6 +25,7 @@ module Kompo
 
   # Utility classes
   autoload :KompoIgnore, "kompo/kompo_ignore"
+  autoload :BrewPackage, "kompo/brew_package"
 
   # Struct to hold file data for embedding (used by MakeFsC)
   autoload :KompoFile, "kompo/tasks/make_fs_c"

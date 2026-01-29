@@ -2,6 +2,17 @@
 
 require_relative "../test_helper"
 
+class BundleInstallStructureTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def test_bundle_install_is_section
+    assert Kompo::BundleInstall < Taski::Section
+    assert_includes Kompo::BundleInstall.exported_methods, :bundle_ruby_dir
+    assert_includes Kompo::BundleInstall.exported_methods, :bundler_config_path
+  end
+end
+
 class BundleInstallTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
@@ -53,27 +64,6 @@ class BundleInstallTest < Minitest::Test
       Kompo::BundleInstall.bundle_ruby_dir
       assert Dir.exist?(File.join(work_dir, "bundle")), "FromCache should restore bundle directory"
     end
-  end
-
-  def test_bundle_install_is_section
-    assert Kompo::BundleInstall < Taski::Section
-    assert_includes Kompo::BundleInstall.exported_methods, :bundle_ruby_dir
-    assert_includes Kompo::BundleInstall.exported_methods, :bundler_config_path
-  end
-
-  def test_bundle_install_has_from_cache_class
-    assert_kind_of Class, Kompo::BundleInstall::FromCache
-    assert Kompo::BundleInstall::FromCache < Taski::Task
-  end
-
-  def test_bundle_install_has_from_source_class
-    assert_kind_of Class, Kompo::BundleInstall::FromSource
-    assert Kompo::BundleInstall::FromSource < Taski::Task
-  end
-
-  def test_bundle_install_has_skip_class
-    assert_kind_of Class, Kompo::BundleInstall::Skip
-    assert Kompo::BundleInstall::Skip < Taski::Task
   end
 
   def test_bundle_install_from_cache_restores_bundle_directory

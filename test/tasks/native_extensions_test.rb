@@ -216,3 +216,137 @@ class BuildNativeGemTest < Minitest::Test
     assert_includes exported, :exts_dir
   end
 end
+
+class BuildNativeGemWithMockTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def setup
+    super
+    @mock = setup_mock_command_runner
+  end
+
+  def teardown
+    teardown_mock_command_runner
+    super
+  end
+
+  def test_build_prebuilt_extension_registers_from_makefile
+    Dir.mktmpdir do |tmpdir|
+      work_dir = File.join(tmpdir, "work")
+      FileUtils.mkdir_p(work_dir)
+
+      ext_dir = File.join(tmpdir, "ext", "bigdecimal")
+      FileUtils.mkdir_p(ext_dir)
+      File.write(File.join(ext_dir, "Makefile"), <<~MAKEFILE)
+        TARGET = bigdecimal
+        DLLIB = $(TARGET).bundle
+        target_prefix = /bigdecimal
+      MAKEFILE
+
+      mock_task(Kompo::WorkDir, path: work_dir)
+      mock_task(Kompo::FindNativeExtensions, extensions: [
+        {
+          dir_name: ext_dir,
+          gem_ext_name: "bigdecimal",
+          is_rust: false,
+          is_prebuilt: true
+        }
+      ])
+
+      capture_io { Kompo::BuildNativeGem.run }
+
+      exts = Kompo::BuildNativeGem.exts
+      assert_equal 1, exts.size
+      assert_equal "bigdecimal/bigdecimal", exts[0][0]
+      assert_equal "Init_bigdecimal", exts[0][1]
+    end
+  end
+
+  def test_build_c_extension_runs_extconf_and_make
+    Dir.mktmpdir do |tmpdir|
+      work_dir = File.join(tmpdir, "work")
+      FileUtils.mkdir_p(work_dir)
+
+      ext_dir = File.join(tmpdir, "ext", "testgem")
+      FileUtils.mkdir_p(ext_dir)
+      File.write(File.join(ext_dir, "extconf.rb"), "require 'mkmf'")
+
+      # Stub extconf.rb execution - it creates Makefile
+      @mock.stub(["ruby", "extconf.rb"], output: "", success: true)
+
+      # Create Makefile after extconf.rb "runs"
+      makefile_content = <<~MAKEFILE
+        TARGET = testgem
+        DLLIB = $(TARGET).bundle
+        target_prefix =
+        OBJS = testgem.o helper.o
+      MAKEFILE
+
+      # Stub make execution
+      @mock.stub(["make", "-C", ext_dir, "testgem.o", "helper.o", "--always-make"],
+        output: "Compiling...", success: true)
+
+      mock_task(Kompo::WorkDir, path: work_dir)
+      mock_task(Kompo::FindNativeExtensions, extensions: [
+        {
+          dir_name: ext_dir,
+          gem_ext_name: "testgem",
+          is_rust: false,
+          is_prebuilt: false
+        }
+      ])
+
+      # Create Makefile and .o files to simulate build
+      File.write(File.join(ext_dir, "Makefile"), makefile_content)
+      File.write(File.join(ext_dir, "testgem.o"), "fake object")
+      File.write(File.join(ext_dir, "helper.o"), "fake object")
+
+      capture_io { Kompo::BuildNativeGem.run }
+
+      assert @mock.called?(:capture_all, "ruby", "extconf.rb")
+      assert @mock.called?(:capture_all, "make", "-C", ext_dir)
+    end
+  end
+
+  def test_build_rust_extension_runs_cargo
+    Dir.mktmpdir do |tmpdir|
+      work_dir = File.join(tmpdir, "work")
+      FileUtils.mkdir_p(work_dir)
+
+      ext_dir = File.join(tmpdir, "ext", "rustgem")
+      FileUtils.mkdir_p(ext_dir)
+      cargo_toml = File.join(ext_dir, "Cargo.toml")
+      File.write(cargo_toml, <<~TOML)
+        [package]
+        name = "rustgem"
+        version = "0.1.0"
+
+        [lib]
+        name = "rustgem"
+        crate-type = ["staticlib"]
+      TOML
+
+      # Create target directory and .a file
+      target_dir = File.join(ext_dir, "target", "release")
+      FileUtils.mkdir_p(target_dir)
+      File.write(File.join(target_dir, "librustgem.a"), "fake static lib")
+
+      mock_task(Kompo::CargoPath, path: "/usr/local/bin/cargo")
+      mock_task(Kompo::WorkDir, path: work_dir)
+      mock_task(Kompo::FindNativeExtensions, extensions: [
+        {
+          dir_name: ext_dir,
+          gem_ext_name: "rustgem",
+          is_rust: true,
+          is_prebuilt: false,
+          cargo_toml: cargo_toml
+        }
+      ])
+
+      capture_io { Kompo::BuildNativeGem.run }
+
+      assert @mock.called?(:run, "/usr/local/bin/cargo", "rustc", "--release")
+    end
+  end
+end

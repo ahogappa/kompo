@@ -26,6 +26,7 @@ opt = OptionParser.new do |o|
     args[:clean_cache] = v.nil? ? RUBY_VERSION : v
   end
   o.on("--dry-run", "Show final compile command without executing it") { |_v| args[:dry_run] = true }
+  o.on("--verbose", "Show detailed command execution output") { |_v| args[:verbose] = true }
   o.on("--dynamic-libs=LIBS", "Comma-separated list of libraries to link dynamically (e.g., ssl,crypto,gmp)") do |v|
     args[:dynamic_libs] = v.split(",").map(&:strip)
   end

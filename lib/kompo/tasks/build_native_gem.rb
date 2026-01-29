@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "fileutils"
-require "open3"
 require_relative "../extension_parser"
 
 module Kompo
@@ -129,7 +128,7 @@ module Kompo
         "--manifest-path", cargo_toml
       ]
 
-      system(*command) or raise "Failed to build Rust extension: #{gem_ext_name}"
+      Kompo.command_runner.run(*command, error_message: "Failed to build Rust extension: #{gem_ext_name}")
 
       # Copy .a files to ext directory
       copy_targets = Dir.glob(File.join(target_dir, "release/*.a"))
@@ -143,10 +142,10 @@ module Kompo
       # Run extconf.rb to generate Makefile
       # Use system Ruby so build-time dependencies (e.g., mini_portile2) are available via Bundler
       puts "Running extconf.rb in #{dir_name}"
-      extconf_output, status = Open3.capture2e("ruby", "extconf.rb", chdir: dir_name)
-      unless status.success?
+      result = Kompo.command_runner.capture_all("ruby", "extconf.rb", chdir: dir_name)
+      unless result.success?
         warn "extconf.rb failed for #{gem_ext_name}"
-        warn "extconf.rb output:\n#{extconf_output}"
+        warn "extconf.rb output:\n#{result.output}"
         raise "Failed to run extconf.rb for #{gem_ext_name}"
       end
 
@@ -167,12 +166,12 @@ module Kompo
 
       objs = objs_match[1]
       puts "Building objects: #{objs}"
-      # Use Open3.capture2e with array form to avoid shell injection
+      # Use command_runner.capture_all with array form to avoid shell injection
       make_args = ["make", "-C", dir_name] + objs.split + ["--always-make"]
-      make_output, status = Open3.capture2e(*make_args)
-      unless status.success?
+      result = Kompo.command_runner.capture_all(*make_args)
+      unless result.success?
         warn "make failed for #{gem_ext_name} in #{dir_name}"
-        warn "Make output:\n#{make_output}"
+        warn "Make output:\n#{result.output}"
         warn "Makefile content:\n#{makefile_content[0..500]}"
         raise "Failed to make #{gem_ext_name}"
       end

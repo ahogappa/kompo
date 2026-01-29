@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "../test_helper"
+require "securerandom"
 
 class WorkDirTest < Minitest::Test
   include Taski::TestHelper::Minitest
@@ -109,6 +110,36 @@ class WorkDirTest < Minitest::Test
       end
 
       assert_match(/not a Kompo work directory/, err)
+    end
+  end
+
+  def test_work_dir_falls_back_on_permission_denied
+    Dir.mktmpdir do |tmpdir|
+      cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
+      FileUtils.mkdir_p(cache_dir)
+
+      # Use a path that requires root permission to create
+      # (path inside /private/var which we can't write to as normal user)
+      cached_work_dir = "/nonexistent_root_path_#{SecureRandom.uuid}/work"
+
+      # Create metadata file with cached work_dir path that we can't create
+      metadata = {"work_dir" => cached_work_dir, "ruby_version" => RUBY_VERSION}
+      File.write(File.join(cache_dir, "metadata.json"), JSON.generate(metadata))
+
+      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
+
+      # Capture stderr to verify warning about permission denied
+      _out, err = capture_io do
+        path = Kompo::WorkDir.path
+
+        # Should fallback to creating a new temp directory, not use the cached path
+        refute_equal cached_work_dir, path
+        assert Dir.exist?(path)
+        # Should have marker file
+        assert File.exist?(File.join(path, Kompo::WorkDir::MARKER_FILE))
+      end
+
+      assert_match(/permission denied.*creating new work directory/i, err)
     end
   end
 end

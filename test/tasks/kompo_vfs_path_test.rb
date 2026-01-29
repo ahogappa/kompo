@@ -124,3 +124,151 @@ class KompoVfsPathTest < Minitest::Test
     end
   end
 end
+
+class KompoVfsPathFromLocalTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def test_from_local_is_task
+    assert Kompo::KompoVfsPath::FromLocal < Taski::Task
+  end
+end
+
+class KompoVfsPathFromHomebrewInstalledTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def setup
+    super
+    @mock = setup_mock_command_runner
+    mock_task(Kompo::HomebrewPath, path: "/opt/homebrew/bin/brew")
+  end
+
+  def teardown
+    teardown_mock_command_runner
+    super
+  end
+
+  def test_installed_gets_prefix_and_verifies_libs
+    Dir.mktmpdir do |tmpdir|
+      lib_dir = File.join(tmpdir, "lib")
+      FileUtils.mkdir_p(lib_dir)
+      File.write(File.join(lib_dir, "libkompo_fs.a"), "fake lib")
+      File.write(File.join(lib_dir, "libkompo_wrap.a"), "fake lib")
+      File.write(File.join(lib_dir, "KOMPO_VFS_VERSION"), "0.5.1")
+
+      @mock.stub(["/opt/homebrew/bin/brew", "--prefix", "kompo-vfs"], output: tmpdir, success: true)
+
+      # Installed is a Task, so we run it via Task.run class method
+      capture_io { Kompo::KompoVfsPath::FromHomebrew::Installed.run }
+
+      assert @mock.called?(:capture, "/opt/homebrew/bin/brew", "--prefix", "kompo-vfs")
+    end
+  end
+
+  def test_installed_raises_when_libs_missing
+    Dir.mktmpdir do |tmpdir|
+      lib_dir = File.join(tmpdir, "lib")
+      FileUtils.mkdir_p(lib_dir)
+      # Only create one lib, missing libkompo_wrap.a
+
+      @mock.stub(["/opt/homebrew/bin/brew", "--prefix", "kompo-vfs"], output: tmpdir, success: true)
+      @mock.stub(["/opt/homebrew/bin/brew", "list", "--versions", "kompo-vfs"], output: "kompo-vfs 0.1.0", success: true)
+
+      error = assert_raises(Taski::AggregateError) do
+        capture_io { Kompo::KompoVfsPath::FromHomebrew::Installed.run }
+      end
+      assert_includes error.message, "outdated"
+      assert_includes error.message, "brew upgrade"
+    end
+  end
+end
+
+class KompoVfsPathFromHomebrewInstallWithMockTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def setup
+    super
+    @mock = setup_mock_command_runner
+    mock_task(Kompo::HomebrewPath, path: "/opt/homebrew/bin/brew")
+  end
+
+  def teardown
+    teardown_mock_command_runner
+    super
+  end
+
+  def test_install_taps_and_installs
+    Dir.mktmpdir do |tmpdir|
+      lib_dir = File.join(tmpdir, "lib")
+      FileUtils.mkdir_p(lib_dir)
+      File.write(File.join(lib_dir, "KOMPO_VFS_VERSION"), "0.5.1")
+
+      @mock.stub(["/opt/homebrew/bin/brew", "tap", "ahogappa/kompo-vfs", "https://github.com/ahogappa/kompo-vfs.git"], output: "", success: true)
+      @mock.stub(["/opt/homebrew/bin/brew", "install", "ahogappa/kompo-vfs/kompo-vfs"], output: "", success: true)
+      @mock.stub(["/opt/homebrew/bin/brew", "--prefix", "kompo-vfs"], output: tmpdir, success: true)
+
+      # Install is a Task, so we run it via Task.run class method
+      capture_io { Kompo::KompoVfsPath::FromHomebrew::Install.run }
+
+      assert @mock.called?(:run, "/opt/homebrew/bin/brew", "tap", "ahogappa/kompo-vfs")
+      assert @mock.called?(:run, "/opt/homebrew/bin/brew", "install", "ahogappa/kompo-vfs/kompo-vfs")
+    end
+  end
+end
+
+class KompoVfsPathFromSourceTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def test_from_source_is_task
+    assert Kompo::KompoVfsPath::FromSource < Taski::Task
+  end
+
+  def test_from_source_has_repo_url_constant
+    assert_equal "https://github.com/ahogappa/kompo-vfs", Kompo::KompoVfsPath::FromSource::REPO_URL
+  end
+end
+
+class KompoVfsPathImplSelectionTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def test_kompo_vfs_path_is_section
+    assert Kompo::KompoVfsPath < Taski::Section
+  end
+
+  def test_from_local_selected_when_local_path_arg_present
+    # FromLocal is selected when local_kompo_vfs_path arg is provided
+    # This is a design/configuration test, not an execution test
+    assert Kompo::KompoVfsPath::FromLocal < Taski::Task
+  end
+
+  def test_from_homebrew_is_section
+    assert Kompo::KompoVfsPath::FromHomebrew < Taski::Section
+  end
+end
+
+class KompoVfsFromHomebrewStructureTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def test_from_homebrew_is_section
+    assert Kompo::KompoVfsPath::FromHomebrew < Taski::Section
+  end
+
+  def test_from_homebrew_has_path_interface
+    # Section uses interfaces() which internally calls exports()
+    # The exported_methods returns the interface methods
+    assert_includes Kompo::KompoVfsPath::FromHomebrew.exported_methods, :path
+  end
+
+  def test_from_homebrew_installed_is_task
+    assert Kompo::KompoVfsPath::FromHomebrew::Installed < Taski::Task
+  end
+
+  def test_from_homebrew_install_is_task
+    assert Kompo::KompoVfsPath::FromHomebrew::Install < Taski::Task
+  end
+end

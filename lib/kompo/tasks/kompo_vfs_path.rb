@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "fileutils"
-require "open3"
 require_relative "kompo_vfs_version_check"
 
 module Kompo
@@ -37,7 +36,11 @@ module Kompo
         puts "Building kompo-vfs from local directory: #{local_path}"
         cargo = CargoPath.path
 
-        raise "Failed to build kompo-vfs" unless system(cargo, "build", "--release", chdir: local_path)
+        Kompo.command_runner.run(
+          cargo, "build", "--release",
+          chdir: local_path,
+          error_message: "Failed to build kompo-vfs"
+        )
 
         @path = File.join(local_path, "target", "release")
         puts "kompo-vfs library path: #{@path}"
@@ -58,14 +61,15 @@ module Kompo
       class Installed < Taski::Task
         def run
           brew = HomebrewPath.path
-          @path = "#{`#{brew} --prefix kompo-vfs`.chomp}/lib"
+          prefix = Kompo.command_runner.capture(brew, "--prefix", "kompo-vfs").chomp
+          @path = "#{prefix}/lib"
 
           # Check if required library files exist (kompo-vfs >= 0.2.0 has libkompo_fs.a and libkompo_wrap.a)
           required_libs = %w[libkompo_fs.a libkompo_wrap.a]
           missing_libs = required_libs.reject { |lib| File.exist?(File.join(@path, lib)) }
 
           unless missing_libs.empty?
-            installed_version = `#{brew} list --versions kompo-vfs`.chomp.split.last
+            installed_version = Kompo.command_runner.capture(brew, "list", "--versions", "kompo-vfs").chomp.split.last
             raise "kompo-vfs #{installed_version} is outdated. Please run: brew upgrade kompo-vfs\n" \
                   "Missing libraries: #{missing_libs.join(", ")}"
           end
@@ -81,10 +85,17 @@ module Kompo
         def run
           brew = HomebrewPath.path
           puts "Installing kompo-vfs via Homebrew..."
-          system(brew, "tap", "ahogappa/kompo-vfs", "https://github.com/ahogappa/kompo-vfs.git") or raise "Failed to tap ahogappa/kompo-vfs"
-          system(brew, "install", "ahogappa/kompo-vfs/kompo-vfs") or raise "Failed to install kompo-vfs"
+          Kompo.command_runner.run(
+            brew, "tap", "ahogappa/kompo-vfs", "https://github.com/ahogappa/kompo-vfs.git",
+            error_message: "Failed to tap ahogappa/kompo-vfs"
+          )
+          Kompo.command_runner.run(
+            brew, "install", "ahogappa/kompo-vfs/kompo-vfs",
+            error_message: "Failed to install kompo-vfs"
+          )
 
-          @path = "#{`#{brew} --prefix kompo-vfs`.chomp}/lib"
+          prefix = Kompo.command_runner.capture(brew, "--prefix", "kompo-vfs").chomp
+          @path = "#{prefix}/lib"
           puts "kompo-vfs library path: #{@path}"
 
           KompoVfsVersionCheck.verify!(@path)
@@ -95,10 +106,10 @@ module Kompo
 
       def kompo_vfs_installed?
         # Avoid calling HomebrewPath.path here to prevent duplicate dependency
-        brew = `which brew 2>/dev/null`.chomp
-        return false if brew.empty?
+        brew = Kompo.command_runner.which("brew")
+        return false unless brew
 
-        system("#{brew} list kompo-vfs > /dev/null 2>&1")
+        Kompo.command_runner.capture(brew, "list", "kompo-vfs", suppress_stderr: true).success?
       end
     end
 
@@ -114,12 +125,19 @@ module Kompo
         FileUtils.mkdir_p(File.dirname(build_dir))
 
         if Dir.exist?(build_dir)
-          system("git", "-C", build_dir, "pull", "--quiet")
+          Kompo.command_runner.run("git", "-C", build_dir, "pull", "--quiet")
         else
-          system("git", "clone", REPO_URL, build_dir) or raise "Failed to clone kompo-vfs repository"
+          Kompo.command_runner.run(
+            "git", "clone", REPO_URL, build_dir,
+            error_message: "Failed to clone kompo-vfs repository"
+          )
         end
 
-        system(cargo, "build", "--release", chdir: build_dir) or raise "Failed to build kompo-vfs"
+        Kompo.command_runner.run(
+          cargo, "build", "--release",
+          chdir: build_dir,
+          error_message: "Failed to build kompo-vfs"
+        )
 
         @path = File.join(build_dir, "target", "release")
         puts "kompo-vfs library path: #{@path}"
@@ -131,13 +149,14 @@ module Kompo
     private
 
     def darwin?
-      RUBY_PLATFORM.include?("darwin") || `uname -s`.chomp == "Darwin"
+      return true if RUBY_PLATFORM.include?("darwin")
+      Kompo.command_runner.capture("uname", "-s").chomp == "Darwin"
     end
 
     def check_homebrew_available!
       # Check if brew is in PATH
-      brew_in_path, = Open3.capture2("which", "brew", err: File::NULL)
-      return unless brew_in_path.chomp.empty?
+      brew_in_path = Kompo.command_runner.which("brew")
+      return if brew_in_path
 
       # Check common Homebrew installation paths (including ARM64 at /opt/homebrew)
       return if HomebrewPath::COMMON_BREW_PATHS.any? { |p| File.executable?(p) }
