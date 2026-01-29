@@ -41,12 +41,18 @@ module Kompo
                 warn "warn: #{cached_work_dir} exists but is not a Kompo work directory, creating new one"
               end
             else
-              # Directory doesn't exist - recreate it (common in CI after cache restore)
-              FileUtils.mkdir_p(cached_work_dir)
-              File.write(File.join(cached_work_dir, MARKER_FILE), "kompo-work-dir")
-              @path = cached_work_dir
-              puts "Recreated cached work directory: #{@path}"
-              return
+              # Directory doesn't exist - try to recreate it (common in CI after cache restore)
+              # This may fail if the path is from a previous CI run with different permissions
+              begin
+                FileUtils.mkdir_p(cached_work_dir)
+                File.write(File.join(cached_work_dir, MARKER_FILE), "kompo-work-dir")
+                @path = cached_work_dir
+                puts "Recreated cached work directory: #{@path}"
+                return
+              rescue Errno::EACCES, Errno::EPERM
+                # Permission denied - fall through to create new work_dir
+                warn "warn: Cannot recreate #{cached_work_dir} (permission denied), creating new work directory"
+              end
             end
           end
         rescue JSON::ParserError
