@@ -30,6 +30,9 @@ opt = OptionParser.new do |o|
   o.on("--dynamic-libs=LIBS", "Comma-separated list of libraries to link dynamically (e.g., ssl,crypto,gmp)") do |v|
     args[:dynamic_libs] = v.split(",").map(&:strip)
   end
+  o.on("--compress", "Enable zlib compression for embedded files (reduces binary size)") do |_v|
+    args[:compress] = true
+  end
   o.on("--cache-dir=PATH", "Cache directory (default: ~/.kompo/cache)") do |v|
     args[:cache_dir] = File.expand_path(v)
   end

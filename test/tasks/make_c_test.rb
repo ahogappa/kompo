@@ -326,6 +326,106 @@ class MakeFsCTest < Minitest::Test
     end
   end
 
+  def test_make_fs_c_without_compress_generates_uncompressed
+    Dir.mktmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
+      mock_args(compress: false)
+
+      path = Kompo::MakeFsC.path
+
+      assert File.exist?(path)
+      content = File.read(path)
+
+      # Should have COMPRESSION_ENABLED = 0
+      assert_includes content, "const int COMPRESSION_ENABLED = 0"
+      # Should have uncompressed FILES array with actual data
+      assert_match(/const char FILES\[\] = \{\d/, content)
+      # Should have dummy COMPRESSED_FILES
+      assert_includes content, "const char COMPRESSED_FILES[] = {0}"
+    end
+  end
+
+  def test_make_fs_c_with_compress_generates_compressed
+    Dir.mktmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
+      mock_args(compress: true)
+
+      path = Kompo::MakeFsC.path
+
+      assert File.exist?(path)
+      content = File.read(path)
+
+      # Should have COMPRESSION_ENABLED = 1
+      assert_includes content, "const int COMPRESSION_ENABLED = 1"
+      # Should have COMPRESSED_FILES array with actual data
+      assert_match(/const char COMPRESSED_FILES\[\] = \{\d/, content)
+      # Should have FILES_BUFFER with size (no static for external linkage)
+      assert_match(/^char FILES_BUFFER\[\d+\]/, content)
+      # Should have dummy FILES
+      assert_includes content, "const char FILES[] = {0}"
+    end
+  end
+
+  def test_make_fs_c_compressed_data_is_smaller
+    Dir.mktmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      lib_dir = File.join(work_dir, "lib")
+      FileUtils.mkdir_p(lib_dir)
+      # Create a file with repetitive content that compresses well
+      File.write(File.join(lib_dir, "large.rb"), "puts 'hello world'\n" * 100)
+
+      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, additional_paths: [lib_dir])
+      mock_args(compress: true)
+
+      path = Kompo::MakeFsC.path
+
+      assert File.exist?(path)
+      content = File.read(path)
+
+      # Extract COMPRESSED_FILES size and FILES_BUFFER_SIZE
+      compressed_match = content.match(/const int COMPRESSED_FILES_SIZE = (\d+)/)
+      original_match = content.match(/const int FILES_BUFFER_SIZE = (\d+)/)
+
+      assert compressed_match, "Should have COMPRESSED_FILES_SIZE"
+      assert original_match, "Should have FILES_BUFFER_SIZE"
+
+      compressed_size = compressed_match[1].to_i
+      original_size = original_match[1].to_i
+
+      # Compressed size should be smaller than original
+      assert compressed_size < original_size,
+        "Compressed size (#{compressed_size}) should be smaller than original (#{original_size})"
+    end
+  end
+
+  def test_make_fs_c_compressed_can_be_decompressed
+    require "zlib"
+
+    Dir.mktmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir, content: "TEST_CONTENT_FOR_DECOMPRESSION")
+      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
+      mock_args(compress: true)
+
+      path = Kompo::MakeFsC.path
+      content = File.read(path)
+
+      # Extract COMPRESSED_FILES data
+      compressed_match = content.match(/const char COMPRESSED_FILES\[\] = \{([^}]+)\}/)
+      assert compressed_match, "Should have COMPRESSED_FILES array"
+
+      # Convert the byte array back to binary data
+      compressed_bytes = compressed_match[1].split(",").map(&:to_i).pack("C*")
+
+      # Decompress using Zlib
+      decompressed = Zlib.inflate(compressed_bytes)
+
+      # The decompressed data should contain our test content
+      assert_includes decompressed, "TEST_CONTENT_FOR_DECOMPRESSION"
+    end
+  end
+
   private
 
   def setup_work_dir_with_entrypoint(tmpdir, content: "puts 'hello'")
