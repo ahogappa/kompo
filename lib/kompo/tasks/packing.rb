@@ -23,14 +23,14 @@ module Kompo
       def get_packing_info(work_dir, deps, ext_paths, enc_files)
         return @packing_info if @packing_info
 
-        cache = build_packing_cache(work_dir)
+        cache = build_packing_cache(work_dir, deps.ruby_version)
 
         if cache&.exists? && !Taski.args[:no_cache]
           puts "Restoring packing info from cache"
           @packing_info = cache.restore(work_dir, deps.ruby_build_path)
         else
           @packing_info = extract_packing_info(work_dir, deps, ext_paths, enc_files)
-          save_to_packing_cache(work_dir, deps.ruby_build_path, @packing_info) unless Taski.args[:no_cache]
+          save_to_packing_cache(work_dir, deps, @packing_info) unless Taski.args[:no_cache]
         end
 
         @packing_info
@@ -62,17 +62,16 @@ module Kompo
         }
       end
 
-      def build_packing_cache(work_dir)
+      def build_packing_cache(work_dir, ruby_version)
         cache_dir = Taski.args.fetch(:cache_dir, DEFAULT_CACHE_DIR)
-        ruby_version = InstallRuby.ruby_version
         PackingCache.from_work_dir(cache_dir: cache_dir, ruby_version: ruby_version, work_dir: work_dir)
       end
 
-      def save_to_packing_cache(work_dir, ruby_build_path, info)
-        cache = build_packing_cache(work_dir)
+      def save_to_packing_cache(work_dir, deps, info)
+        cache = build_packing_cache(work_dir, deps.ruby_version)
         return unless cache
 
-        cache.save(work_dir, ruby_build_path, info)
+        cache.save(work_dir, deps.ruby_build_path, info)
         puts "Saved packing info to cache: #{cache.cache_dir}"
       end
 
