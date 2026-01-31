@@ -102,6 +102,7 @@ module Kompo
       end
 
       # Execute command for side effects (replacement for system)
+      # Output is captured to avoid interfering with progress display.
       # @param command [Array<String>] Command and arguments
       # @param chdir [String, nil] Working directory
       # @param env [Hash, nil] Environment variables
@@ -117,22 +118,36 @@ module Kompo
           return true
         end
 
-        opts = {}
-        opts[:chdir] = chdir if chdir
+        opts = build_options(chdir: chdir)
+        output_lines = []
 
-        success = if env
-          system(env, *command, **opts)
-        else
-          system(*command, **opts)
+        begin
+          Open3.popen2e(env || {}, *command, **opts) do |stdin, stdout_stderr, wait_thr|
+            stdin.close
+            stdout_stderr.each_line do |line|
+              output_lines << line
+            end
+
+            success = wait_thr.value.success?
+            log_result_bool(success)
+
+            if !success && error_message
+              # Print captured output on failure for debugging
+              warn output_lines.join unless output_lines.empty?
+              raise error_message
+            end
+
+            return success
+          end
+        rescue RuntimeError
+          # Re-raise intentional RuntimeError from error_message
+          raise
+        rescue => e
+          log_result_bool(false)
+          warn output_lines.join unless output_lines.empty?
+          warn "[CommandRunner] #{e.class}: #{e.message}"
+          false
         end
-
-        log_result_bool(success)
-
-        if !success && error_message
-          raise error_message
-        end
-
-        success
       end
 
       # Check if a command exists in PATH
