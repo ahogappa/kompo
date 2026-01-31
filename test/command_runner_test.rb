@@ -200,6 +200,23 @@ class CommandRunnerRunTest < Minitest::Test
 
     refute result
   end
+
+  def test_run_returns_false_for_nonexistent_command
+    result = Kompo::CommandRunner.run("nonexistent_command_xyz123")
+
+    refute result
+  end
+
+  def test_run_returns_false_for_nonexistent_command_with_error_message
+    # When command doesn't exist (Errno::ENOENT), should return false
+    # even if error_message is set (error_message only applies to command failures)
+    result = Kompo::CommandRunner.run(
+      "nonexistent_command_xyz123",
+      error_message: "This should not be raised"
+    )
+
+    refute result
+  end
 end
 
 class CommandRunnerWhichTest < Minitest::Test
