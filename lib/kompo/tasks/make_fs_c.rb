@@ -50,6 +50,12 @@ module Kompo
       @added_paths = Set.new
       @duplicate_count = 0
       @verbose = Taski.args.fetch(:verbose, false)
+      @compress = Taski.args.fetch(:compress, false)
+
+      # Compression-related variables (initialized later if compression is enabled)
+      @compressed_data = nil
+      @original_total_size = 0
+      @compressed_total_size = 0
 
       group("Collecting files") do
         embed_paths = collect_embed_paths
@@ -72,12 +78,20 @@ module Kompo
       end
 
       group("Generating fs.c") do
+        # Compress files if compression is enabled
+        compress_files if @compress
+
         context = build_template_context
 
         template_path = File.join(__dir__, "..", "..", "fs.c.erb")
         template = ERB.new(File.read(template_path))
         File.write(@path, template.result(binding))
-        puts "Generated: fs.c (#{@file_bytes.size} bytes)"
+
+        if @compress
+          puts "Generated: fs.c (compressed: #{@compressed_total_size} bytes, original: #{@original_total_size} bytes)"
+        else
+          puts "Generated: fs.c (#{@file_bytes.size} bytes)"
+        end
       end
     end
 
@@ -203,6 +217,21 @@ module Kompo
       FsCTemplateContext.new(
         work_dir: @work_dir
       )
+    end
+
+    # Compress all file data using zlib
+    def compress_files
+      require "zlib"
+
+      raw_data = @file_bytes.pack("C*")
+      compressed = Zlib.deflate(raw_data, Zlib::BEST_COMPRESSION)
+
+      @compressed_data = compressed.bytes
+      @original_total_size = raw_data.bytesize
+      @compressed_total_size = compressed.bytesize
+
+      ratio = (1.0 - (@compressed_total_size.to_f / @original_total_size)) * 100
+      puts "Compression: #{@original_total_size} -> #{@compressed_total_size} bytes (#{ratio.round(1)}% reduction)"
     end
 
     # Struct for fs.c template variables

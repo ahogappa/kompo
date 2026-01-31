@@ -1,6 +1,37 @@
+// Compression flag (0 = disabled, 1 = enabled)
+const int COMPRESSION_ENABLED = <%= @compress ? 1 : 0 %>;
+
+<% if @compress %>
+// Compressed file data (.rodata section - stored on disk)
+const char COMPRESSED_FILES[] = {<%= @compressed_data.join(',') %>};
+const int COMPRESSED_FILES_SIZE = <%= @compressed_data.size %>;
+const unsigned long long COMPRESSED_SIZES[] = {0};
+
+// Decompression buffer (.bss section - zero bytes on disk, allocated at runtime)
+char FILES_BUFFER[<%= @original_total_size %>];
+const int FILES_BUFFER_SIZE = <%= @original_total_size %>;
+const unsigned long long ORIGINAL_SIZES[] = {<%= @file_sizes.join(',') %>};
+
+// Dummy symbols for backward compatibility (not used when compression enabled)
+const char FILES[] = {0};
+const int FILES_SIZE = 0;
+const unsigned long long FILES_SIZES[] = {0};
+<% else %>
+// Uncompressed file data (original implementation)
 const char FILES[] = {<%= @file_bytes.join(',') %>};
 const int FILES_SIZE = <%= @file_bytes.size %>;
 const unsigned long long FILES_SIZES[] = {<%= @file_sizes.join(',') %>};
+
+// Dummy symbols for compression support (not used when compression disabled)
+const char COMPRESSED_FILES[] = {0};
+const int COMPRESSED_FILES_SIZE = 0;
+const unsigned long long COMPRESSED_SIZES[] = {0};
+char FILES_BUFFER[1];
+const int FILES_BUFFER_SIZE = 0;
+const unsigned long long ORIGINAL_SIZES[] = {0};
+<% end %>
+
+// Path data (always uncompressed)
 const char PATHS[] = {<%= @paths.join(',') %>};
 const int PATHS_SIZE = <%= @paths.size %>;
 const char WD[] = {<%= context.work_dir.bytes.join(',') %>,0};
