@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "shellwords"
+require_relative "../packing_cache"
 
 module Kompo
   # Section to compile the final binary.
@@ -16,6 +17,63 @@ module Kompo
     # Common helper methods shared between macOS and Linux implementations
     module CommonHelpers
       private
+
+      # Cache-aware packing info retrieval
+      # Returns hash with ALL info needed for final binary compilation
+      def get_packing_info(work_dir, deps, ext_paths, enc_files)
+        return @packing_info if @packing_info
+
+        cache = build_packing_cache(work_dir, deps.ruby_version)
+
+        if cache&.exists? && !Taski.args[:no_cache]
+          puts "Restoring packing info from cache"
+          @packing_info = cache.restore(work_dir, deps.ruby_build_path)
+        else
+          @packing_info = extract_packing_info(work_dir, deps, ext_paths, enc_files)
+          save_to_packing_cache(work_dir, deps, @packing_info) unless Taski.args[:no_cache]
+        end
+
+        @packing_info
+      end
+
+      def extract_packing_info(work_dir, deps, ext_paths, enc_files)
+        {
+          # From Makefiles
+          ldflags: get_ldflags(work_dir, deps.ruby_major_minor),
+          libpath: get_libpath(work_dir, deps.ruby_major_minor),
+          gem_libs: get_gem_libs(work_dir, deps.ruby_major_minor),
+          extlibs: get_extlibs(deps.ruby_build_path, deps.ruby_version),
+          # From pkg-config
+          main_libs: get_ruby_mainlibs(deps.ruby_install_dir),
+          ruby_cflags: get_ruby_cflags(deps.ruby_install_dir),
+          # From InstallDeps
+          static_libs: deps.static_libs,
+          deps_lib_paths: deps.deps_lib_paths,
+          # Ruby paths
+          ruby_lib: deps.ruby_lib,
+          ruby_build_path: deps.ruby_build_path,
+          ruby_install_dir: deps.ruby_install_dir,
+          ruby_version: deps.ruby_version,
+          ruby_major_minor: deps.ruby_major_minor,
+          # Other
+          kompo_lib: deps.kompo_lib,
+          ext_paths: ext_paths,
+          enc_files: enc_files
+        }
+      end
+
+      def build_packing_cache(work_dir, ruby_version)
+        cache_dir = Taski.args.fetch(:cache_dir, DEFAULT_CACHE_DIR)
+        PackingCache.from_work_dir(cache_dir: cache_dir, ruby_version: ruby_version, work_dir: work_dir)
+      end
+
+      def save_to_packing_cache(work_dir, deps, info)
+        cache = build_packing_cache(work_dir, deps.ruby_version)
+        return unless cache
+
+        cache.save(work_dir, deps.ruby_build_path, info)
+        puts "Saved packing info to cache: #{cache.cache_dir}"
+      end
 
       def get_ruby_cflags(ruby_install_dir)
         ruby_pc = File.join(ruby_install_dir, "lib", "pkgconfig", "ruby.pc")
@@ -86,7 +144,11 @@ module Kompo
         enc_files = CollectDependencies.enc_files
         @output_path = CollectDependencies.output_path
 
-        command = build_command(work_dir, deps, ext_paths, enc_files)
+        # Get packing info from cache or extract from Makefiles
+        packing = get_packing_info(work_dir, deps, ext_paths, enc_files)
+
+        # fs.c is always regenerated (not from cache)
+        command = build_command(deps, packing)
 
         if Taski.args[:dry_run]
           Taski.message(Shellwords.join(command))
@@ -103,42 +165,43 @@ module Kompo
 
       private
 
-      def build_command(work_dir, deps, ext_paths, enc_files)
-        ruby_static_lib = "-lruby.#{deps.ruby_major_minor}-static"
+      def build_command(deps, packing)
+        ruby_static_lib = "-lruby.#{packing[:ruby_major_minor]}-static"
 
         [
           "clang",
           "-O3",
-          get_ruby_cflags(deps.ruby_install_dir),
+          packing[:ruby_cflags],
           # IMPORTANT: kompo_lib must come FIRST to override Homebrew-installed versions
-          "-L#{deps.kompo_lib}",
-          get_ldflags(work_dir, deps.ruby_major_minor),
-          "-L#{deps.ruby_lib}",
+          "-L#{packing[:kompo_lib]}",
+          packing[:ldflags],
+          "-L#{packing[:ruby_lib]}",
           # Also add build path for static library lookup
-          "-L#{File.join(deps.ruby_build_path, "ruby-#{deps.ruby_version}")}",
+          "-L#{File.join(packing[:ruby_build_path], "ruby-#{packing[:ruby_version]}")}",
           # Add library paths for dependencies (Homebrew on macOS)
-          Shellwords.split(deps.deps_lib_paths),
-          get_libpath(work_dir, deps.ruby_major_minor),
+          Shellwords.split(packing[:deps_lib_paths]),
+          packing[:libpath],
           "-fstack-protector-strong",
           "-Wl,-dead_strip", # Remove unused code/data
           "-Wl,-no_deduplicate",  # Allow duplicate symbols from Ruby YJIT and kompo-vfs
           "-Wl,-export_dynamic",  # Export symbols to dynamic symbol table
-          deps.main_c,
-          deps.fs_c,
+          deps.main_c,  # Always fresh (regenerated each build)
+          deps.fs_c,    # Always fresh (regenerated each build)
           # Link kompo_wrap FIRST (before Ruby) to override libc symbols
           "-lkompo_wrap",
-          ext_paths,
-          enc_files,
+          packing[:ext_paths],
+          packing[:enc_files],
           ruby_static_lib,
-          get_libs(deps.ruby_install_dir, work_dir, deps.ruby_build_path, deps.ruby_version, deps.ruby_major_minor, deps.static_libs),
+          get_libs(packing),
           "-o", @output_path
         ].flatten
       end
 
-      def get_libs(ruby_install_dir, work_dir, ruby_build_path, ruby_version, ruby_major_minor, static_libs)
-        main_libs = get_ruby_mainlibs(ruby_install_dir)
-        ruby_std_gem_libs = get_extlibs(ruby_build_path, ruby_version)
-        gem_libs = get_gem_libs(work_dir, ruby_major_minor)
+      def get_libs(packing)
+        main_libs = packing[:main_libs]
+        gem_libs = packing[:gem_libs]
+        ruby_std_gem_libs = packing[:extlibs]
+        static_libs = packing[:static_libs]
 
         all_libs = [main_libs.split(" "), gem_libs, ruby_std_gem_libs].flatten
           .select { |l| l.match?(/-l\w/) }.uniq
@@ -202,7 +265,11 @@ module Kompo
         enc_files = CollectDependencies.enc_files
         @output_path = CollectDependencies.output_path
 
-        command = build_command(work_dir, deps, ext_paths, enc_files)
+        # Get packing info from cache or extract from Makefiles
+        packing = get_packing_info(work_dir, deps, ext_paths, enc_files)
+
+        # fs.c is always regenerated (not from cache)
+        command = build_command(deps, packing)
 
         if Taski.args[:dry_run]
           Taski.message(Shellwords.join(command))
@@ -219,7 +286,7 @@ module Kompo
 
       private
 
-      def build_command(work_dir, deps, ext_paths, enc_files)
+      def build_command(deps, packing)
         # Linux uses libruby-static.a (not libruby.X.Y-static.a like macOS)
         ruby_static_lib = "-lruby-static"
 
@@ -227,34 +294,34 @@ module Kompo
           "gcc",
           "-O3",
           "-no-pie", # Required: Rust std lib is not built with PIC
-          get_ruby_cflags(deps.ruby_install_dir),
+          packing[:ruby_cflags],
           # IMPORTANT: kompo_lib must come FIRST to override system-installed versions
-          "-L#{deps.kompo_lib}",
-          get_ldflags(work_dir, deps.ruby_major_minor),
-          "-L#{deps.ruby_lib}",
+          "-L#{packing[:kompo_lib]}",
+          packing[:ldflags],
+          "-L#{packing[:ruby_lib]}",
           # Also add build path for static library lookup
-          "-L#{File.join(deps.ruby_build_path, "ruby-#{deps.ruby_version}")}",
+          "-L#{File.join(packing[:ruby_build_path], "ruby-#{packing[:ruby_version]}")}",
           # Add library paths for dependencies (from pkg-config)
-          Shellwords.split(deps.deps_lib_paths),
-          get_libpath(work_dir, deps.ruby_major_minor),
+          Shellwords.split(packing[:deps_lib_paths]),
+          packing[:libpath],
           "-fstack-protector-strong",
           "-rdynamic", "-Wl,-export-dynamic",
-          deps.main_c,
-          deps.fs_c,
+          deps.main_c,  # Always fresh (regenerated each build)
+          deps.fs_c,    # Always fresh (regenerated each build)
           "-Wl,-Bstatic",
           "-Wl,--start-group",
-          ext_paths,
-          enc_files,
+          packing[:ext_paths],
+          packing[:enc_files],
           ruby_static_lib,
-          get_libs(deps.ruby_install_dir, work_dir, deps.ruby_build_path, deps.ruby_version, deps.ruby_major_minor),
+          get_libs(packing),
           "-o", @output_path
         ].flatten
       end
 
-      def get_libs(ruby_install_dir, work_dir, ruby_build_path, ruby_version, ruby_major_minor)
-        main_libs = get_ruby_mainlibs(ruby_install_dir)
-        ruby_std_gem_libs = get_extlibs(ruby_build_path, ruby_version)
-        gem_libs = get_gem_libs(work_dir, ruby_major_minor)
+      def get_libs(packing)
+        main_libs = packing[:main_libs]
+        gem_libs = packing[:gem_libs]
+        ruby_std_gem_libs = packing[:extlibs]
 
         # System libraries that must always be dynamically linked
         system_dyn_libs = DYN_LINK_LIBS.map { |l| "-l#{l}" }

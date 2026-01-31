@@ -291,4 +291,138 @@ class NativeExtensionCacheTest < Minitest::Test
       assert_equal [["test", "Init_test"]], metadata["exts"]
     end
   end
+
+  def test_save_copies_ports_directories
+    Dir.mktmpdir do |tmpdir|
+      tmpdir = File.realpath(tmpdir)
+
+      work_dir = File.join(tmpdir, "work")
+      FileUtils.mkdir_p(File.join(work_dir, "ext", "nokogiri"))
+      File.write(File.join(work_dir, "ext", "nokogiri", "nokogiri.o"), "object file content")
+
+      # Create ports directory structure like nokogiri
+      ports_dir = File.join(work_dir, "bundle/ruby/3.4.0/gems/nokogiri-1.19.0/ports/x86_64-darwin/libxml2/2.12.0/lib")
+      FileUtils.mkdir_p(ports_dir)
+      File.write(File.join(ports_dir, "libxml2.a"), "static lib content")
+
+      cache = Kompo::NativeExtensionCache.new(
+        cache_dir: File.join(tmpdir, "cache"),
+        ruby_version: "3.4.1",
+        gemfile_lock_hash: "abc123"
+      )
+
+      exts = [["nokogiri", "Init_nokogiri"]]
+      cache.save(work_dir, exts)
+
+      # Verify ports directory was cached
+      cached_ports = File.join(cache.cache_dir, "ports", "nokogiri-1.19.0/x86_64-darwin/libxml2/2.12.0/lib/libxml2.a")
+      assert File.exist?(cached_ports), "Ports directory should be cached"
+
+      # Verify metadata includes ports info
+      metadata = cache.metadata
+      assert_includes metadata["ports"], "nokogiri-1.19.0"
+    end
+  end
+
+  def test_restore_copies_ports_directories_back
+    Dir.mktmpdir do |tmpdir|
+      tmpdir = File.realpath(tmpdir)
+
+      cache = Kompo::NativeExtensionCache.new(
+        cache_dir: File.join(tmpdir, "cache"),
+        ruby_version: "3.4.1",
+        gemfile_lock_hash: "abc123"
+      )
+
+      # Create cached ext
+      FileUtils.mkdir_p(File.join(cache.cache_dir, "ext", "nokogiri"))
+      File.write(File.join(cache.cache_dir, "ext", "nokogiri", "nokogiri.o"), "object file")
+
+      # Create cached ports
+      cached_ports_dir = File.join(cache.cache_dir, "ports/nokogiri-1.19.0/x86_64-darwin/libxml2/2.12.0/lib")
+      FileUtils.mkdir_p(cached_ports_dir)
+      File.write(File.join(cached_ports_dir, "libxml2.a"), "static lib content")
+
+      # Create metadata
+      File.write(
+        File.join(cache.cache_dir, "metadata.json"),
+        JSON.generate({"exts" => [["nokogiri", "Init_nokogiri"]], "ports" => ["nokogiri-1.19.0"]})
+      )
+
+      # Create work directory with bundle structure (simulating BundleCache restore)
+      work_dir = File.join(tmpdir, "work")
+      gem_dir = File.join(work_dir, "bundle/ruby/3.4.0/gems/nokogiri-1.19.0")
+      FileUtils.mkdir_p(gem_dir)
+
+      # Restore
+      cache.restore(work_dir)
+
+      # Verify ext was restored
+      assert File.exist?(File.join(work_dir, "ext/nokogiri/nokogiri.o"))
+
+      # Verify ports was restored to gem directory
+      restored_ports = File.join(gem_dir, "ports/x86_64-darwin/libxml2/2.12.0/lib/libxml2.a")
+      assert File.exist?(restored_ports), "Ports directory should be restored to gem directory"
+    end
+  end
+
+  def test_restore_does_not_fail_when_no_ports_cache
+    Dir.mktmpdir do |tmpdir|
+      tmpdir = File.realpath(tmpdir)
+
+      cache = Kompo::NativeExtensionCache.new(
+        cache_dir: File.join(tmpdir, "cache"),
+        ruby_version: "3.4.1",
+        gemfile_lock_hash: "abc123"
+      )
+
+      # Create cache without ports
+      FileUtils.mkdir_p(File.join(cache.cache_dir, "ext", "simple_gem"))
+      File.write(File.join(cache.cache_dir, "ext", "simple_gem", "simple.o"), "object file")
+      File.write(File.join(cache.cache_dir, "metadata.json"), JSON.generate({"exts" => []}))
+
+      work_dir = File.join(tmpdir, "work")
+      FileUtils.mkdir_p(work_dir)
+
+      # Should not raise
+      cache.restore(work_dir)
+
+      assert File.exist?(File.join(work_dir, "ext/simple_gem/simple.o"))
+    end
+  end
+
+  def test_restore_skips_ports_for_missing_gems
+    Dir.mktmpdir do |tmpdir|
+      tmpdir = File.realpath(tmpdir)
+
+      cache = Kompo::NativeExtensionCache.new(
+        cache_dir: File.join(tmpdir, "cache"),
+        ruby_version: "3.4.1",
+        gemfile_lock_hash: "abc123"
+      )
+
+      # Create cached ext and ports
+      FileUtils.mkdir_p(File.join(cache.cache_dir, "ext", "nokogiri"))
+      File.write(File.join(cache.cache_dir, "ext", "nokogiri", "nokogiri.o"), "object file")
+
+      cached_ports_dir = File.join(cache.cache_dir, "ports/nokogiri-1.19.0/lib")
+      FileUtils.mkdir_p(cached_ports_dir)
+      File.write(File.join(cached_ports_dir, "libxml2.a"), "static lib")
+
+      File.write(
+        File.join(cache.cache_dir, "metadata.json"),
+        JSON.generate({"exts" => [], "ports" => ["nokogiri-1.19.0"]})
+      )
+
+      # Create work directory WITHOUT the nokogiri gem
+      work_dir = File.join(tmpdir, "work")
+      FileUtils.mkdir_p(work_dir)
+
+      # Should not raise even though gem directory doesn't exist
+      cache.restore(work_dir)
+
+      # ext should be restored
+      assert File.exist?(File.join(work_dir, "ext/nokogiri/nokogiri.o"))
+    end
+  end
 end
