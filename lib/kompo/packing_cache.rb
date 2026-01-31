@@ -64,6 +64,8 @@ module Kompo
       FileUtils.rm_rf(@cache_dir) if Dir.exist?(@cache_dir)
       FileUtils.mkdir_p(@cache_dir)
 
+      ruby_dir = File.join(work_dir, "_ruby")
+
       metadata = {
         "ruby_version" => @ruby_version,
         "gemfile_lock_hash" => @hash,
@@ -78,15 +80,16 @@ module Kompo
         "gem_libs" => data[:gem_libs] || [],
         "extlibs" => data[:extlibs] || [],
         "main_libs" => data[:main_libs] || "",
-        "ruby_cflags" => data[:ruby_cflags] || [],
+        # ruby_cflags may contain -I paths that reference _ruby dir
+        "ruby_cflags" => normalize_ruby_cflags(data[:ruby_cflags] || [], ruby_dir),
         # External library paths (absolute, unchanged)
         "static_libs" => data[:static_libs] || [],
         "deps_lib_paths" => data[:deps_lib_paths] || "",
         "kompo_lib" => data[:kompo_lib] || "",
-        # Ruby paths (will be restored with current ruby paths)
-        "ruby_lib" => data[:ruby_lib] || "",
-        "ruby_build_path" => data[:ruby_build_path] || "",
-        "ruby_install_dir" => data[:ruby_install_dir] || "",
+        # Ruby paths (normalized to be relative to _ruby)
+        "ruby_lib" => normalize_ruby_path(data[:ruby_lib] || "", ruby_dir),
+        "ruby_build_path" => normalize_ruby_path(data[:ruby_build_path] || "", ruby_dir),
+        "ruby_install_dir" => normalize_ruby_path(data[:ruby_install_dir] || "", ruby_dir),
         "ruby_version_str" => data[:ruby_version] || "",
         "ruby_major_minor" => data[:ruby_major_minor] || ""
       }
@@ -101,6 +104,8 @@ module Kompo
       return nil unless exists?
 
       data = JSON.parse(File.read(metadata_path))
+      ruby_dir = File.join(work_dir, "_ruby")
+
       {
         ldflags: convert_to_absolute(data["ldflags"] || [], work_dir),
         libpath: convert_to_absolute(data["libpath"] || [], work_dir),
@@ -109,13 +114,13 @@ module Kompo
         gem_libs: data["gem_libs"] || [],
         extlibs: data["extlibs"] || [],
         main_libs: data["main_libs"] || "",
-        ruby_cflags: data["ruby_cflags"] || [],
+        ruby_cflags: restore_ruby_cflags(data["ruby_cflags"] || [], ruby_dir),
         static_libs: data["static_libs"] || [],
         deps_lib_paths: data["deps_lib_paths"] || "",
         kompo_lib: data["kompo_lib"] || "",
-        ruby_lib: data["ruby_lib"] || "",
-        ruby_build_path: data["ruby_build_path"] || "",
-        ruby_install_dir: data["ruby_install_dir"] || "",
+        ruby_lib: restore_ruby_path(data["ruby_lib"] || "", ruby_dir),
+        ruby_build_path: restore_ruby_path(data["ruby_build_path"] || "", ruby_dir),
+        ruby_install_dir: restore_ruby_path(data["ruby_install_dir"] || "", ruby_dir),
         ruby_version: data["ruby_version_str"] || "",
         ruby_major_minor: data["ruby_major_minor"] || ""
       }
@@ -193,6 +198,56 @@ module Kompo
     def restore_enc_files(paths, ruby_build_path)
       paths.map do |path|
         File.join(ruby_build_path, path)
+      end
+    end
+
+    # Normalize a ruby path: if it contains /_ruby/, store relative from _ruby
+    def normalize_ruby_path(path, ruby_dir)
+      return "" if path.nil? || path.empty?
+
+      if path.include?("/_ruby/")
+        idx = path.index("/_ruby/")
+        path[(idx + 1)..] # Keep from "_ruby/..."
+      elsif path.start_with?(ruby_dir)
+        path.sub(%r{^#{Regexp.escape(ruby_dir)}/?}, "_ruby/")
+      else
+        path
+      end
+    end
+
+    # Restore a ruby path: if it starts with _ruby/, prepend work_dir
+    def restore_ruby_path(path, ruby_dir)
+      return "" if path.nil? || path.empty?
+
+      if path.start_with?("_ruby/")
+        File.join(File.dirname(ruby_dir), path)
+      else
+        path
+      end
+    end
+
+    # Normalize -I paths in ruby_cflags that reference _ruby dir
+    def normalize_ruby_cflags(flags, ruby_dir)
+      flags.map do |flag|
+        if flag.start_with?("-I") && flag.include?("/_ruby/")
+          idx = flag.index("/_ruby/")
+          "-I" + flag[(idx + 1)..] # Keep from "_ruby/..."
+        elsif flag.start_with?("-I#{ruby_dir}")
+          "-I_ruby/" + flag[(ruby_dir.length + 3)..] # -I + path after ruby_dir/
+        else
+          flag
+        end
+      end
+    end
+
+    # Restore -I paths in ruby_cflags
+    def restore_ruby_cflags(flags, ruby_dir)
+      flags.map do |flag|
+        if flag.start_with?("-I_ruby/")
+          "-I" + File.join(File.dirname(ruby_dir), flag[2..])
+        else
+          flag
+        end
       end
     end
   end

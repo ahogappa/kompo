@@ -345,4 +345,100 @@ class PackingCacheTest < Minitest::Test
       assert_equal "", restored[:kompo_lib]
     end
   end
+
+  def test_ruby_cflags_normalization
+    Dir.mktmpdir do |tmpdir|
+      tmpdir = File.realpath(tmpdir)
+      work_dir = File.join(tmpdir, "work")
+      ruby_build_path = File.join(work_dir, "_ruby/build")
+
+      cache = Kompo::PackingCache.new(
+        cache_dir: File.join(tmpdir, "cache"),
+        ruby_version: "3.4.1",
+        gemfile_lock_hash: "abc123"
+      )
+
+      original_data = {
+        ruby_cflags: [
+          "-I#{work_dir}/_ruby/include/ruby-3.4.0",
+          "-I#{work_dir}/_ruby/include/ruby-3.4.0/x86_64-darwin",
+          "-I/usr/include",
+          "-O3"
+        ]
+      }
+
+      cache.save(work_dir, ruby_build_path, original_data)
+
+      # Restore with different work_dir
+      new_work_dir = File.join(tmpdir, "new_work")
+      new_ruby_build_path = File.join(new_work_dir, "_ruby/build")
+      restored = cache.restore(new_work_dir, new_ruby_build_path)
+
+      # Ruby-related -I paths should be updated to new work_dir
+      assert_includes restored[:ruby_cflags], "-I#{new_work_dir}/_ruby/include/ruby-3.4.0"
+      assert_includes restored[:ruby_cflags], "-I#{new_work_dir}/_ruby/include/ruby-3.4.0/x86_64-darwin"
+      # External paths should be preserved
+      assert_includes restored[:ruby_cflags], "-I/usr/include"
+      assert_includes restored[:ruby_cflags], "-O3"
+    end
+  end
+
+  def test_ruby_paths_normalization
+    Dir.mktmpdir do |tmpdir|
+      tmpdir = File.realpath(tmpdir)
+      work_dir = File.join(tmpdir, "work")
+      ruby_build_path = File.join(work_dir, "_ruby/build")
+
+      cache = Kompo::PackingCache.new(
+        cache_dir: File.join(tmpdir, "cache"),
+        ruby_version: "3.4.1",
+        gemfile_lock_hash: "abc123"
+      )
+
+      original_data = {
+        ruby_lib: "#{work_dir}/_ruby/lib",
+        ruby_build_path: "#{work_dir}/_ruby/build",
+        ruby_install_dir: "#{work_dir}/_ruby/install"
+      }
+
+      cache.save(work_dir, ruby_build_path, original_data)
+
+      # Restore with different work_dir
+      new_work_dir = File.join(tmpdir, "new_work")
+      new_ruby_build_path = File.join(new_work_dir, "_ruby/build")
+      restored = cache.restore(new_work_dir, new_ruby_build_path)
+
+      # Ruby paths should be updated to new work_dir
+      assert_equal "#{new_work_dir}/_ruby/lib", restored[:ruby_lib]
+      assert_equal "#{new_work_dir}/_ruby/build", restored[:ruby_build_path]
+      assert_equal "#{new_work_dir}/_ruby/install", restored[:ruby_install_dir]
+    end
+  end
+
+  def test_external_ruby_paths_preserved
+    Dir.mktmpdir do |tmpdir|
+      tmpdir = File.realpath(tmpdir)
+
+      cache = Kompo::PackingCache.new(
+        cache_dir: File.join(tmpdir, "cache"),
+        ruby_version: "3.4.1",
+        gemfile_lock_hash: "abc123"
+      )
+
+      # External ruby paths (e.g., system ruby) should be preserved as-is
+      original_data = {
+        ruby_lib: "/opt/ruby/lib",
+        ruby_build_path: "/opt/ruby/build",
+        ruby_install_dir: "/opt/ruby"
+      }
+
+      cache.save("/work", "/ruby", original_data)
+      restored = cache.restore("/new/work", "/new/ruby")
+
+      # External paths should be unchanged
+      assert_equal "/opt/ruby/lib", restored[:ruby_lib]
+      assert_equal "/opt/ruby/build", restored[:ruby_build_path]
+      assert_equal "/opt/ruby", restored[:ruby_install_dir]
+    end
+  end
 end
