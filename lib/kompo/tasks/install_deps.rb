@@ -11,7 +11,7 @@ module Kompo
     interfaces :lib_paths, :static_libs
 
     def impl
-      macos? ? ForMacOS : ForLinux
+      Kompo.macos? ? ForMacOS : ForLinux
     end
 
     # macOS implementation - installs dependencies via Homebrew
@@ -181,12 +181,6 @@ module Kompo
           After installing, run kompo again.
         MSG
       end
-    end
-
-    private
-
-    def macos?
-      RUBY_PLATFORM.include?("darwin")
     end
   end
 end

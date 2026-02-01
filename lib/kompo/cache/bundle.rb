@@ -1,24 +1,17 @@
 # frozen_string_literal: true
 
-require "fileutils"
-require "digest"
-require "json"
-require_relative "cache"
+require_relative "base"
 
 module Kompo
   # Manages bundle cache operations for BundleInstall
   # Handles cache existence checks, saving, and restoring
-  class BundleCache
-    attr_reader :cache_dir
-
+  class BundleCache < CacheBase
     # @param cache_dir [String] Base cache directory (e.g., ~/.kompo/cache)
     # @param ruby_version [String] Ruby version (e.g., "3.4.1")
     # @param gemfile_lock_hash [String] Hash of Gemfile.lock content
     def initialize(cache_dir:, ruby_version:, gemfile_lock_hash:)
-      @base_cache_dir = cache_dir
-      @ruby_version = ruby_version
-      @hash = gemfile_lock_hash
-      @cache_dir = File.join(@base_cache_dir, @ruby_version, "bundle-#{@hash}")
+      super(cache_dir: cache_dir, ruby_version: ruby_version,
+            gemfile_lock_hash: gemfile_lock_hash, cache_prefix: "bundle")
     end
 
     # Create BundleCache from work directory by computing Gemfile.lock hash
@@ -31,17 +24,6 @@ module Kompo
       return nil unless hash
 
       new(cache_dir: cache_dir, ruby_version: ruby_version, gemfile_lock_hash: hash)
-    end
-
-    # Compute SHA256 hash of Gemfile.lock (first 16 chars)
-    # @param work_dir [String] Directory containing Gemfile.lock
-    # @return [String, nil] Hash string or nil if file not found
-    def self.compute_gemfile_lock_hash(work_dir)
-      gemfile_lock_path = File.join(work_dir, "Gemfile.lock")
-      return nil unless File.exist?(gemfile_lock_path)
-
-      content = File.read(gemfile_lock_path)
-      Digest::SHA256.hexdigest(content)[0..15]
     end
 
     # Check if cache exists with all required files
@@ -85,14 +67,6 @@ module Kompo
       FileUtils.cp_r(bundle_config_dir, work_bundle_config_dir)
     end
 
-    # Read metadata from cache
-    # @return [Hash, nil] Metadata hash or nil if not found
-    def metadata
-      return nil unless File.exist?(metadata_path)
-
-      JSON.parse(File.read(metadata_path))
-    end
-
     private
 
     def bundle_dir
@@ -101,10 +75,6 @@ module Kompo
 
     def bundle_config_dir
       File.join(@cache_dir, ".bundle")
-    end
-
-    def metadata_path
-      File.join(@cache_dir, "metadata.json")
     end
   end
 end

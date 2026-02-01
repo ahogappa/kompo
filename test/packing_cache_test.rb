@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "test_helper"
-require_relative "../lib/kompo/packing_cache"
+require_relative "../lib/kompo/cache/packing"
 
 class PackingCacheTest < Minitest::Test
   def test_cache_dir_is_correct
