@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "test_helper"
-require_relative "../lib/kompo/native_extension_cache"
+require_relative "../lib/kompo/cache/native_extension"
 
 class NativeExtensionCacheTest < Minitest::Test
   def test_compute_gemfile_lock_hash_returns_hash

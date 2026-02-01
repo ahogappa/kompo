@@ -2,7 +2,7 @@
 
 require "fileutils"
 require "bundler"
-require_relative "../bundle_cache"
+require_relative "../cache/bundle"
 
 module Kompo
   # Run bundle install --path bundle in work directory

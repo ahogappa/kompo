@@ -17,6 +17,11 @@ module Kompo
     end
 
     attr_writer :command_runner
+
+    # Check if the current platform is macOS
+    def macos?
+      RUBY_PLATFORM.include?("darwin")
+    end
   end
   # Fixed path prefix for Ruby installation
   # Using a fixed path ensures that cached Ruby binaries work correctly,

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "test_helper"
-require_relative "../lib/kompo/bundle_cache"
+require_relative "../lib/kompo/cache/bundle"
 
 class BundleCacheTest < Minitest::Test
   def test_compute_gemfile_lock_hash_returns_hash

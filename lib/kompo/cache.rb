@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require_relative "cache/base"
+require_relative "cache/bundle"
+require_relative "cache/packing"
+require_relative "cache/native_extension"
 
 module Kompo
   # Default cache directory

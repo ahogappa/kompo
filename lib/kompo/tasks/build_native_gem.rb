@@ -2,7 +2,7 @@
 
 require "fileutils"
 require_relative "../extension_parser"
-require_relative "../native_extension_cache"
+require_relative "../cache/native_extension"
 
 module Kompo
   # Build native gem extensions (C extensions and Rust extensions)

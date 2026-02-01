@@ -1,24 +1,18 @@
 # frozen_string_literal: true
 
-require "fileutils"
-require "digest"
-require "json"
+require_relative "base"
 
 module Kompo
   # Manages packing cache operations for Packing
   # Handles cache of linker-related information extracted from Makefiles
   # This avoids stale work_dir paths when using BundleCache
-  class PackingCache
-    attr_reader :cache_dir
-
+  class PackingCache < CacheBase
     # @param cache_dir [String] Base cache directory (e.g., ~/.kompo/cache)
     # @param ruby_version [String] Ruby version (e.g., "3.4.1")
     # @param gemfile_lock_hash [String] Hash of Gemfile.lock content
     def initialize(cache_dir:, ruby_version:, gemfile_lock_hash:)
-      @base_cache_dir = cache_dir
-      @ruby_version = ruby_version
-      @hash = gemfile_lock_hash
-      @cache_dir = File.join(@base_cache_dir, @ruby_version, "packing-#{@hash}")
+      super(cache_dir: cache_dir, ruby_version: ruby_version,
+            gemfile_lock_hash: gemfile_lock_hash, cache_prefix: "packing")
     end
 
     # Create PackingCache from work directory by computing Gemfile.lock hash
@@ -27,10 +21,9 @@ module Kompo
     # @param work_dir [String] Work directory containing Gemfile.lock
     # @return [PackingCache, nil] PackingCache instance or nil if Gemfile.lock not found
     def self.from_work_dir(cache_dir:, ruby_version:, work_dir:)
-      gemfile_lock_path = File.join(work_dir, "Gemfile.lock")
-      return nil unless File.exist?(gemfile_lock_path)
+      hash = compute_gemfile_lock_hash(work_dir)
+      return nil unless hash
 
-      hash = Digest::SHA256.hexdigest(File.read(gemfile_lock_path))[0..15]
       new(cache_dir: cache_dir, ruby_version: ruby_version, gemfile_lock_hash: hash)
     end
 
@@ -126,19 +119,7 @@ module Kompo
       }
     end
 
-    # Read metadata from cache
-    # @return [Hash, nil] Metadata hash or nil if not found
-    def metadata
-      return nil unless File.exist?(metadata_path)
-
-      JSON.parse(File.read(metadata_path))
-    end
-
     private
-
-    def metadata_path
-      File.join(@cache_dir, "metadata.json")
-    end
 
     # Convert absolute -L paths starting with work_dir to relative
     def convert_to_relative(paths, work_dir)
