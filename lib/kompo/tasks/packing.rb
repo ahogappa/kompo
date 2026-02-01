@@ -2,14 +2,15 @@
 
 require_relative "../cache/packing"
 require_relative "packing/common_helpers"
-require_relative "packing/macos"
-require_relative "packing/linux"
 
 module Kompo
   # Section to compile the final binary.
   # Switches implementation based on the current platform.
   # Uses CollectDependencies's exported values for dependencies.
   class Packing < Taski::Section
+    autoload :ForMacOS, "kompo/tasks/packing/macos"
+    autoload :ForLinux, "kompo/tasks/packing/linux"
+
     interfaces :output_path
 
     def impl
