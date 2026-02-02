@@ -394,6 +394,51 @@ class InstallRubyFromSourceTest < Minitest::Test
       assert_match(/Unsupported source format/, error.message)
     end
   end
+
+  def test_from_source_does_not_save_to_cache_when_no_cache_option_is_set
+    Dir.mktmpdir do |tmpdir|
+      ruby_build_path = "/mock/ruby-build"
+      work_dir = tmpdir
+      kompo_cache = File.join(tmpdir, ".kompo", "cache")
+
+      mock_task(Kompo::RubyBuildPath, path: ruby_build_path)
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: work_dir)
+      mock_args(
+        ruby_version: "3.4.1",
+        kompo_cache: kompo_cache,
+        no_cache: true
+      )
+
+      # Mock ruby-build --definitions to return available versions
+      @mock.stub([ruby_build_path, "--definitions"],
+        output: "3.4.0\n3.4.1\n3.4.2\n", success: true)
+
+      # Mock ruby-build execution
+      @mock.stub([ruby_build_path, "--verbose", "--keep", "3.4.1", File.join(work_dir, "_ruby")],
+        output: "Building Ruby 3.4.1...", success: true)
+
+      # Mock ruby --version after build
+      ruby_path = File.join(work_dir, "_ruby", "bin", "ruby")
+      @mock.stub([ruby_path, "--version"],
+        output: "ruby 3.4.1 (2025-01-01) [arm64-darwin24]", success: true)
+
+      # Create the expected directory structure that would be created by ruby-build
+      ruby_install_dir = File.join(work_dir, "_ruby")
+      FileUtils.mkdir_p(File.join(ruby_install_dir, "bin"))
+      FileUtils.mkdir_p(File.join(ruby_install_dir, "_build"))
+      File.write(File.join(ruby_install_dir, "bin", "ruby"), "#!/bin/sh")
+
+      capture_io { Kompo::InstallRuby.run }
+
+      # Verify cache was NOT created due to no_cache option
+      version_cache_dir = File.join(kompo_cache, "3.4.1")
+      cache_ruby_dir = File.join(version_cache_dir, "ruby")
+      metadata_path = File.join(version_cache_dir, "metadata.json")
+
+      refute Dir.exist?(cache_ruby_dir), "Cache ruby directory should not be created with no_cache option"
+      refute File.exist?(metadata_path), "Cache metadata.json should not be created with no_cache option"
+    end
+  end
 end
 
 class InstallRubyFromCacheRubyPcFixTest < Minitest::Test

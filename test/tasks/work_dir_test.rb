@@ -142,4 +142,30 @@ class WorkDirTest < Minitest::Test
       assert_match(/permission denied.*creating new work directory/i, err)
     end
   end
+
+  def test_work_dir_ignores_cache_when_no_cache_option_is_set
+    Dir.mktmpdir do |tmpdir|
+      cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
+      cached_work_dir = File.join(tmpdir, "cached_work")
+      FileUtils.mkdir_p([cache_dir, cached_work_dir])
+
+      # Create marker file to identify this as a Kompo work directory
+      File.write(File.join(cached_work_dir, Kompo::WorkDir::MARKER_FILE), "kompo-work-dir")
+
+      # Create metadata file with cached work_dir path
+      metadata = {"work_dir" => cached_work_dir, "ruby_version" => RUBY_VERSION}
+      File.write(File.join(cache_dir, "metadata.json"), JSON.generate(metadata))
+
+      # Set no_cache option
+      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"), no_cache: true)
+
+      path = Kompo::WorkDir.path
+
+      # Should NOT use cached work_dir, should create a new one
+      refute_equal cached_work_dir, path
+      assert Dir.exist?(path)
+      # New path should have marker file
+      assert File.exist?(File.join(path, Kompo::WorkDir::MARKER_FILE))
+    end
+  end
 end
