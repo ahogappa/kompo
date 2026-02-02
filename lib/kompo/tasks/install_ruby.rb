@@ -272,6 +272,8 @@ module Kompo
       end
 
       def save_to_cache(work_dir)
+        return if Taski.args[:no_cache]
+
         cache_install_dir = File.join(@version_cache_dir, "ruby")
 
         group("Saving Ruby to cache") do
