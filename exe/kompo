@@ -26,6 +26,7 @@ opt = OptionParser.new do |o|
     args[:clean_cache] = v.nil? ? RUBY_VERSION : v
   end
   o.on("--dry-run", "Show final compile command without executing it") { |_v| args[:dry_run] = true }
+  o.on("--no-clean", "Skip cleanup phase (keep work directory for debugging)") { |_v| args[:no_clean] = true }
   o.on("--verbose", "Show detailed command execution output") { |_v| args[:verbose] = true }
   o.on("--dynamic-libs=LIBS", "Comma-separated list of libraries to link dynamically (e.g., ssl,crypto,gmp)") do |v|
     args[:dynamic_libs] = v.split(",").map(&:strip)
@@ -60,6 +61,8 @@ if args[:clean_cache]
   clean_opts = {}
   clean_opts[:cache_dir] = args[:cache_dir] if args[:cache_dir]
   Kompo.clean_cache(args[:clean_cache], **clean_opts)
+elsif args[:no_clean]
+  Kompo::Packing.run(args:)
 else
   Kompo::Packing.run_and_clean(args:)
 end
