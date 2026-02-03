@@ -163,9 +163,9 @@ module Kompo
         @kompo_cache = Taski.args.fetch(:kompo_cache, File.expand_path("~/.kompo/cache"))
         @version_cache_dir = File.join(@kompo_cache, @ruby_version)
 
-        # Check if we have a valid cache
+        # Check if we have a valid cache (skip if --no-cache is specified)
         cache_metadata_path = File.join(@version_cache_dir, "metadata.json")
-        if cache_valid?(cache_metadata_path)
+        if !Taski.args[:no_cache] && cache_valid?(cache_metadata_path)
           restore_from_cache(cache_metadata_path)
         else
           build_and_cache(ruby_build)
