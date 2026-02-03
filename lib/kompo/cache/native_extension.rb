@@ -91,39 +91,55 @@ module Kompo
 
     # Save ports directories from gems to cache
     # These contain compiled native libraries like libxml2, libxslt
+    # Also handles nested ports directories (e.g., gems/*/ext/*/ports for libgumbo)
     def save_ports_directories(work_dir)
-      gem_ports = Dir.glob(File.join(work_dir, "bundle/ruby/*/gems/*/ports"))
-      return if gem_ports.empty?
+      # Find ALL ports directories including nested ones (gems/**/ports)
+      all_ports = Dir.glob(File.join(work_dir, "bundle/ruby/*/gems/**/ports"))
+      return if all_ports.empty?
 
       FileUtils.mkdir_p(ports_cache_dir)
 
-      gem_ports.each do |port_path|
-        gem_name = File.basename(File.dirname(port_path))
-        dest = File.join(ports_cache_dir, gem_name)
+      all_ports.each do |port_path|
+        # Get path relative to gems directory
+        relative = port_path.sub(%r{.*/bundle/ruby/[^/]+/gems/}, "")
+        dest = File.join(ports_cache_dir, relative)
+        FileUtils.mkdir_p(File.dirname(dest))
         FileUtils.cp_r(port_path, dest)
       end
     end
 
     # Restore ports directories from cache to gems
+    # Handles both top-level and nested ports (e.g., gems/*/ext/*/ports)
     def restore_ports_directories(work_dir)
       return unless Dir.exist?(ports_cache_dir)
 
-      Dir.glob(File.join(ports_cache_dir, "*")).each do |cached_gem_ports|
-        gem_name = File.basename(cached_gem_ports)
-        # Find the gem directory in work_dir
+      # Find all cached ports directories
+      Dir.glob(File.join(ports_cache_dir, "**/ports")).each do |cached_ports|
+        # Get relative path from cache (e.g., "nokogiri-1.19.0/ext/nokogiri/ports")
+        relative = cached_ports.sub("#{ports_cache_dir}/", "")
+        # Remove trailing "/ports" to get parent path
+        parent_relative = relative.sub(%r{/ports$}, "")
+
+        # Find gem directory
+        gem_name = parent_relative.split("/").first
         gem_dir = Dir.glob(File.join(work_dir, "bundle/ruby/*/gems/#{gem_name}")).first
         next unless gem_dir
 
-        dest = File.join(gem_dir, "ports")
+        # Construct full destination path
+        subpath = parent_relative.sub(%r{^[^/]+/?}, "") # Remove gem name
+        dest_parent = subpath.empty? ? gem_dir : File.join(gem_dir, subpath)
+        dest = File.join(dest_parent, "ports")
+
         FileUtils.rm_rf(dest) if Dir.exist?(dest)
-        FileUtils.cp_r(cached_gem_ports, dest)
+        FileUtils.mkdir_p(File.dirname(dest))
+        FileUtils.cp_r(cached_ports, dest)
       end
     end
 
-    # List gem names that have ports directories
+    # List all ports directories (relative to gems directory)
     def list_ports_directories(work_dir)
-      Dir.glob(File.join(work_dir, "bundle/ruby/*/gems/*/ports"))
-        .map { |p| File.basename(File.dirname(p)) }
+      Dir.glob(File.join(work_dir, "bundle/ruby/*/gems/**/ports"))
+        .map { |p| p.sub(%r{.*/bundle/ruby/[^/]+/gems/}, "") }
     end
   end
 end

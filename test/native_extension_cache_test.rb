@@ -314,13 +314,13 @@ class NativeExtensionCacheTest < Minitest::Test
       exts = [["nokogiri", "Init_nokogiri"]]
       cache.save(work_dir, exts)
 
-      # Verify ports directory was cached
-      cached_ports = File.join(cache.cache_dir, "ports", "nokogiri-1.19.0/x86_64-darwin/libxml2/2.12.0/lib/libxml2.a")
+      # Verify ports directory was cached (relative path includes full path from gem)
+      cached_ports = File.join(cache.cache_dir, "ports", "nokogiri-1.19.0/ports/x86_64-darwin/libxml2/2.12.0/lib/libxml2.a")
       assert File.exist?(cached_ports), "Ports directory should be cached"
 
-      # Verify metadata includes ports info
+      # Verify metadata includes ports info (relative path from gems directory)
       metadata = cache.metadata
-      assert_includes metadata["ports"], "nokogiri-1.19.0"
+      assert_includes metadata["ports"], "nokogiri-1.19.0/ports"
     end
   end
 
@@ -338,15 +338,15 @@ class NativeExtensionCacheTest < Minitest::Test
       FileUtils.mkdir_p(File.join(cache.cache_dir, "ext", "nokogiri"))
       File.write(File.join(cache.cache_dir, "ext", "nokogiri", "nokogiri.o"), "object file")
 
-      # Create cached ports
-      cached_ports_dir = File.join(cache.cache_dir, "ports/nokogiri-1.19.0/x86_64-darwin/libxml2/2.12.0/lib")
+      # Create cached ports (new structure: gem-name/ports/arch/lib/...)
+      cached_ports_dir = File.join(cache.cache_dir, "ports/nokogiri-1.19.0/ports/x86_64-darwin/libxml2/2.12.0/lib")
       FileUtils.mkdir_p(cached_ports_dir)
       File.write(File.join(cached_ports_dir, "libxml2.a"), "static lib content")
 
-      # Create metadata
+      # Create metadata (relative path from gems directory)
       File.write(
         File.join(cache.cache_dir, "metadata.json"),
-        JSON.generate({"exts" => [["nokogiri", "Init_nokogiri"]], "ports" => ["nokogiri-1.19.0"]})
+        JSON.generate({"exts" => [["nokogiri", "Init_nokogiri"]], "ports" => ["nokogiri-1.19.0/ports"]})
       )
 
       # Create work directory with bundle structure (simulating BundleCache restore)
@@ -423,6 +423,43 @@ class NativeExtensionCacheTest < Minitest::Test
 
       # ext should be restored
       assert File.exist?(File.join(work_dir, "ext/nokogiri/nokogiri.o"))
+    end
+  end
+
+  def test_saves_and_restores_nested_ext_ports
+    Dir.mktmpdir do |tmpdir|
+      tmpdir = File.realpath(tmpdir)
+      work_dir = File.join(tmpdir, "work")
+
+      # Create nested ports (like nokogiri's libgumbo in ext/nokogiri/ports)
+      nested_ports = File.join(work_dir, "bundle/ruby/3.4.0/gems/nokogiri-1.19.0/ext/nokogiri/ports/arm64-darwin/libgumbo/lib")
+      FileUtils.mkdir_p(nested_ports)
+      File.write(File.join(nested_ports, "libgumbo.a"), "fake lib")
+
+      # Create ext directory
+      ext_dir = File.join(work_dir, "ext/nokogiri")
+      FileUtils.mkdir_p(ext_dir)
+      File.write(File.join(ext_dir, "nokogiri.o"), "fake object")
+
+      File.write(File.join(work_dir, "Gemfile.lock"), "GEM\n  specs:\n    nokogiri (1.19.0)\n")
+
+      cache = Kompo::NativeExtensionCache.from_work_dir(
+        cache_dir: File.join(tmpdir, "cache"),
+        ruby_version: "3.4.1",
+        work_dir: work_dir
+      )
+
+      cache.save(work_dir, [["nokogiri", "Init_nokogiri"]])
+
+      # Restore to new work_dir
+      new_work_dir = File.join(tmpdir, "new_work")
+      FileUtils.mkdir_p(File.join(new_work_dir, "bundle/ruby/3.4.0/gems/nokogiri-1.19.0/ext/nokogiri"))
+
+      cache.restore(new_work_dir)
+
+      # Verify nested ports restored
+      restored = File.join(new_work_dir, "bundle/ruby/3.4.0/gems/nokogiri-1.19.0/ext/nokogiri/ports/arm64-darwin/libgumbo/lib/libgumbo.a")
+      assert File.exist?(restored), "Nested ext ports should be restored"
     end
   end
 end
