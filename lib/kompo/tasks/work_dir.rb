@@ -21,44 +21,47 @@ module Kompo
       kompo_cache = Taski.args.fetch(:kompo_cache, File.expand_path("~/.kompo/cache"))
       cache_metadata_path = File.join(kompo_cache, ruby_version, "metadata.json")
 
-      if File.exist?(cache_metadata_path)
-        begin
-          metadata = JSON.parse(File.read(cache_metadata_path))
-          cached_work_dir = metadata["work_dir"]
+      # Skip cache lookup if --no-cache is specified
+      unless Taski.args[:no_cache]
+        if File.exist?(cache_metadata_path)
+          begin
+            metadata = JSON.parse(File.read(cache_metadata_path))
+            cached_work_dir = metadata["work_dir"]
 
-          if cached_work_dir
-            # Check if the directory exists and belongs to us (has marker) or doesn't exist at all
-            # In CI environments, the temp directory is cleaned between runs, so we recreate it
-            if Dir.exist?(cached_work_dir)
-              marker_path = File.join(cached_work_dir, MARKER_FILE)
-              if File.exist?(marker_path)
-                # Directory exists and has our marker - reuse it
-                @path = cached_work_dir
-                puts "Using cached work directory: #{@path}"
-                return
+            if cached_work_dir
+              # Check if the directory exists and belongs to us (has marker) or doesn't exist at all
+              # In CI environments, the temp directory is cleaned between runs, so we recreate it
+              if Dir.exist?(cached_work_dir)
+                marker_path = File.join(cached_work_dir, MARKER_FILE)
+                if File.exist?(marker_path)
+                  # Directory exists and has our marker - reuse it
+                  @path = cached_work_dir
+                  puts "Using cached work directory: #{@path}"
+                  return
+                else
+                  # Directory exists but wasn't created by Kompo - don't use it
+                  warn "warn: #{cached_work_dir} exists but is not a Kompo work directory, creating new one"
+                end
               else
-                # Directory exists but wasn't created by Kompo - don't use it
-                warn "warn: #{cached_work_dir} exists but is not a Kompo work directory, creating new one"
-              end
-            else
-              # Directory doesn't exist - try to recreate it (common in CI after cache restore)
-              # This may fail if the path is from a previous CI run with different permissions
-              begin
-                FileUtils.mkdir_p(cached_work_dir)
-                File.write(File.join(cached_work_dir, MARKER_FILE), "kompo-work-dir")
-                @path = cached_work_dir
-                puts "Recreated cached work directory: #{@path}"
-                return
-              rescue Errno::EACCES, Errno::EPERM, Errno::EROFS
-                # Permission denied or read-only filesystem - fall through to create new work_dir
-                # Note: This may cause issues if the cached Ruby has hardcoded paths to the old work_dir.
-                # In CI, consider using exact cache key matches (no restore-keys) to avoid this issue.
-                warn "warn: Cannot recreate #{cached_work_dir} (permission denied), creating new work directory"
+                # Directory doesn't exist - try to recreate it (common in CI after cache restore)
+                # This may fail if the path is from a previous CI run with different permissions
+                begin
+                  FileUtils.mkdir_p(cached_work_dir)
+                  File.write(File.join(cached_work_dir, MARKER_FILE), "kompo-work-dir")
+                  @path = cached_work_dir
+                  puts "Recreated cached work directory: #{@path}"
+                  return
+                rescue Errno::EACCES, Errno::EPERM, Errno::EROFS
+                  # Permission denied or read-only filesystem - fall through to create new work_dir
+                  # Note: This may cause issues if the cached Ruby has hardcoded paths to the old work_dir.
+                  # In CI, consider using exact cache key matches (no restore-keys) to avoid this issue.
+                  warn "warn: Cannot recreate #{cached_work_dir} (permission denied), creating new work directory"
+                end
               end
             end
+          rescue JSON::ParserError
+            # Fall through to create new work_dir
           end
-        rescue JSON::ParserError
-          # Fall through to create new work_dir
         end
       end
 

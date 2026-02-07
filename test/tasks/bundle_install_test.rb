@@ -124,3 +124,75 @@ class BundleInstallTest < Minitest::Test
     end
   end
 end
+
+class BundleInstallFromSourceTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def setup
+    super
+    @mock = setup_mock_command_runner
+  end
+
+  def teardown
+    teardown_mock_command_runner
+    super
+  end
+
+  def test_from_source_does_not_save_to_cache_when_no_cache_option_is_set
+    Dir.mktmpdir do |tmpdir|
+      work_dir = File.join(tmpdir, "work")
+      FileUtils.mkdir_p(work_dir)
+
+      # Create Gemfile and Gemfile.lock
+      File.write(File.join(work_dir, "Gemfile"), "source 'https://rubygems.org'\ngem 'sinatra'")
+      gemfile_lock_content = "GEM\n  remote: https://rubygems.org/\n  specs:\n    sinatra (4.0.0)\n"
+      File.write(File.join(work_dir, "Gemfile.lock"), gemfile_lock_content)
+
+      ruby_path = "/mock/ruby"
+      bundler_path = "/mock/bundler"
+      cache_dir = File.join(tmpdir, ".kompo", "cache")
+
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::CopyGemfile, gemfile_exists: true)
+      mock_task(Kompo::InstallRuby,
+        ruby_path: ruby_path,
+        bundler_path: bundler_path,
+        ruby_version: "3.4.1",
+        ruby_major_minor: "3.4")
+      mock_args(cache_dir: cache_dir, no_cache: true)
+
+      # Mock bundler config set command
+      @mock.stub([ruby_path, bundler_path, "config", "set", "--local", "path", "bundle"],
+        output: "", success: true)
+
+      # Mock bundle install command
+      @mock.stub([ruby_path, bundler_path, "install"],
+        output: "Bundle complete!", success: true)
+
+      # Mock cc --version for clang check
+      @mock.stub(["cc", "--version"],
+        output: "Apple clang version 15.0.0", success: true)
+
+      # Create expected directory structure that bundle install would create
+      bundle_dir = File.join(work_dir, "bundle", "ruby", "3.4.0")
+      bundle_config_dir = File.join(work_dir, ".bundle")
+      FileUtils.mkdir_p(bundle_dir)
+      FileUtils.mkdir_p(bundle_config_dir)
+      File.write(File.join(bundle_config_dir, "config"), "BUNDLE_PATH: bundle")
+
+      capture_io { Kompo::BundleInstall.run }
+
+      # Verify bundle install was called
+      assert @mock.called?(:run, ruby_path, bundler_path, "install")
+
+      # Verify cache was NOT created due to no_cache option
+      hash = Digest::SHA256.hexdigest(gemfile_lock_content)[0..15]
+      bundle_cache_name = "bundle-#{hash}"
+      version_cache_dir = File.join(cache_dir, "3.4.1")
+      bundle_cache_dir = File.join(version_cache_dir, bundle_cache_name)
+
+      refute Dir.exist?(bundle_cache_dir), "Bundle cache directory should not be created with no_cache option"
+    end
+  end
+end

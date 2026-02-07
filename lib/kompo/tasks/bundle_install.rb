@@ -130,6 +130,8 @@ module Kompo
       end
 
       def save_to_cache(work_dir)
+        return if Taski.args[:no_cache]
+
         cache_dir = Taski.args.fetch(:cache_dir, DEFAULT_CACHE_DIR)
         ruby_version = InstallRuby.ruby_version
 
