@@ -256,8 +256,7 @@ class InstallRubyFromSourceTest < Minitest::Test
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: work_dir)
       mock_args(
         ruby_version: "3.4.1",
-        kompo_cache: File.join(tmpdir, ".kompo", "cache"),
-        no_cache: true
+        kompo_cache: File.join(tmpdir, ".kompo", "cache")
       )
 
       # Mock ruby --version
