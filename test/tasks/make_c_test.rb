@@ -169,13 +169,10 @@ class MakeFsCTest < Minitest::Test
       mock_args(project_dir: project_dir)
 
       path = Kompo::MakeFsC.path
-      content = File.read(path)
-      paths_match = content.match(/const char PATHS\[\] = \{([^}]+)\}/)
-      assert paths_match, "Should have PATHS array"
-      decoded_paths = paths_match[1].split(",").map(&:to_i).pack("C*")
-      refute_includes decoded_paths, "debug.log"
-      refute_includes decoded_paths, "cache.txt"
-      assert_includes decoded_paths, "main.rb"
+      path_list = decode_embedded_paths(File.read(path))
+      refute path_list.any? { |p| p.include?("debug.log") }
+      refute path_list.any? { |p| p.include?("cache.txt") }
+      assert path_list.any? { |p| p.include?("main.rb") }
     end
   end
 
@@ -210,10 +207,8 @@ class MakeFsCTest < Minitest::Test
       refute_includes content, "SECRET_DATA"
 
       # Regular file should still be included
-      paths_match = content.match(/const char PATHS\[\] = \{([^}]+)\}/)
-      assert paths_match, "Should have PATHS array"
-      decoded_paths = paths_match[1].split(",").map(&:to_i).pack("C*")
-      assert_includes decoded_paths, "app.rb"
+      path_list = decode_embedded_paths(content)
+      assert path_list.any? { |p| p.include?("app.rb") }
     end
   end
 
@@ -240,10 +235,8 @@ class MakeFsCTest < Minitest::Test
       content = File.read(path)
 
       # Internal symlink content should be included
-      paths_match = content.match(/const char PATHS\[\] = \{([^}]+)\}/)
-      assert paths_match, "Should have PATHS array"
-      decoded_paths = paths_match[1].split(",").map(&:to_i).pack("C*")
-      assert_includes decoded_paths, "internal.rb"
+      path_list = decode_embedded_paths(content)
+      assert path_list.any? { |p| p.include?("internal.rb") }
     end
   end
 
@@ -286,14 +279,8 @@ class MakeFsCTest < Minitest::Test
       assert File.exist?(path)
       content = File.read(path)
 
-      # Count occurrences of the entrypoint path in PATHS
-      paths_match = content.match(/const char PATHS\[\] = \{([^}]+)\}/)
-      assert paths_match, "Should have PATHS array"
-      decoded_paths = paths_match[1].split(",").map(&:to_i).pack("C*")
-
       # The entrypoint should only appear once, not twice
-      # Split by null character and count occurrences
-      path_list = decoded_paths.split("\0")
+      path_list = decode_embedded_paths(content)
       entrypoint_count = path_list.count { |p| p == entrypoint }
       assert_equal 1, entrypoint_count, "Entrypoint should only be embedded once"
     end
@@ -315,12 +302,8 @@ class MakeFsCTest < Minitest::Test
       assert File.exist?(path)
       content = File.read(path)
 
-      paths_match = content.match(/const char PATHS\[\] = \{([^}]+)\}/)
-      assert paths_match, "Should have PATHS array"
-      decoded_paths = paths_match[1].split(",").map(&:to_i).pack("C*")
-
       # app.rb should only appear once
-      path_list = decoded_paths.split("\0")
+      path_list = decode_embedded_paths(content)
       app_count = path_list.count { |p| p.end_with?("app.rb") }
       assert_equal 1, app_count, "app.rb should only be embedded once"
     end
@@ -426,6 +409,91 @@ class MakeFsCTest < Minitest::Test
     end
   end
 
+  def test_make_fs_c_does_not_skip_binary_extensions_for_project_paths
+    Dir.mktmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+
+      # Create project directory with image files
+      project_dir = File.join(work_dir, "app", "assets")
+      FileUtils.mkdir_p(project_dir)
+      File.write(File.join(project_dir, "logo.png"), "PNG_IMAGE_DATA")
+      File.write(File.join(project_dir, "photo.jpg"), "JPG_IMAGE_DATA")
+      File.write(File.join(project_dir, "icon.svg"), "SVG_DATA")
+
+      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint,
+        additional_paths: [File.join(work_dir, "app")])
+
+      path = Kompo::MakeFsC.path
+
+      assert File.exist?(path)
+      content = File.read(path)
+
+      # Project paths should include image files (SKIP_EXTENSIONS not applied)
+      path_list = decode_embedded_paths(content)
+      assert path_list.any? { |p| p.include?("logo.png") }
+      assert path_list.any? { |p| p.include?("photo.jpg") }
+      assert path_list.any? { |p| p.include?("icon.svg") }
+    end
+  end
+
+  def test_make_fs_c_skips_binary_extensions_for_gem_paths
+    Dir.mktmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+
+      # Create gem directory with binary files
+      gem_dir = File.join(work_dir, "bundle", "ruby", "3.4.0", "gems", "nokogiri-1.0")
+      FileUtils.mkdir_p(gem_dir)
+      File.write(File.join(gem_dir, "lib.rb"), "module Nokogiri; end")
+      File.write(File.join(gem_dir, "nokogiri.so"), "BINARY_SO_DATA")
+      File.write(File.join(gem_dir, "image.png"), "GEM_PNG_DATA")
+
+      bundle_config_dir = File.join(work_dir, ".bundle")
+      FileUtils.mkdir_p(bundle_config_dir)
+      File.write(File.join(bundle_config_dir, "config"), "BUNDLE_PATH: bundle")
+      File.write(File.join(work_dir, "Gemfile"), "source 'https://rubygems.org'")
+      File.write(File.join(work_dir, "Gemfile.lock"), "GEM\n  specs:\n")
+
+      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint,
+        gemfile_exists: true,
+        bundler_config_path: File.join(bundle_config_dir, "config"),
+        bundle_ruby_dir: gem_dir)
+
+      path = Kompo::MakeFsC.path
+
+      assert File.exist?(path)
+      content = File.read(path)
+
+      # Gem paths should still skip .so and .png files
+      path_list = decode_embedded_paths(content)
+      refute path_list.any? { |p| p.include?("nokogiri.so") }
+      refute path_list.any? { |p| p.include?("image.png") }
+      assert path_list.any? { |p| p.include?("lib.rb") }
+    end
+  end
+
+  def test_make_fs_c_skips_binary_extensions_for_stdlib_paths
+    Dir.mktmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+
+      # Create stdlib directory with binary files
+      stdlib_dir = File.join(tmpdir, "ruby_install", "lib", "ruby", "3.4.0")
+      FileUtils.mkdir_p(stdlib_dir)
+      File.write(File.join(stdlib_dir, "json.rb"), "module JSON; end")
+      File.write(File.join(stdlib_dir, "json.so"), "BINARY_SO_DATA")
+
+      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, stdlib_paths: [stdlib_dir])
+
+      path = Kompo::MakeFsC.path
+
+      assert File.exist?(path)
+      content = File.read(path)
+
+      path_list = decode_embedded_paths(content)
+      refute path_list.any? { |p| p.include?("json.so") }
+      assert path_list.any? { |p| p.include?("json.rb") }
+    end
+  end
+
   private
 
   def setup_work_dir_with_entrypoint(tmpdir, content: "puts 'hello'")
@@ -436,12 +504,20 @@ class MakeFsCTest < Minitest::Test
     [work_dir, entrypoint]
   end
 
+  # Decode the PATHS array from generated fs.c content into a list of embedded path strings
+  def decode_embedded_paths(fs_c_content)
+    paths_match = fs_c_content.match(/const char PATHS\[\] = \{([^}]+)\}/)
+    assert paths_match, "Should have PATHS array"
+    paths_match[1].split(",").map(&:to_i).pack("C*").split("\0")
+  end
+
   def mock_fs_c_dependencies(work_dir, tmpdir, entrypoint,
     additional_paths: [],
     gemfile_exists: false,
     gemspec_paths: [],
     bundler_config_path: nil,
-    bundle_ruby_dir: nil)
+    bundle_ruby_dir: nil,
+    stdlib_paths: [])
     mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
     mock_task(Kompo::InstallRuby,
       ruby_install_dir: "/path/to/install",
@@ -450,6 +526,6 @@ class MakeFsCTest < Minitest::Test
     mock_task(Kompo::CopyProjectFiles, entrypoint_path: entrypoint, additional_paths: additional_paths)
     mock_task(Kompo::CopyGemfile, gemfile_exists: gemfile_exists, gemspec_paths: gemspec_paths)
     mock_task(Kompo::BundleInstall, bundler_config_path: bundler_config_path, bundle_ruby_dir: bundle_ruby_dir)
-    mock_task(Kompo::CheckStdlibs, paths: [])
+    mock_task(Kompo::CheckStdlibs, paths: stdlib_paths)
   end
 end

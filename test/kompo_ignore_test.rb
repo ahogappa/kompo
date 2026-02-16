@@ -118,3 +118,63 @@ class KompoIgnoreTest < Minitest::Test
     refute ignore.ignore?("subdir/config.local.yml")
   end
 end
+
+class KompoIgnoreGenerateDefaultTest < Minitest::Test
+  def setup
+    @temp_dir = Dir.mktmpdir
+  end
+
+  def teardown
+    FileUtils.rm_rf(@temp_dir)
+  end
+
+  def test_generate_default_creates_kompoignore_file
+    Kompo::KompoIgnore.generate_default(@temp_dir)
+
+    ignore_path = File.join(@temp_dir, ".kompoignore")
+    assert File.exist?(ignore_path)
+  end
+
+  def test_generate_default_contains_binary_extensions
+    Kompo::KompoIgnore.generate_default(@temp_dir)
+
+    content = File.read(File.join(@temp_dir, ".kompoignore"))
+    assert_includes content, "*.so"
+    assert_includes content, "*.o"
+    assert_includes content, "*.exe"
+    assert_includes content, "*.gem"
+    assert_includes content, "*.gz"
+  end
+
+  def test_generate_default_does_not_contain_image_extensions
+    Kompo::KompoIgnore.generate_default(@temp_dir)
+
+    content = File.read(File.join(@temp_dir, ".kompoignore"))
+    refute_includes content, "*.png"
+    refute_includes content, "*.jpg"
+    refute_includes content, "*.jpeg"
+    refute_includes content, "*.gif"
+  end
+
+  def test_generate_default_does_not_overwrite_existing_file
+    existing_content = "# My custom ignore\n*.custom\n"
+    File.write(File.join(@temp_dir, ".kompoignore"), existing_content)
+
+    Kompo::KompoIgnore.generate_default(@temp_dir)
+
+    content = File.read(File.join(@temp_dir, ".kompoignore"))
+    assert_equal existing_content, content
+  end
+
+  def test_generate_default_returns_true_when_created
+    result = Kompo::KompoIgnore.generate_default(@temp_dir)
+    assert result
+  end
+
+  def test_generate_default_returns_false_when_already_exists
+    File.write(File.join(@temp_dir, ".kompoignore"), "*.log\n")
+
+    result = Kompo::KompoIgnore.generate_default(@temp_dir)
+    refute result
+  end
+end
