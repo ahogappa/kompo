@@ -137,7 +137,7 @@ class PackingForLinuxDryRunTest < Minitest::Test
         fs_c: fs_c,
         exts_dir: File.join(tmpdir, "exts"),
         deps_lib_paths: "-L/usr/lib/x86_64-linux-gnu",
-        static_libs: []
+        static_libs: ["/usr/lib/x86_64-linux-gnu/libz.a", "/usr/lib/x86_64-linux-gnu/libgmp.a"]
       )
 
       mock_task(Kompo::CollectDependencies,
@@ -153,12 +153,22 @@ class PackingForLinuxDryRunTest < Minitest::Test
       @mock.stub(["pkg-config", "--cflags", "#{ruby_install_dir}/lib/pkgconfig/ruby.pc"],
         output: "-I#{ruby_install_dir}/include")
       @mock.stub(["pkg-config", "--variable=MAINLIBS", "#{ruby_install_dir}/lib/pkgconfig/ruby.pc"],
-        output: "-lpthread -ldl -lm")
+        output: "-lz -lgmp -lpthread -ldl -lm")
 
-      capture_io { Kompo::Packing.run }
+      stdout, = capture_io { Kompo::Packing.run }
 
       # Verify gcc was NOT actually called (dry_run skips execution)
       refute @mock.called?(:run, "gcc"), "gcc should not be executed in dry_run mode"
+
+      # Verify static libraries are linked by full path instead of -l flags
+      assert_includes stdout, "/usr/lib/x86_64-linux-gnu/libz.a",
+        "dry_run output should contain full path for libz.a"
+      assert_includes stdout, "/usr/lib/x86_64-linux-gnu/libgmp.a",
+        "dry_run output should contain full path for libgmp.a"
+
+      # Verify -Wl,-Bstatic and -Wl,-Bdynamic are NOT used
+      refute_includes stdout, "-Wl,-Bstatic", "should not use -Wl,-Bstatic"
+      refute_includes stdout, "-Wl,-Bdynamic", "should not use -Wl,-Bdynamic"
     end
   end
 end

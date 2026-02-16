@@ -116,6 +116,19 @@ module Kompo
         end.compact.flat_map { |l| l.split(" ") }.uniq
           .map { |l| l.start_with?("-l") ? l : "-l#{File.basename(l, ".a").delete_prefix("lib")}" }
       end
+
+      # Build a map from -l<name> flag to static library full path
+      # e.g., {"-lgmp" => "/opt/homebrew/opt/gmp/lib/libgmp.a", ...}
+      # Automatically derives the flag from the library filename (lib<name>.a -> -l<name>)
+      def build_static_lib_map(static_libs)
+        return {} if static_libs.nil? || static_libs.empty?
+
+        static_libs.to_h do |path|
+          basename = File.basename(path, ".a") # "libgmp.a" -> "libgmp"
+          lib_name = basename.delete_prefix("lib") # "libgmp" -> "gmp"
+          ["-l#{lib_name}", path]
+        end
+      end
     end
   end
 end

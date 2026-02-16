@@ -10,8 +10,8 @@ module Kompo
 
       include CommonHelpers
 
-      # Libraries that must be dynamically linked
-      DYN_LINK_LIBS = %w[pthread dl m c].freeze
+      # Linux system libraries (always dynamically linked)
+      SYSTEM_LIBS = %w[pthread dl m c].freeze
 
       def run
         work_dir = CollectDependencies.work_dir
@@ -63,8 +63,8 @@ module Kompo
           "-rdynamic", "-Wl,-export-dynamic",
           deps.main_c,  # Always fresh (regenerated each build)
           deps.fs_c,    # Always fresh (regenerated each build)
-          "-Wl,-Bstatic",
-          "-Wl,--start-group",
+          # Link kompo_wrap FIRST (before Ruby) to override libc symbols
+          "-lkompo_wrap",
           packing[:ext_paths],
           packing[:enc_files],
           ruby_static_lib,
@@ -77,27 +77,39 @@ module Kompo
         main_libs = packing[:main_libs]
         gem_libs = packing[:gem_libs]
         ruby_std_gem_libs = packing[:extlibs]
-
-        # System libraries that must always be dynamically linked
-        system_dyn_libs = DYN_LINK_LIBS.map { |l| "-l#{l}" }
-
-        # User-specified libraries to remain dynamically linked
-        user_dynamic_libs = Taski.args.fetch(:dynamic_libs, [])
-        user_dynamic_lib_flags = user_dynamic_libs.map { |name| "-l#{name}" }
+        static_libs = packing[:static_libs]
 
         all_libs = [main_libs.split(" "), gem_libs, ruby_std_gem_libs].flatten
           .select { |l| l.match?(/-l\w/) }.uniq
 
-        # Partition into static and dynamic
-        # Dynamic: system libs + user-specified dynamic libs
-        static_libs, dyn_libs = all_libs.partition do |l|
-          !system_dyn_libs.include?(l) && !user_dynamic_lib_flags.include?(l)
+        # Separate system libs from other libs
+        other_libs = all_libs.reject { |l| SYSTEM_LIBS.any? { |sys| l == "-l#{sys}" } }
+
+        # Build a lookup table from -l<name> flag to static library full path
+        static_lib_map = build_static_lib_map(static_libs)
+
+        # Get list of libraries that should remain dynamically linked
+        dynamic_libs = Taski.args.fetch(:dynamic_libs, [])
+        dynamic_lib_flags = dynamic_libs.map { |name| "-l#{name}" }
+
+        # Replace dynamic library flags with static library paths where available
+        # Skip static linking for libraries specified in --dynamic-libs option
+        resolved_libs = other_libs.map do |lib_flag|
+          # Keep as dynamic if specified in --dynamic-libs
+          next lib_flag if dynamic_lib_flags.include?(lib_flag)
+
+          static_lib_map[lib_flag] || lib_flag
         end
 
-        dyn_libs << "-lc"
-        dyn_libs.unshift("-Wl,-Bdynamic")
-
-        [static_libs, "-Wl,--end-group", "-lkompo_fs", "-lkompo_wrap", dyn_libs].flatten
+        [
+          # Wrap in --start-group/--end-group for circular dependency resolution (Linux-specific)
+          "-Wl,--start-group",
+          resolved_libs,
+          "-Wl,--end-group",
+          "-lkompo_fs",
+          # System libraries
+          SYSTEM_LIBS.map { |l| "-l#{l}" }
+        ].flatten
       end
     end
   end
