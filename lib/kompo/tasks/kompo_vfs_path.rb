@@ -1,14 +1,16 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "open-uri"
 require_relative "kompo_vfs_version_check"
 
 module Kompo
   # Task to get the kompo-vfs library path.
   # Priority:
   #   1. Local directory (if specified via context[:local_kompo_vfs_path])
-  #   2. macOS: Homebrew (required)
-  #   3. Linux: Build from source
+  #   2. macOS: Homebrew (if available)
+  #   3. Linux: Build from source (if cargo available)
+  #   4. FromGitHubRelease (fallback)
   class KompoVfsPath < Taski::Task
     exports :path
 
@@ -19,15 +21,20 @@ module Kompo
         return
       end
 
-      # macOS: Homebrew is required
-      if darwin?
-        check_homebrew_available!
+      # Priority 2: macOS Homebrew
+      if darwin? && homebrew_available?
         @path = FromHomebrew.path
         return
       end
 
-      # Linux: Build from source
-      @path = FromSource.path
+      # Priority 3: Linux build from source
+      if !darwin? && cargo_available?
+        @path = FromSource.path
+        return
+      end
+
+      # Priority 4: Download from GitHub Releases
+      @path = FromGitHubRelease.path
     end
 
     # Build from local directory (requires Cargo)
@@ -162,6 +169,103 @@ module Kompo
       end
     end
 
+    # Download prebuilt binaries from GitHub Releases
+    class FromGitHubRelease < Taski::Task
+      exports :path
+
+      REPO = "ahogappa/kompo-vfs"
+      REQUIRED_LIBS = %w[libkompo_fs.a libkompo_wrap.a].freeze
+
+      class << self
+        attr_writer :base_dir
+
+        def base_dir
+          @base_dir || File.join(Dir.home, ".kompo")
+        end
+      end
+
+      def run
+        os = detect_os
+        arch = detect_arch
+        lib_dir = install_dir(os, arch)
+
+        unless already_installed?(lib_dir)
+          url = download_url(os, arch)
+          download_and_extract(url, os, arch)
+        end
+
+        @path = lib_dir
+        puts "kompo-vfs library path: #{@path}"
+
+        KompoVfsVersionCheck.verify!(@path)
+      end
+
+      private
+
+      def detect_os
+        if RUBY_PLATFORM.include?("darwin")
+          "darwin"
+        else
+          "linux"
+        end
+      end
+
+      def detect_arch
+        cpu = RbConfig::CONFIG["host_cpu"]
+        case cpu
+        when /aarch64|arm64/
+          "arm64"
+        when /x86_64|x64/
+          "x86_64"
+        else
+          cpu
+        end
+      end
+
+      def download_url(os, arch)
+        version = Kompo::KOMPO_VFS_MIN_VERSION
+        "https://github.com/#{REPO}/releases/download/v#{version}/kompo-vfs-v#{version}-#{os}-#{arch}.tar.gz"
+      end
+
+      def install_dir(os, arch)
+        version = Kompo::KOMPO_VFS_MIN_VERSION
+        File.join(self.class.base_dir, "kompo-vfs-v#{version}-#{os}-#{arch}", "lib")
+      end
+
+      def already_installed?(lib_dir)
+        REQUIRED_LIBS.all? { |lib| File.exist?(File.join(lib_dir, lib)) }
+      end
+
+      def download_and_extract(url, os, arch)
+        version = Kompo::KOMPO_VFS_MIN_VERSION
+        base_dir = self.class.base_dir
+        FileUtils.mkdir_p(base_dir)
+
+        tarball = File.join(base_dir, "kompo-vfs-v#{version}-#{os}-#{arch}.tar.gz")
+
+        puts "Downloading kompo-vfs from #{url}..."
+        begin
+          URI.open(url) do |remote| # rubocop:disable Security/Open
+            File.binwrite(tarball, remote.read)
+          end
+        rescue OpenURI::HTTPError => e
+          raise "Failed to download kompo-vfs from #{url} (#{e.message}). " \
+                "The release v#{version} may not exist for #{os}-#{arch}. " \
+                "Check https://github.com/#{REPO}/releases for available platforms."
+        rescue => e # rubocop:disable Style/RescueStandardError
+          raise "Failed to download kompo-vfs from #{url}: #{e.message}"
+        end
+
+        puts "Extracting..."
+        Kompo.command_runner.run(
+          "tar", "xzf", tarball, "-C", base_dir,
+          error_message: "Failed to extract kompo-vfs tarball"
+        )
+
+        FileUtils.rm_f(tarball)
+      end
+    end
+
     private
 
     def darwin?
@@ -169,20 +273,15 @@ module Kompo
       Kompo.command_runner.capture("uname", "-s").chomp == "Darwin"
     end
 
-    def check_homebrew_available!
-      # Check if brew is in PATH
+    def homebrew_available?
       brew_in_path = Kompo.command_runner.which("brew")
-      return if brew_in_path
+      return true if brew_in_path
 
-      # Check common Homebrew installation paths (including ARM64 at /opt/homebrew)
-      return if HomebrewPath::COMMON_BREW_PATHS.any? { |p| File.executable?(p) }
+      HomebrewPath::COMMON_BREW_PATHS.any? { |p| File.executable?(p) }
+    end
 
-      raise <<~ERROR
-        Homebrew is required on macOS but not installed.
-        Please install Homebrew first: https://brew.sh
-
-        For local development, you can use --local-vfs-path option instead.
-      ERROR
+    def cargo_available?
+      !!Kompo.command_runner.which("cargo")
     end
   end
 end
