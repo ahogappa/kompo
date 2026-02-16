@@ -70,7 +70,7 @@ jobs:
           fi
           cd ../kompo-vfs
           git fetch origin
-          git checkout 1a901270f8a979d05c8dccd85eabd91fe25f195e
+          git checkout v0.6.0
 
       - name: Build kompo-vfs
         run: |
