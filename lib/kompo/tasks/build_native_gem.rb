@@ -16,8 +16,7 @@ module Kompo
     def run
       extensions = FindNativeExtensions.extensions
       if extensions.empty?
-        @exts = Skip.exts
-        @exts_dir = Skip.exts_dir
+        puts "No native extensions to build"
         return
       end
 
@@ -274,20 +273,6 @@ module Kompo
         copy_targets = objs.split.map { |o| File.join(dir_name, o) }
         dest_dir = FileUtils.mkdir_p(dest_ext_dir).first
         FileUtils.cp(copy_targets, dest_dir)
-      end
-    end
-
-    # Skip when no native extensions
-    class Skip < Taski::Task
-      exports :exts, :exts_dir
-
-      def run
-        puts "No native extensions to build"
-        @exts = []
-        @exts_dir = nil
-      end
-
-      def clean
       end
     end
 

@@ -201,7 +201,7 @@ class BuildNativeGemTest < Minitest::Test
     exts = Kompo::BuildNativeGem.exts
     exts_dir = Kompo::BuildNativeGem.exts_dir
 
-    assert_equal [], exts
+    assert_nil exts
     assert_nil exts_dir
     assert_task_accessed(Kompo::FindNativeExtensions, :extensions)
   end

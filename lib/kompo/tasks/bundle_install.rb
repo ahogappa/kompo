@@ -14,8 +14,7 @@ module Kompo
     def run
       # Skip if no Gemfile
       unless CopyGemfile.gemfile_exists
-        @bundle_ruby_dir = Skip.bundle_ruby_dir
-        @bundler_config_path = Skip.bundler_config_path
+        puts "No Gemfile, skipping bundle install"
         return
       end
 
@@ -168,20 +167,6 @@ module Kompo
           bundle_cache.save(work_dir)
           puts "Saved to: #{bundle_cache.cache_dir}"
         end
-      end
-    end
-
-    # Skip bundle install when no Gemfile
-    class Skip < Taski::Task
-      exports :bundle_ruby_dir, :bundler_config_path
-
-      def run
-        puts "No Gemfile, skipping bundle install"
-        @bundle_ruby_dir = nil
-        @bundler_config_path = nil
-      end
-
-      def clean
       end
     end
 
