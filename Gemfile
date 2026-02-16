@@ -14,4 +14,5 @@ group :development, :test do
   gem "minitest-mock"
   gem "simplecov", require: false
   gem "standard"
+  gem "webmock"
 end

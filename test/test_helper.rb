@@ -39,9 +39,14 @@ end
 
 require "minitest/autorun"
 require "minitest/mock"
+require "webmock/minitest"
 require "tmpdir"
 require "fileutils"
 require "json"
+
+# Disable WebMock globally by default so tests that don't need it work normally.
+# Tests that use WebMock should call WebMock.enable! in setup.
+WebMock.disable!
 
 class Minitest::Test
   private

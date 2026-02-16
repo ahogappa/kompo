@@ -231,6 +231,127 @@ class KompoVfsPathFromSourceTest < Minitest::Test
   end
 end
 
+class KompoVfsPathFromGitHubReleaseStructureTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def test_from_github_release_is_task
+    assert Kompo::KompoVfsPath::FromGitHubRelease < Taski::Task
+  end
+
+  def test_from_github_release_has_path_interface
+    assert_includes Kompo::KompoVfsPath::FromGitHubRelease.exported_methods, :path
+  end
+
+  def test_from_github_release_has_repo_constant
+    assert_equal "ahogappa/kompo-vfs", Kompo::KompoVfsPath::FromGitHubRelease::REPO
+  end
+
+  def test_from_github_release_has_required_libs_constant
+    assert_includes Kompo::KompoVfsPath::FromGitHubRelease::REQUIRED_LIBS, "libkompo_fs.a"
+    assert_includes Kompo::KompoVfsPath::FromGitHubRelease::REQUIRED_LIBS, "libkompo_wrap.a"
+  end
+end
+
+class KompoVfsPathFromGitHubReleaseDownloadTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def setup
+    super
+    @mock = setup_mock_command_runner
+    WebMock.enable!
+
+    @os = RUBY_PLATFORM.include?("darwin") ? "darwin" : "linux"
+    cpu = RbConfig::CONFIG["host_cpu"]
+    @arch = case cpu
+    when /aarch64|arm64/ then "arm64"
+    when /x86_64|x64/ then "x86_64"
+    else cpu
+    end
+  end
+
+  def teardown
+    Kompo::KompoVfsPath::FromGitHubRelease.base_dir = nil
+    WebMock.reset!
+    WebMock.disable!
+    teardown_mock_command_runner
+    super
+  end
+
+  def test_downloads_and_extracts_tarball
+    version = Kompo::KOMPO_VFS_MIN_VERSION
+
+    with_tmpdir do |tmpdir|
+      Kompo::KompoVfsPath::FromGitHubRelease.base_dir = tmpdir
+
+      url = "https://github.com/ahogappa/kompo-vfs/releases/download/v#{version}/kompo-vfs-v#{version}-#{@os}-#{@arch}.tar.gz"
+      WebMock.stub_request(:get, url).to_return(body: "fake-tarball", status: 200)
+
+      lib_dir = File.join(tmpdir, "kompo-vfs-v#{version}-#{@os}-#{@arch}", "lib")
+
+      @mock.stub(["tar", "xzf",
+        File.join(tmpdir, "kompo-vfs-v#{version}-#{@os}-#{@arch}.tar.gz"),
+        "-C", tmpdir], output: "", success: true)
+
+      original_run = @mock.method(:run)
+      extracted_lib_dir = lib_dir
+      extracted_version = version
+      @mock.define_singleton_method(:run) do |*command, chdir: nil, env: nil, error_message: nil|
+        result = original_run.call(*command, chdir: chdir, env: env, error_message: error_message)
+        if command.include?("tar")
+          FileUtils.mkdir_p(extracted_lib_dir)
+          File.write(File.join(extracted_lib_dir, "libkompo_fs.a"), "fake")
+          File.write(File.join(extracted_lib_dir, "libkompo_wrap.a"), "fake")
+          File.write(File.join(extracted_lib_dir, "KOMPO_VFS_VERSION"), extracted_version)
+        end
+        result
+      end
+
+      capture_io { Kompo::KompoVfsPath::FromGitHubRelease.run }
+
+      assert_requested(:get, url)
+      assert @mock.called?(:run, "tar")
+    end
+  end
+
+  def test_skips_download_when_already_installed
+    version = Kompo::KOMPO_VFS_MIN_VERSION
+
+    with_tmpdir do |tmpdir|
+      Kompo::KompoVfsPath::FromGitHubRelease.base_dir = tmpdir
+
+      lib_dir = File.join(tmpdir, "kompo-vfs-v#{version}-#{@os}-#{@arch}", "lib")
+      FileUtils.mkdir_p(lib_dir)
+      File.write(File.join(lib_dir, "libkompo_fs.a"), "fake")
+      File.write(File.join(lib_dir, "libkompo_wrap.a"), "fake")
+      File.write(File.join(lib_dir, "KOMPO_VFS_VERSION"), version)
+
+      capture_io { Kompo::KompoVfsPath::FromGitHubRelease.run }
+
+      assert_not_requested(:get, /github\.com/)
+    end
+  end
+
+  def test_raises_with_message_on_http_error
+    version = Kompo::KOMPO_VFS_MIN_VERSION
+
+    with_tmpdir do |tmpdir|
+      Kompo::KompoVfsPath::FromGitHubRelease.base_dir = tmpdir
+
+      url = "https://github.com/ahogappa/kompo-vfs/releases/download/v#{version}/kompo-vfs-v#{version}-#{@os}-#{@arch}.tar.gz"
+      WebMock.stub_request(:get, url).to_return(status: 404, body: "Not Found")
+
+      error = assert_raises(Taski::AggregateError) do
+        capture_io { Kompo::KompoVfsPath::FromGitHubRelease.run }
+      end
+      assert_includes error.message, url
+      assert_includes error.message, "404"
+      assert_includes error.message, "#{@os}-#{@arch}"
+    end
+  end
+end
+
 class KompoVfsPathImplSelectionTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
