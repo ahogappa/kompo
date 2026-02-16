@@ -11,8 +11,8 @@ class SectionClassesTest < Minitest::Test
   SECTIONS_WITH_IMPLEMENTATIONS.each do |section_class, expected_methods|
     class_name = section_class.name.split("::").last
 
-    define_method("test_#{class_name.downcase}_is_section") do
-      assert section_class < Taski::Section
+    define_method("test_#{class_name.downcase}_is_task") do
+      assert section_class < Taski::Task
       expected_methods.each do |method|
         assert_includes section_class.exported_methods, method
       end
@@ -31,8 +31,8 @@ class RubyBuildPathTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
 
-  def test_ruby_build_path_is_section
-    assert Kompo::RubyBuildPath < Taski::Section
+  def test_ruby_build_path_is_task
+    assert Kompo::RubyBuildPath < Taski::Task
     assert_includes Kompo::RubyBuildPath.exported_methods, :path
   end
 
@@ -63,8 +63,8 @@ class HomebrewPathTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
 
-  def test_homebrew_path_is_section
-    assert Kompo::HomebrewPath < Taski::Section
+  def test_homebrew_path_is_task
+    assert Kompo::HomebrewPath < Taski::Task
     assert_includes Kompo::HomebrewPath.exported_methods, :path
   end
 

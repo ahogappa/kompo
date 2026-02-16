@@ -197,10 +197,6 @@ class BuildNativeGemTest < Minitest::Test
 
   def test_build_native_gem_returns_empty_when_no_extensions
     mock_task(Kompo::FindNativeExtensions, extensions: [])
-    mock_no_gemfile_setup
-    mock_task(Kompo::BundleInstall,
-      bundle_ruby_dir: "/path/to/bundle",
-      bundler_config_path: "/tmp/.bundle/config")
 
     exts = Kompo::BuildNativeGem.exts
     exts_dir = Kompo::BuildNativeGem.exts_dir

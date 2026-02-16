@@ -6,8 +6,8 @@ class BundleInstallStructureTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
 
-  def test_bundle_install_is_section
-    assert Kompo::BundleInstall < Taski::Section
+  def test_bundle_install_is_task
+    assert Kompo::BundleInstall < Taski::Task
     assert_includes Kompo::BundleInstall.exported_methods, :bundle_ruby_dir
     assert_includes Kompo::BundleInstall.exported_methods, :bundler_config_path
   end
@@ -137,6 +137,152 @@ class BundleInstallFromSourceTest < Minitest::Test
   def teardown
     teardown_mock_command_runner
     super
+  end
+
+  def test_from_source_installs_matching_bundler_when_version_differs
+    Dir.mktmpdir do |tmpdir|
+      work_dir = File.join(tmpdir, "work")
+      FileUtils.mkdir_p(work_dir)
+
+      File.write(File.join(work_dir, "Gemfile"), "source 'https://rubygems.org'\ngem 'sinatra'")
+      gemfile_lock_content = "GEM\n  remote: https://rubygems.org/\n  specs:\n    sinatra (4.0.0)\n\nBUNDLED WITH\n   2.5.0\n"
+      File.write(File.join(work_dir, "Gemfile.lock"), gemfile_lock_content)
+
+      ruby_path = "/mock/ruby"
+      bundler_path = "/mock/bundler"
+      ruby_install_dir = File.join(tmpdir, "_ruby")
+      FileUtils.mkdir_p(ruby_install_dir)
+
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::CopyGemfile, gemfile_exists: true)
+      mock_task(Kompo::InstallRuby,
+        ruby_path: ruby_path,
+        bundler_path: bundler_path,
+        ruby_install_dir: ruby_install_dir,
+        ruby_version: "3.4.1",
+        ruby_major_minor: "3.4")
+      mock_args(cache_dir: File.join(tmpdir, ".kompo", "cache"), no_cache: true)
+
+      # Mock: get current bundler version (different from BUNDLED WITH)
+      @mock.stub([ruby_path, "-e", "require 'bundler'; puts Bundler::VERSION"],
+        output: "2.6.9", success: true)
+
+      # Mock: gem install bundler
+      gem_path = File.join(ruby_install_dir, "bin", "gem")
+      @mock.stub([ruby_path, gem_path, "install", "bundler", "-v", "2.5.0"],
+        output: "Successfully installed bundler-2.5.0", success: true)
+
+      # Mock bundler config set and install
+      @mock.stub([ruby_path, bundler_path, "config", "set", "--local", "path", "bundle"],
+        output: "", success: true)
+      @mock.stub([ruby_path, bundler_path, "install"],
+        output: "Bundle complete!", success: true)
+      @mock.stub(["cc", "--version"],
+        output: "Apple clang version 15.0.0", success: true)
+
+      # Create expected directory structure
+      FileUtils.mkdir_p(File.join(work_dir, "bundle", "ruby", "3.4.0"))
+      FileUtils.mkdir_p(File.join(work_dir, ".bundle"))
+      File.write(File.join(work_dir, ".bundle", "config"), "BUNDLE_PATH: bundle")
+
+      capture_io { Kompo::BundleInstall.run }
+
+      assert @mock.called?(:run, ruby_path, gem_path, "install", "bundler", "-v", "2.5.0"),
+        "Should install bundler matching BUNDLED WITH version"
+    end
+  end
+
+  def test_from_source_skips_bundler_install_when_version_matches
+    Dir.mktmpdir do |tmpdir|
+      work_dir = File.join(tmpdir, "work")
+      FileUtils.mkdir_p(work_dir)
+
+      File.write(File.join(work_dir, "Gemfile"), "source 'https://rubygems.org'\ngem 'sinatra'")
+      gemfile_lock_content = "GEM\n  remote: https://rubygems.org/\n  specs:\n    sinatra (4.0.0)\n\nBUNDLED WITH\n   2.6.9\n"
+      File.write(File.join(work_dir, "Gemfile.lock"), gemfile_lock_content)
+
+      ruby_path = "/mock/ruby"
+      bundler_path = "/mock/bundler"
+      ruby_install_dir = File.join(tmpdir, "_ruby")
+      FileUtils.mkdir_p(ruby_install_dir)
+
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::CopyGemfile, gemfile_exists: true)
+      mock_task(Kompo::InstallRuby,
+        ruby_path: ruby_path,
+        bundler_path: bundler_path,
+        ruby_install_dir: ruby_install_dir,
+        ruby_version: "3.4.1",
+        ruby_major_minor: "3.4")
+      mock_args(cache_dir: File.join(tmpdir, ".kompo", "cache"), no_cache: true)
+
+      # Mock: get current bundler version (same as BUNDLED WITH)
+      @mock.stub([ruby_path, "-e", "require 'bundler'; puts Bundler::VERSION"],
+        output: "2.6.9", success: true)
+
+      # Mock bundler config set and install
+      @mock.stub([ruby_path, bundler_path, "config", "set", "--local", "path", "bundle"],
+        output: "", success: true)
+      @mock.stub([ruby_path, bundler_path, "install"],
+        output: "Bundle complete!", success: true)
+      @mock.stub(["cc", "--version"],
+        output: "Apple clang version 15.0.0", success: true)
+
+      # Create expected directory structure
+      FileUtils.mkdir_p(File.join(work_dir, "bundle", "ruby", "3.4.0"))
+      FileUtils.mkdir_p(File.join(work_dir, ".bundle"))
+      File.write(File.join(work_dir, ".bundle", "config"), "BUNDLE_PATH: bundle")
+
+      capture_io { Kompo::BundleInstall.run }
+
+      gem_path = File.join(ruby_install_dir, "bin", "gem")
+      refute @mock.called?(:run, ruby_path, gem_path, "install", "bundler", "-v", "2.6.9"),
+        "Should not install bundler when version already matches"
+    end
+  end
+
+  def test_from_source_skips_bundler_install_when_bundled_with_is_empty
+    Dir.mktmpdir do |tmpdir|
+      work_dir = File.join(tmpdir, "work")
+      FileUtils.mkdir_p(work_dir)
+
+      File.write(File.join(work_dir, "Gemfile"), "source 'https://rubygems.org'\ngem 'sinatra'")
+      # BUNDLED WITH with no version on next line
+      gemfile_lock_content = "GEM\n  remote: https://rubygems.org/\n  specs:\n    sinatra (4.0.0)\n\nBUNDLED WITH\n"
+      File.write(File.join(work_dir, "Gemfile.lock"), gemfile_lock_content)
+
+      ruby_path = "/mock/ruby"
+      bundler_path = "/mock/bundler"
+      ruby_install_dir = File.join(tmpdir, "_ruby")
+      FileUtils.mkdir_p(ruby_install_dir)
+
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::CopyGemfile, gemfile_exists: true)
+      mock_task(Kompo::InstallRuby,
+        ruby_path: ruby_path,
+        bundler_path: bundler_path,
+        ruby_install_dir: ruby_install_dir,
+        ruby_version: "3.4.1",
+        ruby_major_minor: "3.4")
+      mock_args(cache_dir: File.join(tmpdir, ".kompo", "cache"), no_cache: true)
+
+      # Mock bundler config set and install
+      @mock.stub([ruby_path, bundler_path, "config", "set", "--local", "path", "bundle"],
+        output: "", success: true)
+      @mock.stub([ruby_path, bundler_path, "install"],
+        output: "Bundle complete!", success: true)
+      @mock.stub(["cc", "--version"],
+        output: "Apple clang version 15.0.0", success: true)
+
+      FileUtils.mkdir_p(File.join(work_dir, "bundle", "ruby", "3.4.0"))
+      FileUtils.mkdir_p(File.join(work_dir, ".bundle"))
+      File.write(File.join(work_dir, ".bundle", "config"), "BUNDLE_PATH: bundle")
+
+      capture_io { Kompo::BundleInstall.run }
+
+      refute @mock.called?(:capture, ruby_path, "-e", "require 'bundler'; puts Bundler::VERSION"),
+        "Should not check bundler version when BUNDLED WITH is empty"
+    end
   end
 
   def test_from_source_does_not_save_to_cache_when_no_cache_option_is_set

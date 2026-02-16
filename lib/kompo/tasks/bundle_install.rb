@@ -8,21 +8,40 @@ module Kompo
   # Run bundle install --path bundle in work directory
   # Uses standard Bundler (not standalone mode) so Bundler.require works
   # Supports caching based on Gemfile.lock hash and Ruby version
-  class BundleInstall < Taski::Section
-    interfaces :bundle_ruby_dir, :bundler_config_path
+  class BundleInstall < Taski::Task
+    exports :bundle_ruby_dir, :bundler_config_path
 
-    def impl
+    def run
       # Skip if no Gemfile
-      return Skip unless CopyGemfile.gemfile_exists
+      unless CopyGemfile.gemfile_exists
+        @bundle_ruby_dir = Skip.bundle_ruby_dir
+        @bundler_config_path = Skip.bundler_config_path
+        return
+      end
+
+      # Install matching bundler version as default gem before bundle install
+      install_matching_bundler
 
       # Skip cache if --no-cache is specified
-      return FromSource if Taski.args[:no_cache]
+      if Taski.args[:no_cache]
+        @bundle_ruby_dir = FromSource.bundle_ruby_dir
+        @bundler_config_path = FromSource.bundler_config_path
+        return
+      end
 
-      cache_exists? ? FromCache : FromSource
+      if cache_exists?
+        @bundle_ruby_dir = FromCache.bundle_ruby_dir
+        @bundler_config_path = FromCache.bundler_config_path
+      else
+        @bundle_ruby_dir = FromSource.bundle_ruby_dir
+        @bundler_config_path = FromSource.bundler_config_path
+      end
     end
 
     # Restore bundle from cache
     class FromCache < Taski::Task
+      exports :bundle_ruby_dir, :bundler_config_path
+
       def run
         work_dir = WorkDir.path
         ruby_major_minor = InstallRuby.ruby_major_minor
@@ -63,6 +82,8 @@ module Kompo
 
     # Run bundle install and save to cache
     class FromSource < Taski::Task
+      exports :bundle_ruby_dir, :bundler_config_path
+
       def run
         work_dir = WorkDir.path
         bundler = InstallRuby.bundler_path
@@ -77,6 +98,7 @@ module Kompo
         # Clear Bundler environment and specify Gemfile path explicitly
         Bundler.with_unbundled_env do
           ruby = InstallRuby.ruby_path
+
           env = {"BUNDLE_GEMFILE" => gemfile_path}
 
           # Suppress clang 18+ warning that causes mkmf try_cppflags to fail
@@ -151,6 +173,8 @@ module Kompo
 
     # Skip bundle install when no Gemfile
     class Skip < Taski::Task
+      exports :bundle_ruby_dir, :bundler_config_path
+
       def run
         puts "No Gemfile, skipping bundle install"
         @bundle_ruby_dir = nil
@@ -162,6 +186,44 @@ module Kompo
     end
 
     private
+
+    def install_matching_bundler
+      work_dir = WorkDir.path
+      gemfile_lock_path = File.join(work_dir, "Gemfile.lock")
+      return unless File.exist?(gemfile_lock_path)
+
+      locked_version = parse_bundled_with(gemfile_lock_path)
+      return unless locked_version
+
+      ruby = InstallRuby.ruby_path
+      result = Bundler.with_unbundled_env do
+        Kompo.command_runner.capture(
+          ruby, "-e", "require 'bundler'; puts Bundler::VERSION",
+          suppress_stderr: true
+        )
+      end
+      current_version = result.chomp
+
+      return if current_version == locked_version
+
+      puts "Installing bundler #{locked_version} (current: #{current_version})..."
+      gem_path = File.join(InstallRuby.ruby_install_dir, "bin", "gem")
+      Bundler.with_unbundled_env do
+        Kompo.command_runner.run(
+          ruby, gem_path, "install", "bundler", "-v", locked_version,
+          error_message: "Failed to install bundler #{locked_version}"
+        )
+      end
+    end
+
+    def parse_bundled_with(gemfile_lock_path)
+      lines = File.readlines(gemfile_lock_path)
+      bundled_with_index = lines.index { |l| l.strip == "BUNDLED WITH" }
+      return unless bundled_with_index
+
+      version = lines[bundled_with_index + 1]&.strip
+      (version.nil? || version.empty?) ? nil : version
+    end
 
     def cache_exists?
       cache_dir = Taski.args.fetch(:cache_dir, DEFAULT_CACHE_DIR)

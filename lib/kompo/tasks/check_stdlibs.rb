@@ -24,10 +24,19 @@ module Kompo
       # Ruby uses "X.Y.0" format for lib/ruby paths (e.g., "3.4.0" not "3.4")
       stdlib_root = File.join(ruby_install_dir, "lib", "ruby", "#{ruby_major_minor}.0")
       # RubyGems needs gemspec files in specifications/ directory
-      gems_specs_root = File.join(ruby_install_dir, "lib", "ruby", "gems", "#{ruby_major_minor}.0", "specifications")
+      gems_root = File.join(ruby_install_dir, "lib", "ruby", "gems", "#{ruby_major_minor}.0")
+      gems_specs_root = File.join(gems_root, "specifications")
 
       if Dir.exist?(stdlib_root)
         @paths = [stdlib_root, gems_specs_root].select { |p| Dir.exist?(p) }
+
+        # Include installed bundler gem directory (installed by BundleInstall to match Gemfile.lock)
+        bundler_gem_dirs = Dir.glob(File.join(gems_root, "gems", "bundler-*"))
+        bundler_gem_dirs.each do |dir|
+          @paths << dir
+          puts "Including bundler gem: #{dir}"
+        end
+
         puts "Including Ruby standard library: #{stdlib_root}"
         puts "Including gem specifications: #{gems_specs_root}" if Dir.exist?(gems_specs_root)
       else

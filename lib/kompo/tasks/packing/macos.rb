@@ -3,9 +3,11 @@
 require "shellwords"
 
 module Kompo
-  class Packing < Taski::Section
+  class Packing < Taski::Task
     # macOS implementation - compiles with clang and Homebrew paths
     class ForMacOS < Taski::Task
+      exports :output_path
+
       include CommonHelpers
 
       # macOS system libraries (always dynamically linked)

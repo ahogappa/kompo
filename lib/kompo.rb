@@ -4,10 +4,6 @@ require "taski"
 require_relative "kompo/version"
 require_relative "kompo/command_runner"
 
-# Use simple progress mode for cleaner output
-# See taski library for details: https://github.com/ahogappa/taski
-Taski.progress_mode = :simple
-
 module Kompo
   class << self
     # Command runner for executing external commands
@@ -51,14 +47,14 @@ module Kompo
   autoload :FindNativeExtensions, "kompo/tasks/find_native_extensions"
   autoload :BuildNativeGem, "kompo/tasks/build_native_gem"
 
-  # Final packing (Section: macOS uses clang, Linux uses gcc)
+  # Final packing (macOS uses clang, Linux uses gcc)
   autoload :CollectDependencies, "kompo/tasks/collect_dependencies"
   autoload :Packing, "kompo/tasks/packing"
 
   # Homebrew path (macOS)
   autoload :HomebrewPath, "kompo/tasks/homebrew"
 
-  # Platform-specific dependencies (Section: macOS uses Homebrew, Linux checks via pkg-config)
+  # Platform-specific dependencies (macOS uses Homebrew, Linux checks via pkg-config)
   autoload :InstallDeps, "kompo/tasks/install_deps"
 
   # External tool paths

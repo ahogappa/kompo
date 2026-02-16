@@ -10,21 +10,37 @@ module Kompo
   # Exports:
   #   - exts: Array of [so_path, init_func] pairs for main.c template
   #   - exts_dir: Directory containing compiled .o files
-  class BuildNativeGem < Taski::Section
-    interfaces :exts, :exts_dir
+  class BuildNativeGem < Taski::Task
+    exports :exts, :exts_dir
 
-    def impl
+    def run
       extensions = FindNativeExtensions.extensions
-      return Skip if extensions.empty?
+      if extensions.empty?
+        @exts = Skip.exts
+        @exts_dir = Skip.exts_dir
+        return
+      end
 
       # Skip cache if --no-cache is specified
-      return FromSource if Taski.args[:no_cache]
+      if Taski.args[:no_cache]
+        @exts = FromSource.exts
+        @exts_dir = FromSource.exts_dir
+        return
+      end
 
-      cache_exists? ? FromCache : FromSource
+      if cache_exists?
+        @exts = FromCache.exts
+        @exts_dir = FromCache.exts_dir
+      else
+        @exts = FromSource.exts
+        @exts_dir = FromSource.exts_dir
+      end
     end
 
     # Restore native extensions from cache
     class FromCache < Taski::Task
+      exports :exts, :exts_dir
+
       def run
         work_dir = WorkDir.path
         @exts_dir = File.join(work_dir, "ext")
@@ -65,6 +81,8 @@ module Kompo
 
     # Build native extensions from source and save to cache
     class FromSource < Taski::Task
+      exports :exts, :exts_dir
+
       def run
         @exts = []
         @exts_dir = nil
@@ -261,6 +279,8 @@ module Kompo
 
     # Skip when no native extensions
     class Skip < Taski::Task
+      exports :exts, :exts_dir
+
       def run
         puts "No native extensions to build"
         @exts = []

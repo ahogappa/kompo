@@ -1,27 +1,29 @@
 # frozen_string_literal: true
 
 module Kompo
-  # Section to get the ruby-build path.
+  # Task to get the ruby-build path.
   # Priority:
   #   1. Existing ruby-build installation (via which)
   #   2. macOS: Install via Homebrew
   #   3. Linux: Install via git clone
-  class RubyBuildPath < Taski::Section
-    interfaces :path
+  class RubyBuildPath < Taski::Task
+    exports :path
 
-    def impl
-      return Installed if ruby_build_installed?
-
-      if darwin?
+    def run
+      if ruby_build_installed?
+        @path = Installed.path
+      elsif darwin?
         check_homebrew_available!
-        return FromHomebrew
+        @path = FromHomebrew.path
+      else
+        @path = FromSource.path
       end
-
-      FromSource
     end
 
     # Use existing ruby-build installation
     class Installed < Taski::Task
+      exports :path
+
       def run
         @path = Kompo.command_runner.which("ruby-build")
         puts "ruby-build path: #{@path}"
@@ -32,6 +34,8 @@ module Kompo
 
     # Install ruby-build via Homebrew (macOS)
     class FromHomebrew < Taski::Task
+      exports :path
+
       def run
         brew = HomebrewPath.path
         puts "Installing ruby-build via Homebrew..."
@@ -49,6 +53,8 @@ module Kompo
 
     # Install ruby-build via git clone (Linux)
     class FromSource < Taski::Task
+      exports :path
+
       def run
         puts "ruby-build not found. Installing via git..."
         install_dir = File.expand_path("~/.ruby-build")

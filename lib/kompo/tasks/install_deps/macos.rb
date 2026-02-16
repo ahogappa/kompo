@@ -3,9 +3,11 @@
 require_relative "../../brew_package"
 
 module Kompo
-  class InstallDeps < Taski::Section
+  class InstallDeps < Taski::Task
     # macOS implementation - installs dependencies via Homebrew
     class ForMacOS < Taski::Task
+      exports :lib_paths, :static_libs
+
       # Package definitions for all Homebrew dependencies
       PACKAGES = {
         gmp: BrewPackage.new(

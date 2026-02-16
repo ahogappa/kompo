@@ -6,8 +6,8 @@ class RubyBuildPathStructureTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
 
-  def test_ruby_build_path_is_section
-    assert Kompo::RubyBuildPath < Taski::Section
+  def test_ruby_build_path_is_task
+    assert Kompo::RubyBuildPath < Taski::Task
   end
 
   def test_ruby_build_path_has_path_interface
@@ -34,7 +34,7 @@ class RubyBuildPathTest < Minitest::Test
     @mock.stub(["/usr/local/bin/ruby-build", "--version"], output: "ruby-build 20240101")
 
     path = nil
-    # Calling .path triggers Section execution and returns the interface value
+    # Calling .path triggers Task execution and returns the exported value
     capture_io { path = Kompo::RubyBuildPath.path }
 
     assert_equal "/usr/local/bin/ruby-build", path
@@ -51,18 +51,19 @@ class RubyBuildPathTest < Minitest::Test
     @mock.stub(["/opt/homebrew/opt/ruby-build/bin/ruby-build", "--version"], output: "ruby-build 20240501")
 
     executable_mock = ::Minitest::Mock.new
-    # check_homebrew_available! checks brew paths
+    # Root task's Fiber starts first, then yields on FromHomebrew.path
+    # check_homebrew_available! runs before FromHomebrew.path is accessed
     executable_mock.expect(:call, true, [String])
-    # FromHomebrew.run checks installed ruby-build
+    # FromHomebrew.run checks installed ruby-build (after Fiber yields)
     executable_mock.expect(:call, true, ["/opt/homebrew/opt/ruby-build/bin/ruby-build"])
 
     path = nil
     File.stub(:executable?, executable_mock) do
-      # Calling .path triggers Section execution and returns the interface value
+      # Calling .path triggers Task execution and returns the exported value
       capture_io { path = Kompo::RubyBuildPath.path }
     end
 
-    # Verify Section returns valid path via interface
+    # Verify Task returns valid path via exports
     assert_equal "/opt/homebrew/opt/ruby-build/bin/ruby-build", path
     executable_mock.verify
   end
@@ -83,12 +84,12 @@ class RubyBuildPathTest < Minitest::Test
     path = nil
     Dir.stub(:exist?, false, [install_dir]) do
       File.stub(:executable?, executable_mock) do
-        # Calling .path triggers Section execution and returns the interface value
+        # Calling .path triggers Task execution and returns the exported value
         capture_io { path = Kompo::RubyBuildPath.path }
       end
     end
 
-    # Verify Section returns valid path via interface
+    # Verify Task returns valid path via exports
     assert_equal ruby_build_bin, path
     executable_mock.verify
   end

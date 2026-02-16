@@ -18,6 +18,10 @@ end
 # before any task classes are defined
 require "taski"
 require "taski/test_helper/minitest"
+
+# Disable progress display in tests to prevent TaskOutputRouter from
+# intercepting $stderr (which breaks capture_io for warn output)
+Taski.progress_display = nil
 require "digest"
 
 # Now load kompo (tasks will have TaskExtension prepended)

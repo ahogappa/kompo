@@ -3,9 +3,11 @@
 require "shellwords"
 
 module Kompo
-  class Packing < Taski::Section
+  class Packing < Taski::Task
     # Linux implementation - compiles with gcc and pkg-config paths
     class ForLinux < Taski::Task
+      exports :output_path
+
       include CommonHelpers
 
       # Libraries that must be dynamically linked

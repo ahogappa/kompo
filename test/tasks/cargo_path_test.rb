@@ -27,8 +27,9 @@ class CargoPathTest < Minitest::Test
 
   def test_uses_install_when_cargo_not_found
     executable_mock = ::Minitest::Mock.new
-    executable_mock.expect(:call, false, [String])  # cargo_installed? check
-    executable_mock.expect(:call, true, [String])   # Install.run check after install
+    # Root Fiber runs first: cargo_installed? → false, then Install.run executes
+    executable_mock.expect(:call, false, [String])  # cargo_installed? check (root Fiber)
+    executable_mock.expect(:call, true, [String])   # Install.run: check after install
 
     File.stub(:executable?, executable_mock) do
       capture_io { Kompo::CargoPath.run }

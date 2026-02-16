@@ -5,21 +5,33 @@ require "json"
 require "time"
 
 module Kompo
-  # Section to install static Ruby
+  # Task to install static Ruby
   # Switches between cache restore and building from source
   # Required context:
   #   - ruby_version: Ruby version to build (default: current RUBY_VERSION)
   #   - kompo_cache: Cache directory for kompo (default: ~/.kompo/cache)
   #   - clear_cache: If true, clear the Ruby build cache before building
-  class InstallRuby < Taski::Section
-    interfaces :ruby_path, :bundler_path, :ruby_install_dir, :ruby_version,
+  class InstallRuby < Taski::Task
+    exports :ruby_path, :bundler_path, :ruby_install_dir, :ruby_version,
       :ruby_major_minor, :ruby_build_path, :original_ruby_install_dir
 
-    def impl
+    def run
       # Skip cache if --no-cache is specified, or if cache doesn't exist
-      return FromSource if Taski.args[:no_cache]
+      source = if Taski.args[:no_cache]
+        FromSource
+      elsif cache_exists?
+        FromCache
+      else
+        FromSource
+      end
 
-      cache_exists? ? FromCache : FromSource
+      @ruby_path = source.ruby_path
+      @bundler_path = source.bundler_path
+      @ruby_install_dir = source.ruby_install_dir
+      @ruby_version = source.ruby_version
+      @ruby_major_minor = source.ruby_major_minor
+      @ruby_build_path = source.ruby_build_path
+      @original_ruby_install_dir = source.original_ruby_install_dir
     end
 
     # Ruby extensions to build statically
@@ -65,6 +77,9 @@ module Kompo
     # Restore Ruby from cache
     # Uses the work_dir path saved in metadata to ensure $LOAD_PATH matches
     class FromCache < Taski::Task
+      exports :ruby_path, :bundler_path, :ruby_install_dir, :ruby_version,
+        :ruby_major_minor, :ruby_build_path, :original_ruby_install_dir
+
       def run
         @ruby_version = Taski.args.fetch(:ruby_version, RUBY_VERSION)
         @ruby_major_minor = ruby_major_and_minor(@ruby_version)
@@ -154,6 +169,9 @@ module Kompo
     # After building, the result is cached with the work_dir path preserved in metadata.
     # When using cache, the same work_dir path is recreated to ensure $LOAD_PATH matches.
     class FromSource < Taski::Task
+      exports :ruby_path, :bundler_path, :ruby_install_dir, :ruby_version,
+        :ruby_major_minor, :ruby_build_path, :original_ruby_install_dir
+
       def run
         ruby_build = RubyBuildPath.path
 
