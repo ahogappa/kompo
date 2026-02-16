@@ -82,6 +82,7 @@ Options:
         --clean[=VERSION]        Clean cache (current version by default, or specify VERSION, or "all")
         --dynamic-libs=LIBS      Keep specified libraries dynamically linked (comma-separated)
         --dry-run                Show final compile command without executing it
+        --progress=MODE          Progress display mode: simple (default), log, tree, none
         --init                   Generate default .kompoignore file
     -t, --tree                   Show task dependency tree and exit
     -v, --version                Show version
@@ -106,6 +107,7 @@ Files:
 | `--clean` | Remove cached Ruby builds. Use `--clean=all` to remove all versions. |
 | `--dynamic-libs` | Keep specified libraries dynamically linked instead of resolving to static `.a` paths. Pass a comma-separated list of library names without the `-l` prefix (e.g., `--dynamic-libs=ssl,crypto`). By default, kompo replaces `-l` flags with full paths to `.a` files when available; this option overrides that for the listed libraries. |
 | `--dry-run` | Show the final compile command without executing it. Useful for debugging build issues. |
+| `--progress` | Progress display mode: `simple` (default, TTY only), `log` (plain text for CI), `tree` (tree view), `none` (disable). |
 | `--init` | Generate a default `.kompoignore` file in the current directory. |
 | `-t, --tree` | Display the task dependency graph and exit without building. |
 | `-v, --version` | Display the kompo version and exit. |

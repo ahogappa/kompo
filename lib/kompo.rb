@@ -18,6 +18,27 @@ module Kompo
     def macos?
       RUBY_PLATFORM.include?("darwin")
     end
+
+    PROGRESS_MODES = {
+      "simple" => nil,
+      "log" => Taski::Progress::Layout::Log,
+      "tree" => Taski::Progress::Layout::Tree
+    }.freeze
+
+    def configure_progress(mode)
+      return if mode.nil?
+
+      if mode == "none"
+        Taski.progress_display = nil
+        return
+      end
+
+      layout = PROGRESS_MODES.fetch(mode) do
+        raise ArgumentError, "Unknown progress mode: #{mode}. Valid modes: #{(PROGRESS_MODES.keys + ["none"]).join(", ")}"
+      end
+
+      Taski.progress.layout = layout if layout
+    end
   end
   # Fixed path prefix for Ruby installation
   # Using a fixed path ensures that cached Ruby binaries work correctly,

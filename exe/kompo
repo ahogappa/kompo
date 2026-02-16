@@ -34,6 +34,9 @@ opt = OptionParser.new do |o|
   o.on("--compress", "Enable zlib compression for embedded files (reduces binary size)") do |_v|
     args[:compress] = true
   end
+  o.on("--progress=MODE", "Progress display mode: simple (default, TTY only), log (plain text), tree, none") do |v|
+    args[:progress] = v
+  end
   o.on("--cache-dir=PATH", "Cache directory (default: ~/.kompo/cache)") do |v|
     args[:cache_dir] = File.expand_path(v)
   end
@@ -59,6 +62,8 @@ opt = OptionParser.new do |o|
 end
 opt.parse!(ARGV)
 args[:files] = ARGV
+
+Kompo.configure_progress(args.delete(:progress))
 
 if args[:init]
   project_dir = Dir.pwd
