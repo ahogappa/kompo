@@ -58,7 +58,7 @@ class BrewPackageTest < Minitest::Test
   end
 
   def test_static_libs_returns_existing_files
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       lib_dir = File.join(tmpdir, "lib")
       FileUtils.mkdir_p(lib_dir)
       FileUtils.touch(File.join(lib_dir, "libtest.a"))

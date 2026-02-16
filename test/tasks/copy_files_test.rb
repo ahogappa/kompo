@@ -7,7 +7,7 @@ class CopyGemfileTest < Minitest::Test
   include TaskTestHelpers
 
   def test_copy_gemfile_returns_false_when_no_gemfile
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       FileUtils.mkdir_p([work_dir, project_dir])
@@ -21,7 +21,7 @@ class CopyGemfileTest < Minitest::Test
   end
 
   def test_copy_gemfile_returns_true_when_gemfile_exists
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       FileUtils.mkdir_p([work_dir, project_dir])
@@ -38,7 +38,7 @@ class CopyGemfileTest < Minitest::Test
   end
 
   def test_copy_gemfile_also_copies_gemfile_lock
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       FileUtils.mkdir_p([work_dir, project_dir])
@@ -57,7 +57,7 @@ class CopyGemfileTest < Minitest::Test
   end
 
   def test_copy_gemfile_copies_gemspec_when_gemfile_references_gemspec
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       FileUtils.mkdir_p([work_dir, project_dir])
@@ -76,7 +76,7 @@ class CopyGemfileTest < Minitest::Test
   end
 
   def test_copy_gemfile_does_not_copy_gemspec_when_no_gemspec_directive
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       FileUtils.mkdir_p([work_dir, project_dir])
@@ -95,7 +95,7 @@ class CopyGemfileTest < Minitest::Test
   end
 
   def test_copy_gemfile_copies_multiple_gemspecs
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       FileUtils.mkdir_p([work_dir, project_dir])
@@ -115,7 +115,7 @@ class CopyGemfileTest < Minitest::Test
   end
 
   def test_copy_gemfile_skips_when_no_gemfile_option_specified
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       FileUtils.mkdir_p([work_dir, project_dir])
@@ -138,7 +138,7 @@ class CopyProjectFilesTest < Minitest::Test
   include TaskTestHelpers
 
   def test_copy_project_files_copies_entrypoint
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       FileUtils.mkdir_p([work_dir, project_dir])
@@ -161,9 +161,7 @@ class CopyProjectFilesTest < Minitest::Test
   end
 
   def test_copy_project_files_copies_additional_files
-    Dir.mktmpdir do |tmpdir|
-      # Use realpath to match WorkDir behavior (resolves symlinks like /tmp -> /private/tmp on macOS)
-      tmpdir = File.realpath(tmpdir)
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       lib_dir = File.join(project_dir, "lib")
@@ -187,9 +185,7 @@ class CopyProjectFilesTest < Minitest::Test
   end
 
   def test_copy_project_files_copies_individual_files
-    Dir.mktmpdir do |tmpdir|
-      # Use realpath to match WorkDir behavior (resolves symlinks like /tmp -> /private/tmp on macOS)
-      tmpdir = File.realpath(tmpdir)
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       config_dir = File.join(project_dir, "config")
@@ -213,8 +209,7 @@ class CopyProjectFilesTest < Minitest::Test
   end
 
   def test_copy_project_files_with_dot_copies_directory_contents
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       lib_dir = File.join(project_dir, "lib")

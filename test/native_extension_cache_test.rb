@@ -5,7 +5,7 @@ require_relative "../lib/kompo/cache/native_extension"
 
 class NativeExtensionCacheTest < Minitest::Test
   def test_compute_gemfile_lock_hash_returns_hash
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       gemfile_lock_content = "GEM\n  specs:\n"
       File.write(File.join(tmpdir, "Gemfile.lock"), gemfile_lock_content)
 
@@ -17,7 +17,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_compute_gemfile_lock_hash_returns_nil_when_file_not_found
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       hash = Kompo::NativeExtensionCache.compute_gemfile_lock_hash(tmpdir)
 
       assert_nil hash
@@ -25,7 +25,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_from_work_dir_creates_cache_instance
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       gemfile_lock_content = "GEM\n  specs:\n"
       File.write(File.join(tmpdir, "Gemfile.lock"), gemfile_lock_content)
 
@@ -42,7 +42,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_from_work_dir_returns_nil_when_no_gemfile_lock
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::NativeExtensionCache.from_work_dir(
         cache_dir: "/tmp/cache",
         ruby_version: "3.4.1",
@@ -64,7 +64,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_exists_returns_false_when_no_cache
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::NativeExtensionCache.new(
         cache_dir: tmpdir,
         ruby_version: "3.4.1",
@@ -76,7 +76,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_exists_returns_false_when_partial_cache
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::NativeExtensionCache.new(
         cache_dir: tmpdir,
         ruby_version: "3.4.1",
@@ -91,7 +91,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_exists_returns_true_when_complete_cache
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::NativeExtensionCache.new(
         cache_dir: tmpdir,
         ruby_version: "3.4.1",
@@ -107,9 +107,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_save_creates_cache_structure
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(File.join(work_dir, "ext", "nokogiri"))
       File.write(File.join(work_dir, "ext", "nokogiri", "nokogiri.o"), "object file content")
@@ -131,9 +129,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_save_creates_metadata_with_correct_content
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(File.join(work_dir, "ext"))
 
@@ -155,9 +151,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_save_does_nothing_when_no_ext_dir
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
       # No ext/ directory
@@ -175,9 +169,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_save_overwrites_existing_cache
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(File.join(work_dir, "ext", "new_gem"))
       File.write(File.join(work_dir, "ext", "new_gem", "new.o"), "new content")
@@ -205,9 +197,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_restore_copies_cache_to_work_dir
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::NativeExtensionCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
@@ -233,9 +223,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_restore_cleans_existing_files
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::NativeExtensionCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
@@ -261,7 +249,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_metadata_returns_nil_when_no_cache
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::NativeExtensionCache.new(
         cache_dir: tmpdir,
         ruby_version: "3.4.1",
@@ -273,7 +261,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_metadata_returns_parsed_json
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::NativeExtensionCache.new(
         cache_dir: tmpdir,
         ruby_version: "3.4.1",
@@ -293,9 +281,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_save_copies_ports_directories
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(File.join(work_dir, "ext", "nokogiri"))
       File.write(File.join(work_dir, "ext", "nokogiri", "nokogiri.o"), "object file content")
@@ -325,9 +311,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_restore_copies_ports_directories_back
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::NativeExtensionCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
@@ -367,9 +351,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_restore_does_not_fail_when_no_ports_cache
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::NativeExtensionCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
@@ -392,9 +374,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_restore_skips_ports_for_missing_gems
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::NativeExtensionCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
@@ -427,8 +407,7 @@ class NativeExtensionCacheTest < Minitest::Test
   end
 
   def test_saves_and_restores_nested_ext_ports
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
 
       # Create nested ports (like nokogiri's libgumbo in ext/nokogiri/ports)

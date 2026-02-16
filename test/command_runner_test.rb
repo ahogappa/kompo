@@ -89,7 +89,7 @@ class CommandRunnerCaptureTest < Minitest::Test
   end
 
   def test_capture_with_chdir
-    Dir.mktmpdir do |dir|
+    with_tmpdir do |dir|
       result = Kompo::CommandRunner.capture("pwd", chdir: dir)
 
       assert result.success?
@@ -137,7 +137,7 @@ class CommandRunnerCaptureAllTest < Minitest::Test
   end
 
   def test_capture_all_with_chdir
-    Dir.mktmpdir do |dir|
+    with_tmpdir do |dir|
       result = Kompo::CommandRunner.capture_all("pwd", chdir: dir)
 
       assert result.success?
@@ -170,7 +170,7 @@ class CommandRunnerRunTest < Minitest::Test
   end
 
   def test_run_with_chdir
-    Dir.mktmpdir do |dir|
+    with_tmpdir do |dir|
       test_file = File.join(dir, "test.txt")
       Kompo::CommandRunner.run("touch", "test.txt", chdir: dir)
 

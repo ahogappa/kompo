@@ -18,7 +18,7 @@ class BundleInstallTest < Minitest::Test
   include TaskTestHelpers
 
   def test_bundle_install_skips_when_no_gemfile
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
 
@@ -38,7 +38,7 @@ class BundleInstallTest < Minitest::Test
   end
 
   def test_bundle_install_selects_from_cache_when_cache_exists
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
       gemfile_lock_content = "GEM\n  specs:\n"
@@ -67,7 +67,7 @@ class BundleInstallTest < Minitest::Test
   end
 
   def test_bundle_install_from_cache_restores_bundle_directory
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
       gemfile_lock_content = "GEM\n  specs:\n"
@@ -105,7 +105,7 @@ class BundleInstallTest < Minitest::Test
   end
 
   def test_bundle_install_from_cache_uses_bundle_cache_class
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
       gemfile_lock_content = "GEM\n  specs:\n"
@@ -140,7 +140,7 @@ class BundleInstallFromSourceTest < Minitest::Test
   end
 
   def test_from_source_installs_matching_bundler_when_version_differs
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
 
@@ -193,7 +193,7 @@ class BundleInstallFromSourceTest < Minitest::Test
   end
 
   def test_from_source_skips_bundler_install_when_version_matches
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
 
@@ -242,7 +242,7 @@ class BundleInstallFromSourceTest < Minitest::Test
   end
 
   def test_from_source_skips_bundler_install_when_bundled_with_is_empty
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
 
@@ -286,7 +286,7 @@ class BundleInstallFromSourceTest < Minitest::Test
   end
 
   def test_from_source_does_not_save_to_cache_when_no_cache_option_is_set
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
 

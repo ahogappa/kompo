@@ -7,7 +7,7 @@ class CollectDependenciesTest < Minitest::Test
   include TaskTestHelpers
 
   def test_collect_dependencies_output_path_in_directory
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "myproject")
       output_dir = File.join(tmpdir, "output")
@@ -35,7 +35,7 @@ class CollectDependenciesTest < Minitest::Test
   end
 
   def test_collect_dependencies_output_path_as_file
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "myproject")
       output_file = File.join(tmpdir, "mybinary")
@@ -62,7 +62,7 @@ class CollectDependenciesTest < Minitest::Test
   end
 
   def test_collect_dependencies_collects_all_dependencies
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "myproject")
       output_dir = File.join(tmpdir, "output")
