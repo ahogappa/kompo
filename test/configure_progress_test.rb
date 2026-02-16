@@ -4,7 +4,8 @@ require_relative "test_helper"
 
 class ConfigureProgressTest < Minitest::Test
   def teardown
-    Taski.reset_progress_display!
+    Taski.progress.reset
+    Taski.progress_display = nil
   end
 
   def test_log_mode_sets_log_layout
