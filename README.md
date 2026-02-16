@@ -135,9 +135,9 @@ Use `kompo --init` to generate a default `.kompoignore` file with common pattern
 
 ### File Filtering Behavior
 
-Project files (your application code) are not filtered by built-in extension rules—all files including images (`.png`, `.jpg`, etc.) are included by default. Use `.kompoignore` to control which project files to exclude.
+Project files are included as-is. Use `.kompoignore` to exclude unwanted files.
 
-Gem and standard library files are automatically filtered to exclude binary artifacts (`.so`, `.o`, `.exe`, etc.) and image files.
+Gem and standard library files are automatically filtered to exclude binary artifacts (`.so`, `.o`, `.exe`, etc.).
 
 ### Syntax
 
