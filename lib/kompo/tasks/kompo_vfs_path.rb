@@ -4,30 +4,36 @@ require "fileutils"
 require_relative "kompo_vfs_version_check"
 
 module Kompo
-  # Section to get the kompo-vfs library path.
+  # Task to get the kompo-vfs library path.
   # Priority:
   #   1. Local directory (if specified via context[:local_kompo_vfs_path])
   #   2. macOS: Homebrew (required)
   #   3. Linux: Build from source
-  class KompoVfsPath < Taski::Section
-    interfaces :path
+  class KompoVfsPath < Taski::Task
+    exports :path
 
-    def impl
+    def run
       # Priority 1: Local directory if specified
-      return FromLocal if Taski.args[:local_kompo_vfs_path]
+      if Taski.args[:local_kompo_vfs_path]
+        @path = FromLocal.path
+        return
+      end
 
       # macOS: Homebrew is required
       if darwin?
         check_homebrew_available!
-        return FromHomebrew
+        @path = FromHomebrew.path
+        return
       end
 
       # Linux: Build from source
-      FromSource
+      @path = FromSource.path
     end
 
     # Build from local directory (requires Cargo)
     class FromLocal < Taski::Task
+      exports :path
+
       def run
         local_path = Taski.args[:local_kompo_vfs_path]
         raise "Local kompo-vfs path not specified" unless local_path
@@ -49,16 +55,22 @@ module Kompo
       end
     end
 
-    # Install via Homebrew (Section to handle installed vs not installed)
-    class FromHomebrew < Taski::Section
-      interfaces :path
+    # Install via Homebrew (Task to handle installed vs not installed)
+    class FromHomebrew < Taski::Task
+      exports :path
 
-      def impl
-        kompo_vfs_installed? ? Installed : Install
+      def run
+        @path = if kompo_vfs_installed?
+          Installed.path
+        else
+          Install.path
+        end
       end
 
       # Use existing Homebrew installation of kompo-vfs
       class Installed < Taski::Task
+        exports :path
+
         def run
           brew = HomebrewPath.path
           prefix = Kompo.command_runner.capture(brew, "--prefix", "kompo-vfs").chomp
@@ -82,6 +94,8 @@ module Kompo
 
       # Install kompo-vfs via Homebrew
       class Install < Taski::Task
+        exports :path
+
         def run
           brew = HomebrewPath.path
           puts "Installing kompo-vfs via Homebrew..."
@@ -115,6 +129,8 @@ module Kompo
 
     # Build from source (requires Cargo)
     class FromSource < Taski::Task
+      exports :path
+
       REPO_URL = "https://github.com/ahogappa/kompo-vfs"
 
       def run

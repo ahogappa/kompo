@@ -1,22 +1,29 @@
-/.bundle/
-/.yardoc
-/_yardoc/
+# Build artifacts
 /coverage/
 /doc/
 /pkg/
 /spec/reports/
 /tmp/
-.DS_Store
-kompo-fs
-sample.db
-samples/hello/hello
-samples/sinatra_and_sqlite/sinatra_and_sqlite
 
-kompo-vfs/
+# Dependencies
+/.bundle/
+
+# Documentation
+/.yardoc
+/_yardoc/
 .gem_rbs_collection
 
-CLAUDE.md
+# OS
+.DS_Store
+
+# Editor / AI tools
+.claude/
 .serena
 .specify
-.claude/
+CLAUDE.md
+
+# Sample outputs
+sample.db
+samples/hello/hello
 samples/rails/sample/sample
+samples/sinatra_and_sqlite/sinatra_and_sqlite

@@ -28,20 +28,20 @@ class InstallRubyTest < Minitest::Test
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
       mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
 
-      # InstallRuby.impl should select FromCache when cache exists
-      # We test that the Section properly reads cache metadata
+      # InstallRuby.run should select FromCache when cache exists
+      # We test that the Task properly reads cache metadata
       assert File.exist?(File.join(version_cache_dir, "metadata.json"))
     end
   end
 
-  def test_install_ruby_interfaces_are_defined
-    # Verify that InstallRuby Section defines expected interfaces
+  def test_install_ruby_exports_are_defined
+    # Verify that InstallRuby Task defines expected exports
     exported = Kompo::InstallRuby.exported_methods
     expected = %i[ruby_path bundler_path ruby_install_dir ruby_version
       ruby_major_minor ruby_build_path original_ruby_install_dir]
 
-    expected.each do |interface|
-      assert_includes exported, interface, "InstallRuby should define #{interface} interface"
+    expected.each do |export|
+      assert_includes exported, export, "InstallRuby should define #{export} export"
     end
   end
 
@@ -205,7 +205,7 @@ class InstallRubyFromSourceTest < Minitest::Test
       # Verify ruby-build was called
       assert @mock.called?(:run, ruby_build_path, "--verbose", "--keep", "3.4.1", ruby_install_dir)
 
-      # Verify interfaces return expected values
+      # Verify exports return expected values
       assert_equal ruby_path, Kompo::InstallRuby.ruby_path
       assert_equal "3.4.1", Kompo::InstallRuby.ruby_version
       assert_equal "3.4", Kompo::InstallRuby.ruby_major_minor
@@ -271,7 +271,7 @@ class InstallRubyFromSourceTest < Minitest::Test
       refute @mock.called?(:run, ruby_build_path, "--verbose", "--keep", "3.4.1", ruby_install_dir),
         "ruby-build should not be called when valid cache exists"
 
-      # Verify interfaces
+      # Verify exports
       assert_equal "3.4.1", Kompo::InstallRuby.ruby_version
     end
   end

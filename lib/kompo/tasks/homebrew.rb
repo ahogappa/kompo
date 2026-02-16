@@ -1,20 +1,26 @@
 # frozen_string_literal: true
 
 module Kompo
-  # Section to get the Homebrew path.
+  # Task to get the Homebrew path.
   # Switches implementation based on whether Homebrew is already installed.
-  class HomebrewPath < Taski::Section
-    interfaces :path
+  class HomebrewPath < Taski::Task
+    exports :path
 
     # Common Homebrew installation paths
     COMMON_BREW_PATHS = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"].freeze
 
-    def impl
-      homebrew_installed? ? Installed : Install
+    def run
+      @path = if homebrew_installed?
+        Installed.path
+      else
+        Install.path
+      end
     end
 
     # Use existing Homebrew installation
     class Installed < Taski::Task
+      exports :path
+
       def run
         # First check PATH, then fallback to common installation paths
         @path = Kompo.command_runner.which("brew") ||
@@ -25,6 +31,8 @@ module Kompo
 
     # Install Homebrew
     class Install < Taski::Task
+      exports :path
+
       MARKER_FILE = File.expand_path("~/.kompo_installed_homebrew")
       INSTALL_SCRIPT_URL = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
 

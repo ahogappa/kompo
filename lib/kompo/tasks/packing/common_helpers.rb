@@ -3,7 +3,7 @@
 require "shellwords"
 
 module Kompo
-  class Packing < Taski::Section
+  class Packing < Taski::Task
     # Common helper methods shared between macOS and Linux implementations
     module CommonHelpers
       private

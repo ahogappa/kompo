@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 module Kompo
-  class InstallDeps < Taski::Section
+  class InstallDeps < Taski::Task
     # Linux implementation - checks dependencies using pkg-config
     class ForLinux < Taski::Task
+      exports :lib_paths, :static_libs
+
       def run
         unless pkg_config_available?
           puts "[WARNING] pkg-config not found. Skipping dependency check."

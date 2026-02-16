@@ -17,8 +17,8 @@ class KompoVfsPathTest < Minitest::Test
     end
   end
 
-  def test_kompo_vfs_path_is_section
-    assert Kompo::KompoVfsPath < Taski::Section
+  def test_kompo_vfs_path_is_task
+    assert Kompo::KompoVfsPath < Taski::Task
     assert_includes Kompo::KompoVfsPath.exported_methods, :path
   end
 
@@ -27,9 +27,9 @@ class KompoVfsPathTest < Minitest::Test
     assert Kompo::KompoVfsPath::FromLocal < Taski::Task
   end
 
-  def test_kompo_vfs_path_has_from_homebrew_section
+  def test_kompo_vfs_path_has_from_homebrew_task
     assert_kind_of Class, Kompo::KompoVfsPath::FromHomebrew
-    assert Kompo::KompoVfsPath::FromHomebrew < Taski::Section
+    assert Kompo::KompoVfsPath::FromHomebrew < Taski::Task
   end
 
   def test_kompo_vfs_path_has_from_source_class
@@ -235,8 +235,8 @@ class KompoVfsPathImplSelectionTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
 
-  def test_kompo_vfs_path_is_section
-    assert Kompo::KompoVfsPath < Taski::Section
+  def test_kompo_vfs_path_is_task
+    assert Kompo::KompoVfsPath < Taski::Task
   end
 
   def test_from_local_selected_when_local_path_arg_present
@@ -245,8 +245,8 @@ class KompoVfsPathImplSelectionTest < Minitest::Test
     assert Kompo::KompoVfsPath::FromLocal < Taski::Task
   end
 
-  def test_from_homebrew_is_section
-    assert Kompo::KompoVfsPath::FromHomebrew < Taski::Section
+  def test_from_homebrew_is_task
+    assert Kompo::KompoVfsPath::FromHomebrew < Taski::Task
   end
 end
 
@@ -254,13 +254,11 @@ class KompoVfsFromHomebrewStructureTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
 
-  def test_from_homebrew_is_section
-    assert Kompo::KompoVfsPath::FromHomebrew < Taski::Section
+  def test_from_homebrew_is_task
+    assert Kompo::KompoVfsPath::FromHomebrew < Taski::Task
   end
 
   def test_from_homebrew_has_path_interface
-    # Section uses interfaces() which internally calls exports()
-    # The exported_methods returns the interface methods
     assert_includes Kompo::KompoVfsPath::FromHomebrew.exported_methods, :path
   end
 

@@ -1,17 +1,23 @@
 # frozen_string_literal: true
 
 module Kompo
-  # Section to get the Cargo path.
+  # Task to get the Cargo path.
   # Switches implementation based on whether Cargo is already installed.
-  class CargoPath < Taski::Section
-    interfaces :path
+  class CargoPath < Taski::Task
+    exports :path
 
-    def impl
-      cargo_installed? ? Installed : Install
+    def run
+      @path = if cargo_installed?
+        Installed.path
+      else
+        Install.path
+      end
     end
 
     # Use existing Cargo installation
     class Installed < Taski::Task
+      exports :path
+
       def run
         # First check PATH, then fallback to default rustup location
         @path = Kompo.command_runner.which("cargo") || File.expand_path("~/.cargo/bin/cargo")
@@ -23,6 +29,8 @@ module Kompo
 
     # Install Cargo via rustup and return the path
     class Install < Taski::Task
+      exports :path
+
       RUSTUP_INSTALL_SCRIPT = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
 
       def run

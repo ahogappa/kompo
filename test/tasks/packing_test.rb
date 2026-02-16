@@ -6,8 +6,8 @@ class PackingStructureTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
 
-  def test_packing_is_section
-    assert Kompo::Packing < Taski::Section
+  def test_packing_is_task
+    assert Kompo::Packing < Taski::Task
   end
 
   def test_packing_has_output_path_interface
