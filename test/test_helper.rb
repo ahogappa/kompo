@@ -48,12 +48,49 @@ require "json"
 # Tests that use WebMock should call WebMock.enable! in setup.
 WebMock.disable!
 
+class TmpDir
+  def initialize(path)
+    @path = path
+  end
+
+  def to_s
+    @path
+  end
+
+  alias_method :to_str, :to_s
+
+  def <<(entry)
+    name, content = parse_entry(entry)
+
+    full_path = File.join(@path, name)
+    if name.end_with?("/")
+      FileUtils.mkdir_p(full_path)
+    else
+      FileUtils.mkdir_p(File.dirname(full_path))
+      content ? File.write(full_path, content) : FileUtils.touch(full_path)
+    end
+    self
+  end
+
+  private
+
+  def parse_entry(entry)
+    case entry
+    when String
+      [entry, nil]
+    when Array
+      raise ArgumentError, "expected 1 or 2 elements, got #{entry.size}" if entry.size > 2
+      entry
+    end
+  end
+end
+
 class Minitest::Test
   private
 
   def with_tmpdir
     Dir.mktmpdir do |tmpdir|
-      yield File.realpath(tmpdir)
+      yield TmpDir.new(File.realpath(tmpdir))
     end
   end
 end
