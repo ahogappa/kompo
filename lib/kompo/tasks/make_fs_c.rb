@@ -58,19 +58,21 @@ module Kompo
       @compressed_total_size = 0
 
       group("Collecting files") do
-        embed_paths = collect_embed_paths
+        collect_embed_paths.each do |category, paths|
+          skip_ext = category != :project
 
-        embed_paths.each do |embed_path|
-          expand_path = File.expand_path(embed_path)
-          unless File.exist?(expand_path)
-            warn "warn: #{expand_path} does not exist. Skipping."
-            next
-          end
+          paths.each do |embed_path|
+            expand_path = File.expand_path(embed_path)
+            unless File.exist?(expand_path)
+              warn "warn: #{expand_path} does not exist. Skipping."
+              next
+            end
 
-          if File.directory?(expand_path)
-            process_directory(expand_path)
-          else
-            add_file(expand_path)
+            if File.directory?(expand_path)
+              process_directory(expand_path, skip_extensions: skip_ext)
+            else
+              add_file(expand_path)
+            end
           end
         end
         duplicate_info = @duplicate_count.positive? ? " (#{@duplicate_count} duplicates skipped)" : ""
@@ -105,30 +107,24 @@ module Kompo
     private
 
     def collect_embed_paths
-      paths = []
+      project_paths = [CopyProjectFiles.entrypoint_path, *CopyProjectFiles.additional_paths]
 
-      # 1. Project files (entrypoint + additional files/directories specified by user)
-      paths << CopyProjectFiles.entrypoint_path
-      paths += CopyProjectFiles.additional_paths
-
-      # 2. Gemfile, Gemfile.lock, and gemspec files (if exists)
+      other_paths = []
       if CopyGemfile.gemfile_exists
-        paths << File.join(@work_dir, "Gemfile")
-        paths << File.join(@work_dir, "Gemfile.lock")
-        paths += CopyGemfile.gemspec_paths
-
-        # 3. Bundle directory (.bundle/config and bundle/ruby/X.Y.Z/gems/...)
-        paths << BundleInstall.bundler_config_path
-        paths << BundleInstall.bundle_ruby_dir
+        other_paths.push(
+          File.join(@work_dir, "Gemfile"),
+          File.join(@work_dir, "Gemfile.lock"),
+          *CopyGemfile.gemspec_paths,
+          BundleInstall.bundler_config_path,
+          BundleInstall.bundle_ruby_dir
+        )
       end
+      other_paths.concat(CheckStdlibs.paths)
 
-      # 4. Ruby standard library
-      paths += CheckStdlibs.paths
-
-      paths.compact
+      {project: project_paths.compact, other: other_paths.compact}
     end
 
-    def process_directory(dir_path)
+    def process_directory(dir_path, skip_extensions: true)
       # Resolve base directory to ensure symlink safety
       real_base = File.realpath(dir_path)
 
@@ -149,9 +145,11 @@ module Kompo
           end
         end
 
-        # Skip certain file extensions
-        next if SKIP_EXTENSIONS.any? { |ext| path.end_with?(ext) }
-        next if path.end_with?("selenium-manager")
+        # Skip certain file extensions (only for non-project paths like gems/stdlib)
+        if skip_extensions
+          next if SKIP_EXTENSIONS.any? { |ext| path.end_with?(ext) }
+          next if path.end_with?("selenium-manager")
+        end
 
         # Skip files matching .kompoignore patterns
         next if should_ignore?(path)
@@ -164,17 +162,11 @@ module Kompo
     # Only applies to files under work_dir (Ruby standard library is excluded)
     def should_ignore?(absolute_path)
       return false unless @kompo_ignore&.enabled?
-
-      # Only apply .kompoignore to work_dir files (project files and gems)
-      # Ruby standard library paths are outside work_dir and should not be filtered
       return false unless absolute_path.start_with?(@work_dir)
 
       relative_path = absolute_path.sub("#{@work_dir}/", "")
-      if @kompo_ignore.ignore?(relative_path)
-        puts "Ignoring (via .kompoignore): #{relative_path}"
-        true
-      else
-        false
+      @kompo_ignore.ignore?(relative_path).tap do |ignored|
+        puts "Ignoring (via .kompoignore): #{relative_path}" if ignored
       end
     end
 

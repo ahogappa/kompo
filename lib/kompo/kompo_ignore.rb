@@ -8,6 +8,36 @@ module Kompo
   class KompoIgnore
     FILENAME = ".kompoignore"
 
+    DEFAULT_CONTENT = <<~IGNORE
+      # Kompo ignore patterns
+      # Patterns follow .gitignore syntax
+
+      # Build artifacts and compiled files
+      *.so
+      *.bundle
+      *.o
+      *.exe
+      *.out
+
+      # Package files
+      *.gem
+      *.jar
+
+      # Archives
+      *.gz
+    IGNORE
+
+    # Generate a default .kompoignore file in the given directory
+    # @param project_dir [String] Directory to create the file in
+    # @return [Boolean] true if file was created, false if it already exists
+    def self.generate_default(project_dir)
+      ignore_path = File.join(project_dir, FILENAME)
+      return false if File.exist?(ignore_path)
+
+      File.write(ignore_path, DEFAULT_CONTENT)
+      true
+    end
+
     def initialize(project_dir)
       @project_dir = project_dir
       @pathspec = load_pathspec

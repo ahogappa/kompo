@@ -37,6 +37,9 @@ opt = OptionParser.new do |o|
   o.on("--cache-dir=PATH", "Cache directory (default: ~/.kompo/cache)") do |v|
     args[:cache_dir] = File.expand_path(v)
   end
+  o.on("--init", "Generate default .kompoignore file") do
+    args[:init] = true
+  end
   o.on("-t", "--tree", "Show task dependency tree and exit") do
     puts Kompo::Packing.tree
     exit(0)
@@ -57,7 +60,15 @@ end
 opt.parse!(ARGV)
 args[:files] = ARGV
 
-if args[:clean_cache]
+if args[:init]
+  project_dir = Dir.pwd
+  if Kompo::KompoIgnore.generate_default(project_dir)
+    puts "Generated .kompoignore in #{project_dir}"
+  else
+    puts ".kompoignore already exists in #{project_dir}, skipping"
+  end
+  exit(0)
+elsif args[:clean_cache]
   clean_opts = {}
   clean_opts[:cache_dir] = args[:cache_dir] if args[:cache_dir]
   Kompo.clean_cache(args[:clean_cache], **clean_opts)

@@ -81,6 +81,7 @@ Options:
         --local-vfs-path=PATH    Path to local kompo-vfs for development
         --clean[=VERSION]        Clean cache (current version by default, or specify VERSION, or "all")
         --dry-run                Show final compile command without executing it
+        --init                   Generate default .kompoignore file
     -t, --tree                   Show task dependency tree and exit
     -v, --version                Show version
     -h, --help                   Show this help message
@@ -103,6 +104,7 @@ Files:
 | `--local-vfs-path` | Use a local kompo-vfs build instead of Homebrew installation. Useful for development. |
 | `--clean` | Remove cached Ruby builds. Use `--clean=all` to remove all versions. |
 | `--dry-run` | Show the final compile command without executing it. Useful for debugging build issues. |
+| `--init` | Generate a default `.kompoignore` file in the current directory. |
 | `-t, --tree` | Display the task dependency graph and exit without building. |
 | `-v, --version` | Display the kompo version and exit. |
 
@@ -128,6 +130,14 @@ $ kompo --clean=all
 ## .kompoignore
 
 You can create a `.kompoignore` file in your project root to exclude files from the binary. This file follows the same syntax as `.gitignore`.
+
+Use `kompo --init` to generate a default `.kompoignore` file with common patterns.
+
+### File Filtering Behavior
+
+Project files (your application code) are not filtered by built-in extension rules—all files including images (`.png`, `.jpg`, etc.) are included by default. Use `.kompoignore` to control which project files to exclude.
+
+Gem and standard library files are automatically filtered to exclude binary artifacts (`.so`, `.o`, `.exe`, etc.) and image files.
 
 ### Syntax
 
