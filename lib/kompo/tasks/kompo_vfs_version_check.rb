@@ -46,7 +46,7 @@ module Kompo
     def self.build_missing_file_message(version_file)
       <<~MSG.chomp
         kompo-vfs version file not found at: #{version_file}
-        Your kompo-vfs installation may be outdated (< 0.5.0).
+        Your kompo-vfs installation may be outdated (< #{Kompo::KOMPO_VFS_MIN_VERSION}).
 
         Please upgrade:
           Homebrew: brew update && brew upgrade kompo-vfs

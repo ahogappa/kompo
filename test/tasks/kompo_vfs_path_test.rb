@@ -48,7 +48,7 @@ class KompoVfsPathTest < Minitest::Test
 
   def test_kompo_vfs_version_check_passes_when_version_satisfies
     Dir.mktmpdir do |tmpdir|
-      File.write(File.join(tmpdir, "KOMPO_VFS_VERSION"), "0.5.1")
+      File.write(File.join(tmpdir, "KOMPO_VFS_VERSION"), "0.6.0")
       # Should not raise
       Kompo::KompoVfsVersionCheck.verify!(tmpdir)
     end
@@ -64,12 +64,12 @@ class KompoVfsPathTest < Minitest::Test
 
   def test_kompo_vfs_version_check_fails_when_version_too_old
     Dir.mktmpdir do |tmpdir|
-      File.write(File.join(tmpdir, "KOMPO_VFS_VERSION"), "0.4.0")
+      File.write(File.join(tmpdir, "KOMPO_VFS_VERSION"), "0.5.1")
       error = assert_raises(Kompo::KompoVfsVersionCheck::IncompatibleVersionError) do
         Kompo::KompoVfsVersionCheck.verify!(tmpdir)
       end
-      assert_includes error.message, "0.4.0 is too old"
-      assert_includes error.message, "Required: >= 0.5.1"
+      assert_includes error.message, "0.5.1 is too old"
+      assert_includes error.message, "Required: >= 0.6.0"
     end
   end
 
@@ -85,8 +85,8 @@ class KompoVfsPathTest < Minitest::Test
 
   def test_kompo_vfs_version_check_get_version_reads_file
     Dir.mktmpdir do |tmpdir|
-      File.write(File.join(tmpdir, "KOMPO_VFS_VERSION"), "0.5.1\n")
-      assert_equal "0.5.1", Kompo::KompoVfsVersionCheck.get_version(tmpdir)
+      File.write(File.join(tmpdir, "KOMPO_VFS_VERSION"), "0.6.0\n")
+      assert_equal "0.6.0", Kompo::KompoVfsVersionCheck.get_version(tmpdir)
     end
   end
 
@@ -155,7 +155,7 @@ class KompoVfsPathFromHomebrewInstalledTest < Minitest::Test
       FileUtils.mkdir_p(lib_dir)
       File.write(File.join(lib_dir, "libkompo_fs.a"), "fake lib")
       File.write(File.join(lib_dir, "libkompo_wrap.a"), "fake lib")
-      File.write(File.join(lib_dir, "KOMPO_VFS_VERSION"), "0.5.1")
+      File.write(File.join(lib_dir, "KOMPO_VFS_VERSION"), "0.6.0")
 
       @mock.stub(["/opt/homebrew/bin/brew", "--prefix", "kompo-vfs"], output: tmpdir, success: true)
 
@@ -203,7 +203,7 @@ class KompoVfsPathFromHomebrewInstallWithMockTest < Minitest::Test
     Dir.mktmpdir do |tmpdir|
       lib_dir = File.join(tmpdir, "lib")
       FileUtils.mkdir_p(lib_dir)
-      File.write(File.join(lib_dir, "KOMPO_VFS_VERSION"), "0.5.1")
+      File.write(File.join(lib_dir, "KOMPO_VFS_VERSION"), "0.6.0")
 
       @mock.stub(["/opt/homebrew/bin/brew", "tap", "ahogappa/kompo-vfs", "https://github.com/ahogappa/kompo-vfs.git"], output: "", success: true)
       @mock.stub(["/opt/homebrew/bin/brew", "install", "ahogappa/kompo-vfs/kompo-vfs"], output: "", success: true)
