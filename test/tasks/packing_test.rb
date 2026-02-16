@@ -32,7 +32,7 @@ class PackingForMacOSDryRunTest < Minitest::Test
   def test_dry_run_does_not_execute_clang
     skip unless RUBY_PLATFORM.include?("darwin")
 
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = tmpdir
       ruby_build_dir = File.join(tmpdir, "ruby-build", "ruby-3.4.1")
       ruby_install_dir = File.join(tmpdir, "ruby-install")
@@ -106,7 +106,7 @@ class PackingForLinuxDryRunTest < Minitest::Test
   def test_dry_run_does_not_execute_gcc
     skip if RUBY_PLATFORM.include?("darwin")
 
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = tmpdir
       ruby_build_dir = File.join(tmpdir, "ruby-build", "ruby-3.4.1")
       ruby_install_dir = File.join(tmpdir, "ruby-install")

@@ -7,7 +7,7 @@ class InstallRubyTest < Minitest::Test
   include TaskTestHelpers
 
   def test_install_ruby_uses_cache_when_available
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       # Create cache directory structure (new structure: {version}/ruby/)
       version_cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
       ruby_install_dir = File.join(version_cache_dir, "ruby")
@@ -65,7 +65,7 @@ class InstallRubyTest < Minitest::Test
   end
 
   def test_from_cache_restores_ruby_and_fixes_shebangs
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       # Create cache with proper structure (new structure: {version}/ruby/)
       version_cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
       cache_install_dir = File.join(version_cache_dir, "ruby")
@@ -104,7 +104,7 @@ class InstallRubyTest < Minitest::Test
   end
 
   def test_from_cache_updates_shebangs_in_bin_directory
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       version_cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
       cache_install_dir = File.join(version_cache_dir, "ruby")
       FileUtils.mkdir_p(File.join(cache_install_dir, "bin"))
@@ -169,7 +169,7 @@ class InstallRubyFromSourceTest < Minitest::Test
   end
 
   def test_from_source_builds_ruby_when_no_cache
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       ruby_build_path = "/mock/ruby-build"
       work_dir = tmpdir
 
@@ -213,7 +213,7 @@ class InstallRubyFromSourceTest < Minitest::Test
   end
 
   def test_from_source_raises_when_ruby_version_not_available
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       ruby_build_path = "/mock/ruby-build"
 
       mock_task(Kompo::RubyBuildPath, path: ruby_build_path)
@@ -237,7 +237,7 @@ class InstallRubyFromSourceTest < Minitest::Test
   end
 
   def test_from_source_restores_from_cache_when_valid
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       ruby_build_path = "/mock/ruby-build"
       work_dir = tmpdir
       version_cache_dir = File.join(tmpdir, ".kompo", "cache", "3.4.1")
@@ -277,7 +277,7 @@ class InstallRubyFromSourceTest < Minitest::Test
   end
 
   def test_from_source_with_ruby_source_directory
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       ruby_build_path = "/mock/ruby-build"
       work_dir = tmpdir
       source_dir = File.join(tmpdir, "ruby-source")
@@ -314,7 +314,7 @@ class InstallRubyFromSourceTest < Minitest::Test
   end
 
   def test_from_source_with_ruby_source_tarball
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       ruby_build_path = "/mock/ruby-build"
       work_dir = tmpdir
       tarball = File.join(tmpdir, "ruby-3.4.1.tar.gz")
@@ -354,7 +354,7 @@ class InstallRubyFromSourceTest < Minitest::Test
   end
 
   def test_from_source_raises_for_nonexistent_source_path
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       mock_task(Kompo::RubyBuildPath, path: "/mock/ruby-build")
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
       mock_args(
@@ -373,7 +373,7 @@ class InstallRubyFromSourceTest < Minitest::Test
   end
 
   def test_from_source_raises_for_unsupported_source_format
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       zip_file = File.join(tmpdir, "ruby.zip")
       File.write(zip_file, "dummy")
 
@@ -395,7 +395,7 @@ class InstallRubyFromSourceTest < Minitest::Test
   end
 
   def test_from_source_does_not_save_to_cache_when_no_cache_option_is_set
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       ruby_build_path = "/mock/ruby-build"
       work_dir = tmpdir
       kompo_cache = File.join(tmpdir, ".kompo", "cache")
@@ -445,7 +445,7 @@ class InstallRubyFromCacheRubyPcFixTest < Minitest::Test
   include TaskTestHelpers
 
   def test_from_cache_fixes_ruby_pc
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       version_cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
       cache_install_dir = File.join(version_cache_dir, "ruby")
       pkgconfig_dir = File.join(cache_install_dir, "lib", "pkgconfig")

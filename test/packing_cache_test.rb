@@ -15,7 +15,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_from_work_dir_creates_cache_instance
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       gemfile_lock_content = "GEM\n  specs:\n"
       File.write(File.join(tmpdir, "Gemfile.lock"), gemfile_lock_content)
 
@@ -32,7 +32,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_from_work_dir_returns_nil_when_no_gemfile_lock
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.from_work_dir(
         cache_dir: "/tmp/cache",
         ruby_version: "3.4.1",
@@ -44,7 +44,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_exists_returns_false_when_no_cache
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
         cache_dir: tmpdir,
         ruby_version: "3.4.1",
@@ -56,7 +56,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_exists_returns_true_when_cache_exists
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
         cache_dir: tmpdir,
         ruby_version: "3.4.1",
@@ -71,8 +71,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_save_and_restore_roundtrip
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       ruby_build_path = File.join(tmpdir, "ruby_build")
 
@@ -144,8 +143,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_external_paths_unchanged
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       ruby_build_path = File.join(tmpdir, "ruby_build")
 
@@ -174,9 +172,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_static_libs_preserved
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
@@ -197,9 +193,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_main_libs_preserved
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
@@ -216,9 +210,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_extlibs_preserved
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
@@ -235,9 +227,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_deps_lib_paths_preserved
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
@@ -254,9 +244,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_save_creates_metadata_with_correct_content
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
@@ -274,9 +262,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_save_overwrites_existing_cache
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
@@ -296,7 +282,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_metadata_returns_nil_when_no_cache
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
         cache_dir: tmpdir,
         ruby_version: "3.4.1",
@@ -308,7 +294,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_restore_returns_nil_when_no_cache
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
         cache_dir: tmpdir,
         ruby_version: "3.4.1",
@@ -320,9 +306,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_handles_empty_data
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
@@ -347,8 +331,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_ruby_cflags_normalization
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       ruby_build_path = File.join(work_dir, "_ruby/build")
 
@@ -384,8 +367,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_ruby_paths_normalization
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       ruby_build_path = File.join(work_dir, "_ruby/build")
 
@@ -416,9 +398,7 @@ class PackingCacheTest < Minitest::Test
   end
 
   def test_external_ruby_paths_preserved
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",

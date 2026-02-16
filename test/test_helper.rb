@@ -43,6 +43,16 @@ require "tmpdir"
 require "fileutils"
 require "json"
 
+class Minitest::Test
+  private
+
+  def with_tmpdir
+    Dir.mktmpdir do |tmpdir|
+      yield File.realpath(tmpdir)
+    end
+  end
+end
+
 # Common mock configurations for task tests
 module TaskTestHelpers
   STANDARD_RUBY_MOCK = {

@@ -7,7 +7,7 @@ class MakeMainCTest < Minitest::Test
   include TaskTestHelpers
 
   def test_make_main_c_generates_file
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
       main_c_path = File.join(work_dir, "main.c")
@@ -44,7 +44,7 @@ class MakeFsCTest < Minitest::Test
   include TaskTestHelpers
 
   def test_make_fs_c_generates_file
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
 
@@ -59,7 +59,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_with_additional_paths
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       lib_dir = File.join(work_dir, "lib")
       FileUtils.mkdir_p(lib_dir)
@@ -75,7 +75,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_prunes_git_directories
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       lib_dir = File.join(work_dir, "lib")
       git_dir = File.join(lib_dir, ".git")
@@ -93,7 +93,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_handles_nonexistent_path
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, additional_paths: ["/nonexistent/path"])
 
@@ -104,7 +104,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_skips_binary_extensions
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       File.write(File.join(work_dir, "test.so"), "binary")
       File.write(File.join(work_dir, "test.o"), "object")
@@ -119,7 +119,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_with_gemfile
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir, content: "require 'bundler/setup'")
       bundle_dir = File.join(work_dir, "bundle", "ruby", "3.4.0")
       bundle_config_dir = File.join(work_dir, ".bundle")
@@ -140,7 +140,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_with_kompoignore
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       project_dir = File.join(tmpdir, "project")
       FileUtils.mkdir_p(project_dir)
@@ -156,7 +156,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_ignores_files_matching_kompoignore
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       project_dir = File.join(tmpdir, "project")
       tmp_dir = File.join(work_dir, "tmp")
@@ -177,10 +177,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_skips_symlinks_escaping_base_directory
-    Dir.mktmpdir do |tmpdir|
-      # Resolve tmpdir to real path (macOS /var -> /private/var symlink)
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       lib_dir = File.join(work_dir, "lib")
       FileUtils.mkdir_p(lib_dir)
@@ -213,10 +210,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_allows_symlinks_within_base_directory
-    Dir.mktmpdir do |tmpdir|
-      # Resolve tmpdir to real path (macOS /var -> /private/var symlink)
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       lib_dir = File.join(work_dir, "lib")
       real_dir = File.join(lib_dir, "real")
@@ -241,7 +235,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_handles_binary_content_correctly
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
 
       # Create a directory with a binary file
@@ -267,7 +261,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_skips_duplicate_files
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
 
       # Entrypoint is already added via CopyProjectFiles.entrypoint_path
@@ -287,7 +281,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_skips_duplicate_files_in_directory
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       lib_dir = File.join(work_dir, "lib")
       FileUtils.mkdir_p(lib_dir)
@@ -310,7 +304,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_without_compress_generates_uncompressed
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
       mock_args(compress: false)
@@ -330,7 +324,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_with_compress_generates_compressed
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
       mock_args(compress: true)
@@ -352,7 +346,7 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_compressed_data_is_smaller
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       lib_dir = File.join(work_dir, "lib")
       FileUtils.mkdir_p(lib_dir)
@@ -386,7 +380,7 @@ class MakeFsCTest < Minitest::Test
   def test_make_fs_c_compressed_can_be_decompressed
     require "zlib"
 
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir, content: "TEST_CONTENT_FOR_DECOMPRESSION")
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
       mock_args(compress: true)

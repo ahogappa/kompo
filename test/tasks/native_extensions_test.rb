@@ -18,7 +18,7 @@ class FindNativeExtensionsTest < Minitest::Test
   end
 
   def test_find_native_extensions_finds_c_extensions
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       bundle_dir, ruby_install_dir, ruby_build_path = setup_extension_dirs(tmpdir)
       gem_ext_dir = File.join(bundle_dir, "gems", "nokogiri-1.0", "ext", "nokogiri")
       FileUtils.mkdir_p(gem_ext_dir)
@@ -35,7 +35,7 @@ class FindNativeExtensionsTest < Minitest::Test
   end
 
   def test_find_native_extensions_detects_rust_extensions
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       bundle_dir, ruby_install_dir, ruby_build_path = setup_extension_dirs(tmpdir)
       gem_ext_dir = File.join(bundle_dir, "gems", "rb_sys_test-1.0", "ext", "rb_sys_test")
       FileUtils.mkdir_p(gem_ext_dir)
@@ -53,7 +53,7 @@ class FindNativeExtensionsTest < Minitest::Test
   end
 
   def test_find_native_extensions_finds_bundled_gems
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       bundle_dir, ruby_install_dir, ruby_build_path = setup_extension_dirs(tmpdir)
 
       # Create bundled gem directory structure (Ruby 4.0+)
@@ -75,7 +75,7 @@ class FindNativeExtensionsTest < Minitest::Test
   end
 
   def test_find_native_extensions_skips_bundled_gems_when_no_stdlib
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       bundle_dir, ruby_install_dir, ruby_build_path = setup_extension_dirs(tmpdir)
 
       # Create bundled gem directory structure
@@ -96,7 +96,7 @@ class FindNativeExtensionsTest < Minitest::Test
   end
 
   def test_find_native_extensions_skips_bundled_gems_without_o_files
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       bundle_dir, ruby_install_dir, ruby_build_path = setup_extension_dirs(tmpdir)
 
       # Create bundled gem directory without .o files
@@ -116,7 +116,7 @@ class FindNativeExtensionsTest < Minitest::Test
   end
 
   def test_find_native_extensions_prefers_gemfile_over_prebuilt_bundled
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       bundle_dir, ruby_install_dir, ruby_build_path = setup_extension_dirs(tmpdir)
 
       # Create prebuilt bundled gem
@@ -147,7 +147,7 @@ class FindNativeExtensionsTest < Minitest::Test
   end
 
   def test_find_native_extensions_finds_bundled_gems_with_nested_o_files
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       bundle_dir, ruby_install_dir, ruby_build_path = setup_extension_dirs(tmpdir)
 
       # Create bundled gem with .o files in subdirectory (like lib/)
@@ -228,7 +228,7 @@ class BuildNativeGemWithMockTest < Minitest::Test
   end
 
   def test_build_prebuilt_extension_does_not_run_extconf
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
 
@@ -261,7 +261,7 @@ class BuildNativeGemWithMockTest < Minitest::Test
   end
 
   def test_build_c_extension_runs_extconf_and_make
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
 
@@ -309,7 +309,7 @@ class BuildNativeGemWithMockTest < Minitest::Test
   end
 
   def test_build_rust_extension_runs_cargo
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(work_dir)
 

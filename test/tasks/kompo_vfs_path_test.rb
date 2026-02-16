@@ -7,7 +7,7 @@ class KompoVfsPathTest < Minitest::Test
   include TaskTestHelpers
 
   def test_kompo_vfs_path_impl_can_access_local_path_arg
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       vfs_path = File.join(tmpdir, "kompo-vfs")
       FileUtils.mkdir_p(vfs_path)
 
@@ -47,7 +47,7 @@ class KompoVfsPathTest < Minitest::Test
   end
 
   def test_kompo_vfs_version_check_passes_when_version_satisfies
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       File.write(File.join(tmpdir, "KOMPO_VFS_VERSION"), "0.6.0")
       # Should not raise
       Kompo::KompoVfsVersionCheck.verify!(tmpdir)
@@ -55,7 +55,7 @@ class KompoVfsPathTest < Minitest::Test
   end
 
   def test_kompo_vfs_version_check_passes_with_higher_version
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       File.write(File.join(tmpdir, "KOMPO_VFS_VERSION"), "1.0.0")
       # Should not raise
       Kompo::KompoVfsVersionCheck.verify!(tmpdir)
@@ -63,7 +63,7 @@ class KompoVfsPathTest < Minitest::Test
   end
 
   def test_kompo_vfs_version_check_fails_when_version_too_old
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       File.write(File.join(tmpdir, "KOMPO_VFS_VERSION"), "0.5.1")
       error = assert_raises(Kompo::KompoVfsVersionCheck::IncompatibleVersionError) do
         Kompo::KompoVfsVersionCheck.verify!(tmpdir)
@@ -74,7 +74,7 @@ class KompoVfsPathTest < Minitest::Test
   end
 
   def test_kompo_vfs_version_check_fails_when_version_file_missing
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       error = assert_raises(Kompo::KompoVfsVersionCheck::IncompatibleVersionError) do
         Kompo::KompoVfsVersionCheck.verify!(tmpdir)
       end
@@ -84,7 +84,7 @@ class KompoVfsPathTest < Minitest::Test
   end
 
   def test_kompo_vfs_version_check_get_version_reads_file
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       File.write(File.join(tmpdir, "KOMPO_VFS_VERSION"), "0.6.0\n")
       assert_equal "0.6.0", Kompo::KompoVfsVersionCheck.get_version(tmpdir)
     end
@@ -109,14 +109,14 @@ class KompoVfsPathTest < Minitest::Test
   end
 
   def test_kompo_vfs_version_check_get_version_strips_whitespace
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       File.write(File.join(tmpdir, "KOMPO_VFS_VERSION"), "  0.5.0  \n")
       assert_equal "0.5.0", Kompo::KompoVfsVersionCheck.get_version(tmpdir)
     end
   end
 
   def test_kompo_vfs_version_check_get_version_raises_when_file_missing
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       error = assert_raises(Kompo::KompoVfsVersionCheck::IncompatibleVersionError) do
         Kompo::KompoVfsVersionCheck.get_version(tmpdir)
       end
@@ -150,7 +150,7 @@ class KompoVfsPathFromHomebrewInstalledTest < Minitest::Test
   end
 
   def test_installed_gets_prefix_and_verifies_libs
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       lib_dir = File.join(tmpdir, "lib")
       FileUtils.mkdir_p(lib_dir)
       File.write(File.join(lib_dir, "libkompo_fs.a"), "fake lib")
@@ -167,7 +167,7 @@ class KompoVfsPathFromHomebrewInstalledTest < Minitest::Test
   end
 
   def test_installed_raises_when_libs_missing
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       lib_dir = File.join(tmpdir, "lib")
       FileUtils.mkdir_p(lib_dir)
       # Only create one lib, missing libkompo_wrap.a
@@ -200,7 +200,7 @@ class KompoVfsPathFromHomebrewInstallWithMockTest < Minitest::Test
   end
 
   def test_install_taps_and_installs
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       lib_dir = File.join(tmpdir, "lib")
       FileUtils.mkdir_p(lib_dir)
       File.write(File.join(lib_dir, "KOMPO_VFS_VERSION"), "0.6.0")

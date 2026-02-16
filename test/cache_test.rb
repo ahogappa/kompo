@@ -4,7 +4,7 @@ require_relative "test_helper"
 
 class CacheTest < Minitest::Test
   def test_clean_cache_no_directory
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache_dir = File.join(tmpdir, ".kompo", "cache")
 
       assert_output(/Cache directory does not exist/) do
@@ -14,7 +14,7 @@ class CacheTest < Minitest::Test
   end
 
   def test_clean_cache_specific_version
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache_dir = File.join(tmpdir, ".kompo", "cache")
       version_dir = File.join(cache_dir, "3.4.1")
       FileUtils.mkdir_p(File.join(version_dir, "ruby"))
@@ -30,7 +30,7 @@ class CacheTest < Minitest::Test
   end
 
   def test_clean_cache_specific_version_removes_all_contents
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache_dir = File.join(tmpdir, ".kompo", "cache")
       version_dir = File.join(cache_dir, "3.4.1")
       FileUtils.mkdir_p(File.join(version_dir, "ruby"))
@@ -55,7 +55,7 @@ class CacheTest < Minitest::Test
   end
 
   def test_clean_cache_specific_version_does_not_remove_other_version
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache_dir = File.join(tmpdir, ".kompo", "cache")
 
       # Create version 3.4.1 cache
@@ -78,7 +78,7 @@ class CacheTest < Minitest::Test
   end
 
   def test_clean_cache_version_not_found
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache_dir = File.join(tmpdir, ".kompo", "cache")
       FileUtils.mkdir_p(cache_dir)
 
@@ -89,7 +89,7 @@ class CacheTest < Minitest::Test
   end
 
   def test_clean_cache_all
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache_dir = File.join(tmpdir, ".kompo", "cache")
 
       # Create multiple version caches
@@ -105,7 +105,7 @@ class CacheTest < Minitest::Test
   end
 
   def test_clean_cache_all_empty
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache_dir = File.join(tmpdir, ".kompo", "cache")
       FileUtils.mkdir_p(cache_dir)
 

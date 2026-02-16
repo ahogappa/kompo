@@ -5,7 +5,7 @@ require_relative "../lib/kompo/cache/bundle"
 
 class BundleCacheTest < Minitest::Test
   def test_compute_gemfile_lock_hash_returns_hash
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       gemfile_lock_content = "GEM\n  specs:\n"
       File.write(File.join(tmpdir, "Gemfile.lock"), gemfile_lock_content)
 
@@ -17,7 +17,7 @@ class BundleCacheTest < Minitest::Test
   end
 
   def test_compute_gemfile_lock_hash_returns_nil_when_file_not_found
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       hash = Kompo::BundleCache.compute_gemfile_lock_hash(tmpdir)
 
       assert_nil hash
@@ -25,7 +25,7 @@ class BundleCacheTest < Minitest::Test
   end
 
   def test_from_work_dir_creates_cache_instance
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       gemfile_lock_content = "GEM\n  specs:\n"
       File.write(File.join(tmpdir, "Gemfile.lock"), gemfile_lock_content)
 
@@ -42,7 +42,7 @@ class BundleCacheTest < Minitest::Test
   end
 
   def test_from_work_dir_returns_nil_when_no_gemfile_lock
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::BundleCache.from_work_dir(
         cache_dir: "/tmp/cache",
         ruby_version: "3.4.1",
@@ -64,7 +64,7 @@ class BundleCacheTest < Minitest::Test
   end
 
   def test_exists_returns_false_when_no_cache
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::BundleCache.new(
         cache_dir: tmpdir,
         ruby_version: "3.4.1",
@@ -76,7 +76,7 @@ class BundleCacheTest < Minitest::Test
   end
 
   def test_exists_returns_false_when_partial_cache
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::BundleCache.new(
         cache_dir: tmpdir,
         ruby_version: "3.4.1",
@@ -91,7 +91,7 @@ class BundleCacheTest < Minitest::Test
   end
 
   def test_exists_returns_true_when_complete_cache
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::BundleCache.new(
         cache_dir: tmpdir,
         ruby_version: "3.4.1",
@@ -108,9 +108,7 @@ class BundleCacheTest < Minitest::Test
   end
 
   def test_save_creates_cache_structure
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(File.join(work_dir, "bundle", "ruby", "3.4.0"))
       FileUtils.mkdir_p(File.join(work_dir, ".bundle"))
@@ -132,9 +130,7 @@ class BundleCacheTest < Minitest::Test
   end
 
   def test_save_creates_metadata_with_correct_content
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(File.join(work_dir, "bundle"))
       FileUtils.mkdir_p(File.join(work_dir, ".bundle"))
@@ -155,9 +151,7 @@ class BundleCacheTest < Minitest::Test
   end
 
   def test_save_overwrites_existing_cache
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
       FileUtils.mkdir_p(File.join(work_dir, "bundle"))
       FileUtils.mkdir_p(File.join(work_dir, ".bundle"))
@@ -183,9 +177,7 @@ class BundleCacheTest < Minitest::Test
   end
 
   def test_restore_copies_cache_to_work_dir
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::BundleCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
@@ -210,9 +202,7 @@ class BundleCacheTest < Minitest::Test
   end
 
   def test_restore_cleans_existing_files
-    Dir.mktmpdir do |tmpdir|
-      tmpdir = File.realpath(tmpdir)
-
+    with_tmpdir do |tmpdir|
       cache = Kompo::BundleCache.new(
         cache_dir: File.join(tmpdir, "cache"),
         ruby_version: "3.4.1",
@@ -241,7 +231,7 @@ class BundleCacheTest < Minitest::Test
   end
 
   def test_metadata_returns_nil_when_no_cache
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::BundleCache.new(
         cache_dir: tmpdir,
         ruby_version: "3.4.1",
@@ -253,7 +243,7 @@ class BundleCacheTest < Minitest::Test
   end
 
   def test_metadata_returns_parsed_json
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache = Kompo::BundleCache.new(
         cache_dir: tmpdir,
         ruby_version: "3.4.1",

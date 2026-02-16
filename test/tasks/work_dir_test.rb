@@ -8,7 +8,7 @@ class WorkDirTest < Minitest::Test
   include TaskTestHelpers
 
   def test_work_dir_creates_temp_directory
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       # Mock Taski.args to use our temp directory for cache
       mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
 
@@ -24,7 +24,7 @@ class WorkDirTest < Minitest::Test
   end
 
   def test_work_dir_uses_cached_work_dir_when_available
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
       cached_work_dir = File.join(tmpdir, "cached_work")
       FileUtils.mkdir_p([cache_dir, cached_work_dir])
@@ -45,7 +45,7 @@ class WorkDirTest < Minitest::Test
   end
 
   def test_work_dir_handles_invalid_metadata_json
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
       FileUtils.mkdir_p(cache_dir)
 
@@ -63,7 +63,7 @@ class WorkDirTest < Minitest::Test
   end
 
   def test_work_dir_recreates_cached_work_dir_when_directory_does_not_exist
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
       # Use a path that doesn't exist yet (simulates CI cleanup between runs)
       cached_work_dir = File.join(tmpdir, "nonexistent_cached_work")
@@ -89,7 +89,7 @@ class WorkDirTest < Minitest::Test
   end
 
   def test_work_dir_warns_when_directory_exists_without_marker
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
       # Create directory but without marker file (not created by Kompo)
       cached_work_dir = File.join(tmpdir, "foreign_directory")
@@ -114,7 +114,7 @@ class WorkDirTest < Minitest::Test
   end
 
   def test_work_dir_falls_back_on_permission_denied
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
       FileUtils.mkdir_p(cache_dir)
 
@@ -144,7 +144,7 @@ class WorkDirTest < Minitest::Test
   end
 
   def test_work_dir_ignores_cache_when_no_cache_option_is_set
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
       cached_work_dir = File.join(tmpdir, "cached_work")
       FileUtils.mkdir_p([cache_dir, cached_work_dir])
