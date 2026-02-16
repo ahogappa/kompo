@@ -80,6 +80,7 @@ Options:
         --no-gemfile             Skip Gemfile processing (no bundle install)
         --local-vfs-path=PATH    Path to local kompo-vfs for development
         --clean[=VERSION]        Clean cache (current version by default, or specify VERSION, or "all")
+        --dynamic-libs=LIBS      Keep specified libraries dynamically linked (comma-separated)
         --dry-run                Show final compile command without executing it
         --init                   Generate default .kompoignore file
     -t, --tree                   Show task dependency tree and exit
@@ -103,6 +104,7 @@ Files:
 | `--no-gemfile` | Skip Gemfile processing and bundle install. Useful when your project doesn't use Bundler. |
 | `--local-vfs-path` | Use a local kompo-vfs build instead of Homebrew installation. Useful for development. |
 | `--clean` | Remove cached Ruby builds. Use `--clean=all` to remove all versions. |
+| `--dynamic-libs` | Keep specified libraries dynamically linked instead of resolving to static `.a` paths. Pass a comma-separated list of library names without the `-l` prefix (e.g., `--dynamic-libs=ssl,crypto`). By default, kompo replaces `-l` flags with full paths to `.a` files when available; this option overrides that for the listed libraries. |
 | `--dry-run` | Show the final compile command without executing it. Useful for debugging build issues. |
 | `--init` | Generate a default `.kompoignore` file in the current directory. |
 | `-t, --tree` | Display the task dependency graph and exit without building. |
@@ -122,6 +124,9 @@ $ kompo --ruby-version=3.3.0 main.rb
 
 # Development: use local kompo-vfs
 $ kompo --local-vfs-path=/path/to/kompo-vfs main.rb
+
+# Keep OpenSSL dynamically linked (e.g., to use system OpenSSL)
+$ kompo --dynamic-libs=ssl,crypto main.rb
 
 # Clean all cached Ruby builds
 $ kompo --clean=all
