@@ -17,7 +17,7 @@ class PackingCacheTest < Minitest::Test
   def test_from_work_dir_creates_cache_instance
     with_tmpdir do |tmpdir|
       gemfile_lock_content = "GEM\n  specs:\n"
-      File.write(File.join(tmpdir, "Gemfile.lock"), gemfile_lock_content)
+      tmpdir << ["Gemfile.lock", gemfile_lock_content]
 
       cache = Kompo::PackingCache.from_work_dir(
         cache_dir: "/tmp/cache",

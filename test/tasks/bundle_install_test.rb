@@ -19,8 +19,8 @@ class BundleInstallTest < Minitest::Test
 
   def test_bundle_install_skips_when_no_gemfile
     with_tmpdir do |tmpdir|
+      tmpdir << "work/"
       work_dir = File.join(tmpdir, "work")
-      FileUtils.mkdir_p(work_dir)
 
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
@@ -39,21 +39,17 @@ class BundleInstallTest < Minitest::Test
 
   def test_bundle_install_selects_from_cache_when_cache_exists
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      FileUtils.mkdir_p(work_dir)
       gemfile_lock_content = "GEM\n  specs:\n"
-      File.write(File.join(work_dir, "Gemfile.lock"), gemfile_lock_content)
-
-      # Calculate expected cache name
       hash = Digest::SHA256.hexdigest(gemfile_lock_content)[0..15]
       bundle_cache_name = "bundle-#{hash}"
-      version_cache_dir = File.join(tmpdir, ".kompo", "cache", "3.4.1")
-      cache_dir = File.join(version_cache_dir, bundle_cache_name)
+      cache_prefix = ".kompo/cache/3.4.1/#{bundle_cache_name}"
 
-      # Create complete cache structure
-      FileUtils.mkdir_p(File.join(cache_dir, "bundle"))
-      FileUtils.mkdir_p(File.join(cache_dir, ".bundle"))
-      File.write(File.join(cache_dir, "metadata.json"), '{"ruby_version": "3.4.1"}')
+      tmpdir << ["work/Gemfile.lock", gemfile_lock_content] \
+             << "#{cache_prefix}/bundle/" \
+             << "#{cache_prefix}/.bundle/" \
+             << ["#{cache_prefix}/metadata.json", '{"ruby_version": "3.4.1"}']
+
+      work_dir = File.join(tmpdir, "work")
 
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
@@ -68,26 +64,17 @@ class BundleInstallTest < Minitest::Test
 
   def test_bundle_install_from_cache_restores_bundle_directory
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      FileUtils.mkdir_p(work_dir)
       gemfile_lock_content = "GEM\n  specs:\n"
-      File.write(File.join(work_dir, "Gemfile.lock"), gemfile_lock_content)
-
-      # Calculate expected cache name (new structure: {version}/bundle-{hash})
       hash = Digest::SHA256.hexdigest(gemfile_lock_content)[0..15]
       bundle_cache_name = "bundle-#{hash}"
-      version_cache_dir = File.join(tmpdir, ".kompo", "cache", "3.4.1")
-      cache_dir = File.join(version_cache_dir, bundle_cache_name)
+      cache_prefix = ".kompo/cache/3.4.1/#{bundle_cache_name}"
 
-      # Create cache with content
-      cache_bundle_dir = File.join(cache_dir, "bundle", "ruby", "3.4.0", "gems", "sinatra-4.0.0")
-      cache_bundle_lib_dir = File.join(cache_bundle_dir, "lib")
-      cache_bundle_config = File.join(cache_dir, ".bundle")
-      FileUtils.mkdir_p(cache_bundle_lib_dir)
-      FileUtils.mkdir_p(cache_bundle_config)
-      File.write(File.join(cache_bundle_lib_dir, "sinatra.rb"), "# sinatra gem")
-      File.write(File.join(cache_bundle_config, "config"), "BUNDLE_PATH: bundle")
-      File.write(File.join(cache_dir, "metadata.json"), '{"ruby_version": "3.4.1"}')
+      tmpdir << ["work/Gemfile.lock", gemfile_lock_content] \
+             << ["#{cache_prefix}/bundle/ruby/3.4.0/gems/sinatra-4.0.0/lib/sinatra.rb", "# sinatra gem"] \
+             << ["#{cache_prefix}/.bundle/config", "BUNDLE_PATH: bundle"] \
+             << ["#{cache_prefix}/metadata.json", '{"ruby_version": "3.4.1"}']
+
+      work_dir = File.join(tmpdir, "work")
 
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
@@ -106,10 +93,9 @@ class BundleInstallTest < Minitest::Test
 
   def test_bundle_install_from_cache_uses_bundle_cache_class
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      FileUtils.mkdir_p(work_dir)
       gemfile_lock_content = "GEM\n  specs:\n"
-      File.write(File.join(work_dir, "Gemfile.lock"), gemfile_lock_content)
+      tmpdir << ["work/Gemfile.lock", gemfile_lock_content]
+      work_dir = File.join(tmpdir, "work")
 
       # Verify BundleCache.from_work_dir is used
       hash = Digest::SHA256.hexdigest(gemfile_lock_content)[0..15]
@@ -141,17 +127,15 @@ class BundleInstallFromSourceTest < Minitest::Test
 
   def test_from_source_installs_matching_bundler_when_version_differs
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      FileUtils.mkdir_p(work_dir)
-
-      File.write(File.join(work_dir, "Gemfile"), "source 'https://rubygems.org'\ngem 'sinatra'")
       gemfile_lock_content = "GEM\n  remote: https://rubygems.org/\n  specs:\n    sinatra (4.0.0)\n\nBUNDLED WITH\n   2.5.0\n"
-      File.write(File.join(work_dir, "Gemfile.lock"), gemfile_lock_content)
+      tmpdir << ["work/Gemfile", "source 'https://rubygems.org'\ngem 'sinatra'"] \
+             << ["work/Gemfile.lock", gemfile_lock_content] \
+             << "_ruby/"
 
+      work_dir = File.join(tmpdir, "work")
       ruby_path = "/mock/ruby"
       bundler_path = "/mock/bundler"
       ruby_install_dir = File.join(tmpdir, "_ruby")
-      FileUtils.mkdir_p(ruby_install_dir)
 
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
@@ -181,9 +165,7 @@ class BundleInstallFromSourceTest < Minitest::Test
         output: "Apple clang version 15.0.0", success: true)
 
       # Create expected directory structure
-      FileUtils.mkdir_p(File.join(work_dir, "bundle", "ruby", "3.4.0"))
-      FileUtils.mkdir_p(File.join(work_dir, ".bundle"))
-      File.write(File.join(work_dir, ".bundle", "config"), "BUNDLE_PATH: bundle")
+      tmpdir << "work/bundle/ruby/3.4.0/" << ["work/.bundle/config", "BUNDLE_PATH: bundle"]
 
       capture_io { Kompo::BundleInstall.run }
 
@@ -194,17 +176,15 @@ class BundleInstallFromSourceTest < Minitest::Test
 
   def test_from_source_skips_bundler_install_when_version_matches
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      FileUtils.mkdir_p(work_dir)
-
-      File.write(File.join(work_dir, "Gemfile"), "source 'https://rubygems.org'\ngem 'sinatra'")
       gemfile_lock_content = "GEM\n  remote: https://rubygems.org/\n  specs:\n    sinatra (4.0.0)\n\nBUNDLED WITH\n   2.6.9\n"
-      File.write(File.join(work_dir, "Gemfile.lock"), gemfile_lock_content)
+      tmpdir << ["work/Gemfile", "source 'https://rubygems.org'\ngem 'sinatra'"] \
+             << ["work/Gemfile.lock", gemfile_lock_content] \
+             << "_ruby/"
 
+      work_dir = File.join(tmpdir, "work")
       ruby_path = "/mock/ruby"
       bundler_path = "/mock/bundler"
       ruby_install_dir = File.join(tmpdir, "_ruby")
-      FileUtils.mkdir_p(ruby_install_dir)
 
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
@@ -229,9 +209,7 @@ class BundleInstallFromSourceTest < Minitest::Test
         output: "Apple clang version 15.0.0", success: true)
 
       # Create expected directory structure
-      FileUtils.mkdir_p(File.join(work_dir, "bundle", "ruby", "3.4.0"))
-      FileUtils.mkdir_p(File.join(work_dir, ".bundle"))
-      File.write(File.join(work_dir, ".bundle", "config"), "BUNDLE_PATH: bundle")
+      tmpdir << "work/bundle/ruby/3.4.0/" << ["work/.bundle/config", "BUNDLE_PATH: bundle"]
 
       capture_io { Kompo::BundleInstall.run }
 
@@ -243,18 +221,16 @@ class BundleInstallFromSourceTest < Minitest::Test
 
   def test_from_source_skips_bundler_install_when_bundled_with_is_empty
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      FileUtils.mkdir_p(work_dir)
-
-      File.write(File.join(work_dir, "Gemfile"), "source 'https://rubygems.org'\ngem 'sinatra'")
       # BUNDLED WITH with no version on next line
       gemfile_lock_content = "GEM\n  remote: https://rubygems.org/\n  specs:\n    sinatra (4.0.0)\n\nBUNDLED WITH\n"
-      File.write(File.join(work_dir, "Gemfile.lock"), gemfile_lock_content)
+      tmpdir << ["work/Gemfile", "source 'https://rubygems.org'\ngem 'sinatra'"] \
+             << ["work/Gemfile.lock", gemfile_lock_content] \
+             << "_ruby/"
 
+      work_dir = File.join(tmpdir, "work")
       ruby_path = "/mock/ruby"
       bundler_path = "/mock/bundler"
       ruby_install_dir = File.join(tmpdir, "_ruby")
-      FileUtils.mkdir_p(ruby_install_dir)
 
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
@@ -274,9 +250,7 @@ class BundleInstallFromSourceTest < Minitest::Test
       @mock.stub(["cc", "--version"],
         output: "Apple clang version 15.0.0", success: true)
 
-      FileUtils.mkdir_p(File.join(work_dir, "bundle", "ruby", "3.4.0"))
-      FileUtils.mkdir_p(File.join(work_dir, ".bundle"))
-      File.write(File.join(work_dir, ".bundle", "config"), "BUNDLE_PATH: bundle")
+      tmpdir << "work/bundle/ruby/3.4.0/" << ["work/.bundle/config", "BUNDLE_PATH: bundle"]
 
       capture_io { Kompo::BundleInstall.run }
 
@@ -287,14 +261,11 @@ class BundleInstallFromSourceTest < Minitest::Test
 
   def test_from_source_does_not_save_to_cache_when_no_cache_option_is_set
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      FileUtils.mkdir_p(work_dir)
-
-      # Create Gemfile and Gemfile.lock
-      File.write(File.join(work_dir, "Gemfile"), "source 'https://rubygems.org'\ngem 'sinatra'")
       gemfile_lock_content = "GEM\n  remote: https://rubygems.org/\n  specs:\n    sinatra (4.0.0)\n"
-      File.write(File.join(work_dir, "Gemfile.lock"), gemfile_lock_content)
+      tmpdir << ["work/Gemfile", "source 'https://rubygems.org'\ngem 'sinatra'"] \
+             << ["work/Gemfile.lock", gemfile_lock_content]
 
+      work_dir = File.join(tmpdir, "work")
       ruby_path = "/mock/ruby"
       bundler_path = "/mock/bundler"
       cache_dir = File.join(tmpdir, ".kompo", "cache")
@@ -321,11 +292,7 @@ class BundleInstallFromSourceTest < Minitest::Test
         output: "Apple clang version 15.0.0", success: true)
 
       # Create expected directory structure that bundle install would create
-      bundle_dir = File.join(work_dir, "bundle", "ruby", "3.4.0")
-      bundle_config_dir = File.join(work_dir, ".bundle")
-      FileUtils.mkdir_p(bundle_dir)
-      FileUtils.mkdir_p(bundle_config_dir)
-      File.write(File.join(bundle_config_dir, "config"), "BUNDLE_PATH: bundle")
+      tmpdir << "work/bundle/ruby/3.4.0/" << ["work/.bundle/config", "BUNDLE_PATH: bundle"]
 
       capture_io { Kompo::BundleInstall.run }
 

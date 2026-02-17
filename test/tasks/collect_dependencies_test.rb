@@ -8,10 +8,10 @@ class CollectDependenciesTest < Minitest::Test
 
   def test_collect_dependencies_output_path_in_directory
     with_tmpdir do |tmpdir|
+      tmpdir << "work/" << "myproject/" << "output/"
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "myproject")
       output_dir = File.join(tmpdir, "output")
-      FileUtils.mkdir_p([work_dir, project_dir, output_dir])
 
       # Mock all dependencies
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
@@ -36,10 +36,10 @@ class CollectDependenciesTest < Minitest::Test
 
   def test_collect_dependencies_output_path_as_file
     with_tmpdir do |tmpdir|
+      tmpdir << "work/" << "myproject/"
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "myproject")
       output_file = File.join(tmpdir, "mybinary")
-      FileUtils.mkdir_p([work_dir, project_dir])
 
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::InstallRuby,
@@ -63,10 +63,10 @@ class CollectDependenciesTest < Minitest::Test
 
   def test_collect_dependencies_collects_all_dependencies
     with_tmpdir do |tmpdir|
+      tmpdir << "work/" << "myproject/" << "output/"
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "myproject")
       output_dir = File.join(tmpdir, "output")
-      FileUtils.mkdir_p([work_dir, project_dir, output_dir])
 
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::InstallRuby,

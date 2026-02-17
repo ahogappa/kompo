@@ -8,13 +8,11 @@ class CopyGemfileTest < Minitest::Test
 
   def test_copy_gemfile_returns_false_when_no_gemfile
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      project_dir = File.join(tmpdir, "project")
-      FileUtils.mkdir_p([work_dir, project_dir])
+      tmpdir << "work/" << "project/"
       # No Gemfile in project_dir
 
-      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: project_dir)
+      mock_task(Kompo::WorkDir, path: File.join(tmpdir, "work"), original_dir: tmpdir)
+      mock_args(project_dir: File.join(tmpdir, "project"))
 
       refute Kompo::CopyGemfile.gemfile_exists
     end
@@ -22,14 +20,11 @@ class CopyGemfileTest < Minitest::Test
 
   def test_copy_gemfile_returns_true_when_gemfile_exists
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      project_dir = File.join(tmpdir, "project")
-      FileUtils.mkdir_p([work_dir, project_dir])
-      # Create Gemfile in project_dir
-      File.write(File.join(project_dir, "Gemfile"), "source 'https://rubygems.org'")
+      tmpdir << "work/" << ["project/Gemfile", "source 'https://rubygems.org'"]
 
+      work_dir = File.join(tmpdir, "work")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: project_dir)
+      mock_args(project_dir: File.join(tmpdir, "project"))
 
       assert Kompo::CopyGemfile.gemfile_exists
       # Verify Gemfile was copied to work_dir
@@ -39,15 +34,13 @@ class CopyGemfileTest < Minitest::Test
 
   def test_copy_gemfile_also_copies_gemfile_lock
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      project_dir = File.join(tmpdir, "project")
-      FileUtils.mkdir_p([work_dir, project_dir])
-      # Create both Gemfile and Gemfile.lock in project_dir
-      File.write(File.join(project_dir, "Gemfile"), "source 'https://rubygems.org'")
-      File.write(File.join(project_dir, "Gemfile.lock"), "GEM\n  remote: https://rubygems.org/\n")
+      tmpdir << "work/" \
+             << ["project/Gemfile", "source 'https://rubygems.org'"] \
+             << ["project/Gemfile.lock", "GEM\n  remote: https://rubygems.org/\n"]
 
+      work_dir = File.join(tmpdir, "work")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: project_dir)
+      mock_args(project_dir: File.join(tmpdir, "project"))
 
       assert Kompo::CopyGemfile.gemfile_exists
       # Verify both files were copied to work_dir
@@ -58,15 +51,13 @@ class CopyGemfileTest < Minitest::Test
 
   def test_copy_gemfile_copies_gemspec_when_gemfile_references_gemspec
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      project_dir = File.join(tmpdir, "project")
-      FileUtils.mkdir_p([work_dir, project_dir])
-      # Create Gemfile with gemspec directive
-      File.write(File.join(project_dir, "Gemfile"), "source 'https://rubygems.org'\ngemspec")
-      File.write(File.join(project_dir, "my_gem.gemspec"), "Gem::Specification.new { |s| s.name = 'my_gem' }")
+      tmpdir << "work/" \
+             << ["project/Gemfile", "source 'https://rubygems.org'\ngemspec"] \
+             << ["project/my_gem.gemspec", "Gem::Specification.new { |s| s.name = 'my_gem' }"]
 
+      work_dir = File.join(tmpdir, "work")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: project_dir)
+      mock_args(project_dir: File.join(tmpdir, "project"))
 
       assert Kompo::CopyGemfile.gemfile_exists
       # Verify Gemfile and gemspec were copied to work_dir
@@ -77,15 +68,13 @@ class CopyGemfileTest < Minitest::Test
 
   def test_copy_gemfile_does_not_copy_gemspec_when_no_gemspec_directive
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      project_dir = File.join(tmpdir, "project")
-      FileUtils.mkdir_p([work_dir, project_dir])
-      # Create Gemfile without gemspec directive
-      File.write(File.join(project_dir, "Gemfile"), "source 'https://rubygems.org'\ngem 'rake'")
-      File.write(File.join(project_dir, "my_gem.gemspec"), "Gem::Specification.new { |s| s.name = 'my_gem' }")
+      tmpdir << "work/" \
+             << ["project/Gemfile", "source 'https://rubygems.org'\ngem 'rake'"] \
+             << ["project/my_gem.gemspec", "Gem::Specification.new { |s| s.name = 'my_gem' }"]
 
+      work_dir = File.join(tmpdir, "work")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: project_dir)
+      mock_args(project_dir: File.join(tmpdir, "project"))
 
       assert Kompo::CopyGemfile.gemfile_exists
       # Verify Gemfile was copied but gemspec was not
@@ -96,16 +85,14 @@ class CopyGemfileTest < Minitest::Test
 
   def test_copy_gemfile_copies_multiple_gemspecs
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      project_dir = File.join(tmpdir, "project")
-      FileUtils.mkdir_p([work_dir, project_dir])
-      # Create Gemfile with gemspec directive and multiple gemspecs
-      File.write(File.join(project_dir, "Gemfile"), "gemspec")
-      File.write(File.join(project_dir, "my_gem.gemspec"), "Gem::Specification.new { |s| s.name = 'my_gem' }")
-      File.write(File.join(project_dir, "other_gem.gemspec"), "Gem::Specification.new { |s| s.name = 'other_gem' }")
+      tmpdir << "work/" \
+             << ["project/Gemfile", "gemspec"] \
+             << ["project/my_gem.gemspec", "Gem::Specification.new { |s| s.name = 'my_gem' }"] \
+             << ["project/other_gem.gemspec", "Gem::Specification.new { |s| s.name = 'other_gem' }"]
 
+      work_dir = File.join(tmpdir, "work")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: project_dir)
+      mock_args(project_dir: File.join(tmpdir, "project"))
 
       assert Kompo::CopyGemfile.gemfile_exists
       # Verify all gemspecs were copied
@@ -116,14 +103,11 @@ class CopyGemfileTest < Minitest::Test
 
   def test_copy_gemfile_skips_when_no_gemfile_option_specified
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      project_dir = File.join(tmpdir, "project")
-      FileUtils.mkdir_p([work_dir, project_dir])
-      # Create Gemfile in project_dir
-      File.write(File.join(project_dir, "Gemfile"), "source 'https://rubygems.org'")
+      tmpdir << "work/" << ["project/Gemfile", "source 'https://rubygems.org'"]
 
+      work_dir = File.join(tmpdir, "work")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: project_dir, no_gemfile: true)
+      mock_args(project_dir: File.join(tmpdir, "project"), no_gemfile: true)
 
       # gemfile_exists should be false even though Gemfile exists
       refute Kompo::CopyGemfile.gemfile_exists
@@ -139,13 +123,10 @@ class CopyProjectFilesTest < Minitest::Test
 
   def test_copy_project_files_copies_entrypoint
     with_tmpdir do |tmpdir|
+      tmpdir << "work/" << ["project/main.rb", "puts 'hello'"]
+
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
-      FileUtils.mkdir_p([work_dir, project_dir])
-
-      # Create entrypoint in project_dir
-      File.write(File.join(project_dir, "main.rb"), "puts 'hello'")
-
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_args(project_dir: project_dir, entrypoint: "main.rb", files: [])
 
@@ -162,15 +143,12 @@ class CopyProjectFilesTest < Minitest::Test
 
   def test_copy_project_files_copies_additional_files
     with_tmpdir do |tmpdir|
+      tmpdir << "work/" \
+             << ["project/main.rb", "require_relative 'lib/app'"] \
+             << ["project/lib/app.rb", "class App; end"]
+
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
-      lib_dir = File.join(project_dir, "lib")
-      FileUtils.mkdir_p([work_dir, lib_dir])
-
-      # Create files in project_dir
-      File.write(File.join(project_dir, "main.rb"), "require_relative 'lib/app'")
-      File.write(File.join(lib_dir, "app.rb"), "class App; end")
-
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_args(project_dir: project_dir, entrypoint: "main.rb", files: ["lib"])
 
@@ -186,15 +164,12 @@ class CopyProjectFilesTest < Minitest::Test
 
   def test_copy_project_files_copies_individual_files
     with_tmpdir do |tmpdir|
+      tmpdir << "work/" \
+             << ["project/main.rb", "require_relative 'config/settings'"] \
+             << ["project/config/settings.rb", "SETTINGS = {}"]
+
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
-      config_dir = File.join(project_dir, "config")
-      FileUtils.mkdir_p([work_dir, config_dir])
-
-      # Create files in project_dir (individual file, not directory)
-      File.write(File.join(project_dir, "main.rb"), "require_relative 'config/settings'")
-      File.write(File.join(config_dir, "settings.rb"), "SETTINGS = {}")
-
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_args(project_dir: project_dir, entrypoint: "main.rb", files: ["config/settings.rb"])
 
@@ -210,16 +185,13 @@ class CopyProjectFilesTest < Minitest::Test
 
   def test_copy_project_files_with_dot_copies_directory_contents
     with_tmpdir do |tmpdir|
+      tmpdir << "work/" \
+             << ["project/main.rb", "puts 'hello'"] \
+             << ["project/app.gemspec", "Gem::Specification.new { |s| s.name = 'app' }"] \
+             << ["project/lib/app.rb", "class App; end"]
+
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
-      lib_dir = File.join(project_dir, "lib")
-      FileUtils.mkdir_p([work_dir, lib_dir])
-
-      # Create files in project_dir
-      File.write(File.join(project_dir, "main.rb"), "puts 'hello'")
-      File.write(File.join(project_dir, "app.gemspec"), "Gem::Specification.new { |s| s.name = 'app' }")
-      File.write(File.join(lib_dir, "app.rb"), "class App; end")
-
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_args(project_dir: project_dir, entrypoint: "main.rb", files: ["."])
 

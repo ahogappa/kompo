@@ -8,21 +8,19 @@ class CheckStdlibsTest < Minitest::Test
 
   def test_check_stdlibs_accesses_install_ruby
     with_tmpdir do |tmpdir|
-      stdlib_root = File.join(tmpdir, "lib", "ruby", "3.4.0")
-      FileUtils.mkdir_p(stdlib_root)
+      tmpdir << "lib/ruby/3.4.0/"
       mock_install_ruby_with_dir(tmpdir)
 
       paths = Kompo::CheckStdlibs.paths
 
-      assert_includes paths, stdlib_root
+      assert_includes paths, File.join(tmpdir, "lib", "ruby", "3.4.0")
       assert_task_accessed(Kompo::InstallRuby, :ruby_install_dir)
     end
   end
 
   def test_check_stdlibs_skips_when_no_stdlib_flag_set
     with_tmpdir do |tmpdir|
-      stdlib_root = File.join(tmpdir, "lib", "ruby", "3.4.0")
-      FileUtils.mkdir_p(stdlib_root)
+      tmpdir << "lib/ruby/3.4.0/"
       mock_install_ruby_with_dir(tmpdir)
       mock_args(no_stdlib: true)
 
@@ -34,15 +32,14 @@ class CheckStdlibsTest < Minitest::Test
 
   def test_check_stdlibs_includes_gem_specifications
     with_tmpdir do |tmpdir|
-      stdlib_root = File.join(tmpdir, "lib", "ruby", "3.4.0")
-      gems_specs = File.join(tmpdir, "lib", "ruby", "gems", "3.4.0", "specifications")
-      FileUtils.mkdir_p([stdlib_root, gems_specs])
+      tmpdir << "lib/ruby/3.4.0/" \
+             << "lib/ruby/gems/3.4.0/specifications/"
       mock_install_ruby_with_dir(tmpdir)
 
       paths = Kompo::CheckStdlibs.paths
 
-      assert_includes paths, stdlib_root
-      assert_includes paths, gems_specs
+      assert_includes paths, File.join(tmpdir, "lib", "ruby", "3.4.0")
+      assert_includes paths, File.join(tmpdir, "lib", "ruby", "gems", "3.4.0", "specifications")
     end
   end
 

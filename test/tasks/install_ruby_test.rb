@@ -8,29 +8,22 @@ class InstallRubyTest < Minitest::Test
 
   def test_install_ruby_uses_cache_when_available
     with_tmpdir do |tmpdir|
-      # Create cache directory structure (new structure: {version}/ruby/)
-      version_cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
-      ruby_install_dir = File.join(version_cache_dir, "ruby")
-      FileUtils.mkdir_p(ruby_install_dir)
-
-      # Create metadata file indicating cache is valid
       metadata = {
         "ruby_version" => RUBY_VERSION,
         "work_dir" => tmpdir
       }
-      File.write(File.join(version_cache_dir, "metadata.json"), JSON.generate(metadata))
+      cache_prefix = ".kompo/cache/#{RUBY_VERSION}"
 
-      # Create required files that FromCache checks
-      FileUtils.mkdir_p(File.join(ruby_install_dir, "bin"))
-      File.write(File.join(ruby_install_dir, "bin", "ruby"), "#!/bin/sh")
-      File.write(File.join(ruby_install_dir, "bin", "bundle"), "#!/bin/sh")
+      tmpdir << ["#{cache_prefix}/metadata.json", JSON.generate(metadata)] \
+             << ["#{cache_prefix}/ruby/bin/ruby", "#!/bin/sh"] \
+             << ["#{cache_prefix}/ruby/bin/bundle", "#!/bin/sh"]
 
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
       mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
 
       # InstallRuby.run should select FromCache when cache exists
       # We test that the Task properly reads cache metadata
-      assert File.exist?(File.join(version_cache_dir, "metadata.json"))
+      assert File.exist?(File.join(tmpdir, cache_prefix, "metadata.json"))
     end
   end
 
@@ -66,22 +59,18 @@ class InstallRubyTest < Minitest::Test
 
   def test_from_cache_restores_ruby_and_fixes_shebangs
     with_tmpdir do |tmpdir|
-      # Create cache with proper structure (new structure: {version}/ruby/)
-      version_cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
-      cache_install_dir = File.join(version_cache_dir, "ruby")
-      FileUtils.mkdir_p(File.join(cache_install_dir, "bin"))
+      cache_prefix = ".kompo/cache/#{RUBY_VERSION}"
+      metadata = {"ruby_version" => RUBY_VERSION, "work_dir" => tmpdir}
 
-      # Create ruby and other bin files with shebangs
-      File.write(File.join(cache_install_dir, "bin", "ruby"), "#!/bin/sh\necho ruby")
-      File.write(File.join(cache_install_dir, "bin", "bundler"), "#!/old/path/to/ruby\necho bundler")
-      File.write(File.join(cache_install_dir, "bin", "gem"), "#!/old/path/to/ruby\necho gem")
+      tmpdir << ["#{cache_prefix}/ruby/bin/ruby", "#!/bin/sh\necho ruby"] \
+             << ["#{cache_prefix}/ruby/bin/bundler", "#!/old/path/to/ruby\necho bundler"] \
+             << ["#{cache_prefix}/ruby/bin/gem", "#!/old/path/to/ruby\necho gem"] \
+             << ["#{cache_prefix}/metadata.json", JSON.generate(metadata)]
+
+      cache_install_dir = File.join(tmpdir, cache_prefix, "ruby")
       FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "ruby"))
       FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "bundler"))
       FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "gem"))
-
-      # Create metadata
-      metadata = {"ruby_version" => RUBY_VERSION, "work_dir" => tmpdir}
-      File.write(File.join(version_cache_dir, "metadata.json"), JSON.generate(metadata))
 
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
       mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
@@ -105,25 +94,18 @@ class InstallRubyTest < Minitest::Test
 
   def test_from_cache_updates_shebangs_in_bin_directory
     with_tmpdir do |tmpdir|
-      version_cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
-      cache_install_dir = File.join(version_cache_dir, "ruby")
-      FileUtils.mkdir_p(File.join(cache_install_dir, "bin"))
+      cache_prefix = ".kompo/cache/#{RUBY_VERSION}"
+      metadata = {"ruby_version" => RUBY_VERSION, "work_dir" => tmpdir}
 
-      # Create files with shebangs
-      ruby_content = "#!/bin/sh\necho ruby"
-      irb_content = "#!/old/path/to/ruby\nputs 'irb'"
-      rake_content = "#!/old/path/to/ruby\n# rake script"
+      tmpdir << ["#{cache_prefix}/ruby/bin/ruby", "#!/bin/sh\necho ruby"] \
+             << ["#{cache_prefix}/ruby/bin/irb", "#!/old/path/to/ruby\nputs 'irb'"] \
+             << ["#{cache_prefix}/ruby/bin/rake", "#!/old/path/to/ruby\n# rake script"] \
+             << ["#{cache_prefix}/metadata.json", JSON.generate(metadata)]
 
-      File.write(File.join(cache_install_dir, "bin", "ruby"), ruby_content)
-      File.write(File.join(cache_install_dir, "bin", "irb"), irb_content)
-      File.write(File.join(cache_install_dir, "bin", "rake"), rake_content)
+      cache_install_dir = File.join(tmpdir, cache_prefix, "ruby")
       FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "ruby"))
       FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "irb"))
       FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "rake"))
-
-      # Create metadata
-      metadata = {"ruby_version" => RUBY_VERSION, "work_dir" => tmpdir}
-      File.write(File.join(version_cache_dir, "metadata.json"), JSON.generate(metadata))
 
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
       mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
@@ -195,14 +177,12 @@ class InstallRubyFromSourceTest < Minitest::Test
         output: "ruby 3.4.1 (2025-01-01) [arm64-darwin24]", success: true)
 
       # Create the expected directory structure that would be created by ruby-build
-      ruby_install_dir = File.join(work_dir, "_ruby")
-      FileUtils.mkdir_p(File.join(ruby_install_dir, "bin"))
-      FileUtils.mkdir_p(File.join(ruby_install_dir, "_build"))
-      File.write(File.join(ruby_install_dir, "bin", "ruby"), "#!/bin/sh")
+      tmpdir << ["_ruby/bin/ruby", "#!/bin/sh"] << "_ruby/_build/"
 
       capture_io { Kompo::InstallRuby.run }
 
       # Verify ruby-build was called
+      ruby_install_dir = File.join(work_dir, "_ruby")
       assert @mock.called?(:run, ruby_build_path, "--verbose", "--keep", "3.4.1", ruby_install_dir)
 
       # Verify exports return expected values
@@ -240,17 +220,15 @@ class InstallRubyFromSourceTest < Minitest::Test
     with_tmpdir do |tmpdir|
       ruby_build_path = "/mock/ruby-build"
       work_dir = tmpdir
-      version_cache_dir = File.join(tmpdir, ".kompo", "cache", "3.4.1")
-      cache_install_dir = File.join(version_cache_dir, "ruby")
+      cache_prefix = ".kompo/cache/3.4.1"
+      metadata = {"work_dir" => work_dir, "ruby_version" => "3.4.1", "created_at" => Time.now.iso8601}
 
       # Create valid cache
-      FileUtils.mkdir_p(File.join(cache_install_dir, "bin"))
-      FileUtils.mkdir_p(File.join(cache_install_dir, "_build"))
-      File.write(File.join(cache_install_dir, "bin", "ruby"), "#!/bin/sh\necho ruby")
-      FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "ruby"))
+      tmpdir << ["#{cache_prefix}/ruby/bin/ruby", "#!/bin/sh\necho ruby"] \
+             << "#{cache_prefix}/ruby/_build/" \
+             << ["#{cache_prefix}/metadata.json", JSON.generate(metadata)]
 
-      metadata = {"work_dir" => work_dir, "ruby_version" => "3.4.1", "created_at" => Time.now.iso8601}
-      File.write(File.join(version_cache_dir, "metadata.json"), JSON.generate(metadata))
+      FileUtils.chmod(0o755, File.join(tmpdir, cache_prefix, "ruby", "bin", "ruby"))
 
       mock_task(Kompo::RubyBuildPath, path: ruby_build_path)
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: work_dir)
@@ -281,7 +259,7 @@ class InstallRubyFromSourceTest < Minitest::Test
       ruby_build_path = "/mock/ruby-build"
       work_dir = tmpdir
       source_dir = File.join(tmpdir, "ruby-source")
-      FileUtils.mkdir_p(source_dir)
+      tmpdir << "ruby-source/"
 
       mock_task(Kompo::RubyBuildPath, path: ruby_build_path)
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: work_dir)
@@ -302,13 +280,12 @@ class InstallRubyFromSourceTest < Minitest::Test
         output: "ruby 3.4.1", success: true)
 
       # Create expected directory structure
-      ruby_install_dir = File.join(work_dir, "_ruby")
-      FileUtils.mkdir_p(File.join(ruby_install_dir, "bin"))
-      File.write(File.join(ruby_install_dir, "bin", "ruby"), "#!/bin/sh")
+      tmpdir << ["_ruby/bin/ruby", "#!/bin/sh"]
 
       capture_io { Kompo::InstallRuby.run }
 
       # Verify ruby-build was called with source directory
+      ruby_install_dir = File.join(work_dir, "_ruby")
       assert @mock.called?(:run, ruby_build_path, "--verbose", "--keep", source_dir, ruby_install_dir)
     end
   end
@@ -318,7 +295,7 @@ class InstallRubyFromSourceTest < Minitest::Test
       ruby_build_path = "/mock/ruby-build"
       work_dir = tmpdir
       tarball = File.join(tmpdir, "ruby-3.4.1.tar.gz")
-      File.write(tarball, "dummy tarball")
+      tmpdir << ["ruby-3.4.1.tar.gz", "dummy tarball"]
 
       mock_task(Kompo::RubyBuildPath, path: ruby_build_path)
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: work_dir)
@@ -338,9 +315,7 @@ class InstallRubyFromSourceTest < Minitest::Test
         output: "ruby 3.4.1", success: true)
 
       # Create expected directory structure
-      ruby_install_dir = File.join(work_dir, "_ruby")
-      FileUtils.mkdir_p(File.join(ruby_install_dir, "bin"))
-      File.write(File.join(ruby_install_dir, "bin", "ruby"), "#!/bin/sh")
+      tmpdir << ["_ruby/bin/ruby", "#!/bin/sh"]
 
       capture_io { Kompo::InstallRuby.run }
 
@@ -374,8 +349,8 @@ class InstallRubyFromSourceTest < Minitest::Test
 
   def test_from_source_raises_for_unsupported_source_format
     with_tmpdir do |tmpdir|
+      tmpdir << ["ruby.zip", "dummy"]
       zip_file = File.join(tmpdir, "ruby.zip")
-      File.write(zip_file, "dummy")
 
       mock_task(Kompo::RubyBuildPath, path: "/mock/ruby-build")
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
@@ -422,10 +397,7 @@ class InstallRubyFromSourceTest < Minitest::Test
         output: "ruby 3.4.1 (2025-01-01) [arm64-darwin24]", success: true)
 
       # Create the expected directory structure that would be created by ruby-build
-      ruby_install_dir = File.join(work_dir, "_ruby")
-      FileUtils.mkdir_p(File.join(ruby_install_dir, "bin"))
-      FileUtils.mkdir_p(File.join(ruby_install_dir, "_build"))
-      File.write(File.join(ruby_install_dir, "bin", "ruby"), "#!/bin/sh")
+      tmpdir << ["_ruby/bin/ruby", "#!/bin/sh"] << "_ruby/_build/"
 
       capture_io { Kompo::InstallRuby.run }
 
@@ -446,26 +418,20 @@ class InstallRubyFromCacheRubyPcFixTest < Minitest::Test
 
   def test_from_cache_fixes_ruby_pc
     with_tmpdir do |tmpdir|
-      version_cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
-      cache_install_dir = File.join(version_cache_dir, "ruby")
-      pkgconfig_dir = File.join(cache_install_dir, "lib", "pkgconfig")
-      FileUtils.mkdir_p(pkgconfig_dir)
-      FileUtils.mkdir_p(File.join(cache_install_dir, "bin"))
+      cache_prefix = ".kompo/cache/#{RUBY_VERSION}"
+      metadata = {"ruby_version" => RUBY_VERSION, "work_dir" => tmpdir}
 
-      # Create ruby.pc with old prefix
-      File.write(File.join(pkgconfig_dir, "ruby.pc"), <<~PC)
+      ruby_pc_content = <<~PC
         prefix=/old/cache/path
         exec_prefix=${prefix}
         libdir=${exec_prefix}/lib
       PC
 
-      # Create bin files
-      File.write(File.join(cache_install_dir, "bin", "ruby"), "#!/bin/sh\necho ruby")
-      FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "ruby"))
+      tmpdir << ["#{cache_prefix}/ruby/lib/pkgconfig/ruby.pc", ruby_pc_content] \
+             << ["#{cache_prefix}/ruby/bin/ruby", "#!/bin/sh\necho ruby"] \
+             << ["#{cache_prefix}/metadata.json", JSON.generate(metadata)]
 
-      # Create metadata
-      metadata = {"ruby_version" => RUBY_VERSION, "work_dir" => tmpdir}
-      File.write(File.join(version_cache_dir, "metadata.json"), JSON.generate(metadata))
+      FileUtils.chmod(0o755, File.join(tmpdir, cache_prefix, "ruby", "bin", "ruby"))
 
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
       mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))

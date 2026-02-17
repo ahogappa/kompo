@@ -34,22 +34,20 @@ class PackingForMacOSDryRunTest < Minitest::Test
 
     with_tmpdir do |tmpdir|
       work_dir = tmpdir
-      ruby_build_dir = File.join(tmpdir, "ruby-build", "ruby-3.4.1")
       ruby_install_dir = File.join(tmpdir, "ruby-install")
       kompo_lib = File.join(tmpdir, "kompo-lib")
       output_path = File.join(tmpdir, "output", "myapp")
 
-      # Create required directories
-      FileUtils.mkdir_p(ruby_build_dir)
-      FileUtils.mkdir_p(File.join(ruby_install_dir, "lib", "pkgconfig"))
-      FileUtils.mkdir_p(File.join(tmpdir, "output"))
-      FileUtils.mkdir_p(kompo_lib)
+      # Create required directories and files
+      tmpdir << "ruby-build/ruby-3.4.1/" \
+             << "ruby-install/lib/pkgconfig/" \
+             << "output/" \
+             << "kompo-lib/" \
+             << ["main.c", "int main() { return 0; }"] \
+             << ["fs.c", "// fs"]
 
-      # Create main.c and fs.c files
       main_c = File.join(tmpdir, "main.c")
       fs_c = File.join(tmpdir, "fs.c")
-      File.write(main_c, "int main() { return 0; }")
-      File.write(fs_c, "// fs")
 
       # Mock CollectDependencies
       deps = Kompo::CollectDependencies::Dependencies.new(
@@ -108,22 +106,20 @@ class PackingForLinuxDryRunTest < Minitest::Test
 
     with_tmpdir do |tmpdir|
       work_dir = tmpdir
-      ruby_build_dir = File.join(tmpdir, "ruby-build", "ruby-3.4.1")
       ruby_install_dir = File.join(tmpdir, "ruby-install")
       kompo_lib = File.join(tmpdir, "kompo-lib")
       output_path = File.join(tmpdir, "output", "myapp")
 
-      # Create required directories
-      FileUtils.mkdir_p(ruby_build_dir)
-      FileUtils.mkdir_p(File.join(ruby_install_dir, "lib", "pkgconfig"))
-      FileUtils.mkdir_p(File.join(tmpdir, "output"))
-      FileUtils.mkdir_p(kompo_lib)
+      # Create required directories and files
+      tmpdir << "ruby-build/ruby-3.4.1/" \
+             << "ruby-install/lib/pkgconfig/" \
+             << "output/" \
+             << "kompo-lib/" \
+             << ["main.c", "int main() { return 0; }"] \
+             << ["fs.c", "// fs"]
 
-      # Create main.c and fs.c files
       main_c = File.join(tmpdir, "main.c")
       fs_c = File.join(tmpdir, "fs.c")
-      File.write(main_c, "int main() { return 0; }")
-      File.write(fs_c, "// fs")
 
       # Mock CollectDependencies
       deps = Kompo::CollectDependencies::Dependencies.new(

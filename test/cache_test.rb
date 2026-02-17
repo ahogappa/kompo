@@ -15,11 +15,12 @@ class CacheTest < Minitest::Test
 
   def test_clean_cache_specific_version
     with_tmpdir do |tmpdir|
+      tmpdir << ".kompo/cache/3.4.1/ruby/" \
+             << [".kompo/cache/3.4.1/metadata.json", "{}"] \
+             << [".kompo/cache/3.4.1/ruby-3.4.1.tar.gz", "dummy tarball"]
+
       cache_dir = File.join(tmpdir, ".kompo", "cache")
       version_dir = File.join(cache_dir, "3.4.1")
-      FileUtils.mkdir_p(File.join(version_dir, "ruby"))
-      File.write(File.join(version_dir, "metadata.json"), "{}")
-      File.write(File.join(version_dir, "ruby-3.4.1.tar.gz"), "dummy tarball")
 
       assert_output(/Removed.*3\.4\.1.*Cache for Ruby 3\.4\.1 cleaned successfully/m) do
         Kompo.clean_cache("3.4.1", cache_dir: cache_dir)
@@ -31,20 +32,16 @@ class CacheTest < Minitest::Test
 
   def test_clean_cache_specific_version_removes_all_contents
     with_tmpdir do |tmpdir|
+      tmpdir << ".kompo/cache/3.4.1/ruby/" \
+             << [".kompo/cache/3.4.1/metadata.json", "{}"] \
+             << [".kompo/cache/3.4.1/ruby-3.4.1.tar.gz", "dummy tarball"] \
+             << ".kompo/cache/3.4.1/bundle-abc123def456/bundle/" \
+             << ".kompo/cache/3.4.1/bundle-abc123def456/.bundle/" \
+             << [".kompo/cache/3.4.1/bundle-abc123def456/metadata.json", "{}"] \
+             << ".kompo/cache/3.4.1/bundle-xyz789/bundle/"
+
       cache_dir = File.join(tmpdir, ".kompo", "cache")
       version_dir = File.join(cache_dir, "3.4.1")
-      FileUtils.mkdir_p(File.join(version_dir, "ruby"))
-      File.write(File.join(version_dir, "metadata.json"), "{}")
-      File.write(File.join(version_dir, "ruby-3.4.1.tar.gz"), "dummy tarball")
-
-      # Bundle caches are also under the version directory
-      bundle_cache_dir = File.join(version_dir, "bundle-abc123def456")
-      FileUtils.mkdir_p(File.join(bundle_cache_dir, "bundle"))
-      FileUtils.mkdir_p(File.join(bundle_cache_dir, ".bundle"))
-      File.write(File.join(bundle_cache_dir, "metadata.json"), "{}")
-
-      bundle_cache_dir2 = File.join(version_dir, "bundle-xyz789")
-      FileUtils.mkdir_p(File.join(bundle_cache_dir2, "bundle"))
 
       assert_output(/Removed.*3\.4\.1.*Cache for Ruby 3\.4\.1 cleaned successfully/m) do
         Kompo.clean_cache("3.4.1", cache_dir: cache_dir)
@@ -56,17 +53,17 @@ class CacheTest < Minitest::Test
 
   def test_clean_cache_specific_version_does_not_remove_other_version
     with_tmpdir do |tmpdir|
-      cache_dir = File.join(tmpdir, ".kompo", "cache")
-
       # Create version 3.4.1 cache
-      version_341 = File.join(cache_dir, "3.4.1")
-      FileUtils.mkdir_p(File.join(version_341, "ruby"))
-      FileUtils.mkdir_p(File.join(version_341, "bundle-abc123"))
+      tmpdir << ".kompo/cache/3.4.1/ruby/" \
+             << ".kompo/cache/3.4.1/bundle-abc123/"
 
       # Create version 4.0.0 cache
+      tmpdir << ".kompo/cache/4.0.0/ruby/" \
+             << ".kompo/cache/4.0.0/bundle-xyz789/"
+
+      cache_dir = File.join(tmpdir, ".kompo", "cache")
+      version_341 = File.join(cache_dir, "3.4.1")
       version_400 = File.join(cache_dir, "4.0.0")
-      FileUtils.mkdir_p(File.join(version_400, "ruby"))
-      FileUtils.mkdir_p(File.join(version_400, "bundle-xyz789"))
 
       Kompo.clean_cache("3.4.1", cache_dir: cache_dir)
 
@@ -79,8 +76,9 @@ class CacheTest < Minitest::Test
 
   def test_clean_cache_version_not_found
     with_tmpdir do |tmpdir|
+      tmpdir << ".kompo/cache/"
+
       cache_dir = File.join(tmpdir, ".kompo", "cache")
-      FileUtils.mkdir_p(cache_dir)
 
       assert_output(/No cache found for Ruby 3\.4\.1/) do
         Kompo.clean_cache("3.4.1", cache_dir: cache_dir)
@@ -90,11 +88,11 @@ class CacheTest < Minitest::Test
 
   def test_clean_cache_all
     with_tmpdir do |tmpdir|
-      cache_dir = File.join(tmpdir, ".kompo", "cache")
-
       # Create multiple version caches
-      FileUtils.mkdir_p(File.join(cache_dir, "3.4.1", "ruby"))
-      FileUtils.mkdir_p(File.join(cache_dir, "4.0.0", "ruby"))
+      tmpdir << ".kompo/cache/3.4.1/ruby/" \
+             << ".kompo/cache/4.0.0/ruby/"
+
+      cache_dir = File.join(tmpdir, ".kompo", "cache")
 
       assert_output(/All caches cleaned successfully/) do
         Kompo.clean_cache("all", cache_dir: cache_dir)
@@ -106,8 +104,9 @@ class CacheTest < Minitest::Test
 
   def test_clean_cache_all_empty
     with_tmpdir do |tmpdir|
+      tmpdir << ".kompo/cache/"
+
       cache_dir = File.join(tmpdir, ".kompo", "cache")
-      FileUtils.mkdir_p(cache_dir)
 
       assert_output(/No caches found/) do
         Kompo.clean_cache("all", cache_dir: cache_dir)

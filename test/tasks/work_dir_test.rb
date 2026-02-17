@@ -25,16 +25,12 @@ class WorkDirTest < Minitest::Test
 
   def test_work_dir_uses_cached_work_dir_when_available
     with_tmpdir do |tmpdir|
-      cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
       cached_work_dir = File.join(tmpdir, "cached_work")
-      FileUtils.mkdir_p([cache_dir, cached_work_dir])
-
-      # Create marker file to identify this as a Kompo work directory
-      File.write(File.join(cached_work_dir, Kompo::WorkDir::MARKER_FILE), "kompo-work-dir")
-
-      # Create metadata file with cached work_dir path
       metadata = {"work_dir" => cached_work_dir, "ruby_version" => RUBY_VERSION}
-      File.write(File.join(cache_dir, "metadata.json"), JSON.generate(metadata))
+
+      tmpdir << "cached_work/" \
+             << ["cached_work/#{Kompo::WorkDir::MARKER_FILE}", "kompo-work-dir"] \
+             << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
 
       mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
 
@@ -46,11 +42,7 @@ class WorkDirTest < Minitest::Test
 
   def test_work_dir_handles_invalid_metadata_json
     with_tmpdir do |tmpdir|
-      cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
-      FileUtils.mkdir_p(cache_dir)
-
-      # Create invalid JSON metadata file
-      File.write(File.join(cache_dir, "metadata.json"), "not valid json")
+      tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", "not valid json"]
 
       mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
 
@@ -64,14 +56,11 @@ class WorkDirTest < Minitest::Test
 
   def test_work_dir_recreates_cached_work_dir_when_directory_does_not_exist
     with_tmpdir do |tmpdir|
-      cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
-      # Use a path that doesn't exist yet (simulates CI cleanup between runs)
       cached_work_dir = File.join(tmpdir, "nonexistent_cached_work")
-      FileUtils.mkdir_p(cache_dir)
+      metadata = {"work_dir" => cached_work_dir, "ruby_version" => RUBY_VERSION}
 
       # Create metadata file with cached work_dir path, but don't create the directory
-      metadata = {"work_dir" => cached_work_dir, "ruby_version" => RUBY_VERSION}
-      File.write(File.join(cache_dir, "metadata.json"), JSON.generate(metadata))
+      tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
 
       # Verify the directory doesn't exist
       refute Dir.exist?(cached_work_dir)
@@ -90,14 +79,12 @@ class WorkDirTest < Minitest::Test
 
   def test_work_dir_warns_when_directory_exists_without_marker
     with_tmpdir do |tmpdir|
-      cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
-      # Create directory but without marker file (not created by Kompo)
       cached_work_dir = File.join(tmpdir, "foreign_directory")
-      FileUtils.mkdir_p([cache_dir, cached_work_dir])
-
-      # Create metadata file pointing to the foreign directory
       metadata = {"work_dir" => cached_work_dir, "ruby_version" => RUBY_VERSION}
-      File.write(File.join(cache_dir, "metadata.json"), JSON.generate(metadata))
+
+      # Create directory but without marker file (not created by Kompo)
+      tmpdir << "foreign_directory/" \
+             << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
 
       mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
 
@@ -115,16 +102,13 @@ class WorkDirTest < Minitest::Test
 
   def test_work_dir_falls_back_on_permission_denied
     with_tmpdir do |tmpdir|
-      cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
-      FileUtils.mkdir_p(cache_dir)
-
       # Use a path that requires root permission to create
       # (path inside /private/var which we can't write to as normal user)
       cached_work_dir = "/nonexistent_root_path_#{SecureRandom.uuid}/work"
 
       # Create metadata file with cached work_dir path that we can't create
       metadata = {"work_dir" => cached_work_dir, "ruby_version" => RUBY_VERSION}
-      File.write(File.join(cache_dir, "metadata.json"), JSON.generate(metadata))
+      tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
 
       mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
 
@@ -145,16 +129,12 @@ class WorkDirTest < Minitest::Test
 
   def test_work_dir_ignores_cache_when_no_cache_option_is_set
     with_tmpdir do |tmpdir|
-      cache_dir = File.join(tmpdir, ".kompo", "cache", RUBY_VERSION)
       cached_work_dir = File.join(tmpdir, "cached_work")
-      FileUtils.mkdir_p([cache_dir, cached_work_dir])
-
-      # Create marker file to identify this as a Kompo work directory
-      File.write(File.join(cached_work_dir, Kompo::WorkDir::MARKER_FILE), "kompo-work-dir")
-
-      # Create metadata file with cached work_dir path
       metadata = {"work_dir" => cached_work_dir, "ruby_version" => RUBY_VERSION}
-      File.write(File.join(cache_dir, "metadata.json"), JSON.generate(metadata))
+
+      tmpdir << "cached_work/" \
+             << ["cached_work/#{Kompo::WorkDir::MARKER_FILE}", "kompo-work-dir"] \
+             << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
 
       # Set no_cache option
       mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"), no_cache: true)

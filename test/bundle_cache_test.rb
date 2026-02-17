@@ -7,7 +7,7 @@ class BundleCacheTest < Minitest::Test
   def test_compute_gemfile_lock_hash_returns_hash
     with_tmpdir do |tmpdir|
       gemfile_lock_content = "GEM\n  specs:\n"
-      File.write(File.join(tmpdir, "Gemfile.lock"), gemfile_lock_content)
+      tmpdir << ["Gemfile.lock", gemfile_lock_content]
 
       hash = Kompo::BundleCache.compute_gemfile_lock_hash(tmpdir)
 
@@ -27,7 +27,7 @@ class BundleCacheTest < Minitest::Test
   def test_from_work_dir_creates_cache_instance
     with_tmpdir do |tmpdir|
       gemfile_lock_content = "GEM\n  specs:\n"
-      File.write(File.join(tmpdir, "Gemfile.lock"), gemfile_lock_content)
+      tmpdir << ["Gemfile.lock", gemfile_lock_content]
 
       cache = Kompo::BundleCache.from_work_dir(
         cache_dir: "/tmp/cache",
@@ -110,9 +110,9 @@ class BundleCacheTest < Minitest::Test
   def test_save_creates_cache_structure
     with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
-      FileUtils.mkdir_p(File.join(work_dir, "bundle", "ruby", "3.4.0"))
-      FileUtils.mkdir_p(File.join(work_dir, ".bundle"))
-      File.write(File.join(work_dir, ".bundle", "config"), "BUNDLE_PATH: bundle")
+      tmpdir << "work/bundle/ruby/3.4.0/" \
+             << "work/.bundle/" \
+             << ["work/.bundle/config", "BUNDLE_PATH: bundle"]
 
       cache = Kompo::BundleCache.new(
         cache_dir: File.join(tmpdir, "cache"),
@@ -132,8 +132,7 @@ class BundleCacheTest < Minitest::Test
   def test_save_creates_metadata_with_correct_content
     with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
-      FileUtils.mkdir_p(File.join(work_dir, "bundle"))
-      FileUtils.mkdir_p(File.join(work_dir, ".bundle"))
+      tmpdir << "work/bundle/" << "work/.bundle/"
 
       cache = Kompo::BundleCache.new(
         cache_dir: File.join(tmpdir, "cache"),
@@ -153,9 +152,8 @@ class BundleCacheTest < Minitest::Test
   def test_save_overwrites_existing_cache
     with_tmpdir do |tmpdir|
       work_dir = File.join(tmpdir, "work")
-      FileUtils.mkdir_p(File.join(work_dir, "bundle"))
-      FileUtils.mkdir_p(File.join(work_dir, ".bundle"))
-      File.write(File.join(work_dir, ".bundle", "config"), "NEW_CONFIG")
+      tmpdir << "work/bundle/" \
+             << ["work/.bundle/config", "NEW_CONFIG"]
 
       cache = Kompo::BundleCache.new(
         cache_dir: File.join(tmpdir, "cache"),
@@ -192,7 +190,7 @@ class BundleCacheTest < Minitest::Test
 
       # Restore to work directory
       work_dir = File.join(tmpdir, "work")
-      FileUtils.mkdir_p(work_dir)
+      tmpdir << "work/"
 
       cache.restore(work_dir)
 
@@ -217,9 +215,8 @@ class BundleCacheTest < Minitest::Test
 
       # Create work directory with existing files
       work_dir = File.join(tmpdir, "work")
-      FileUtils.mkdir_p(File.join(work_dir, "bundle", "old"))
-      FileUtils.mkdir_p(File.join(work_dir, ".bundle"))
-      File.write(File.join(work_dir, ".bundle", "config"), "OLD_CONFIG")
+      tmpdir << "work/bundle/old/" \
+             << ["work/.bundle/config", "OLD_CONFIG"]
 
       cache.restore(work_dir)
 
