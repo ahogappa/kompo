@@ -8,8 +8,8 @@ class MakeMainCTest < Minitest::Test
 
   def test_make_main_c_generates_file
     with_tmpdir do |tmpdir|
+      tmpdir << "work/"
       work_dir = File.join(tmpdir, "work")
-      FileUtils.mkdir_p(work_dir)
       main_c_path = File.join(work_dir, "main.c")
       entrypoint = File.join(work_dir, "main.rb")
 
@@ -61,9 +61,8 @@ class MakeFsCTest < Minitest::Test
   def test_make_fs_c_with_additional_paths
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      tmpdir << ["work/lib/app.rb", "class App; end"]
       lib_dir = File.join(work_dir, "lib")
-      FileUtils.mkdir_p(lib_dir)
-      File.write(File.join(lib_dir, "app.rb"), "class App; end")
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, additional_paths: [lib_dir])
 
@@ -77,11 +76,9 @@ class MakeFsCTest < Minitest::Test
   def test_make_fs_c_prunes_git_directories
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      tmpdir << ["work/lib/app.rb", "class App; end"] \
+             << ["work/lib/.git/config", "git config"]
       lib_dir = File.join(work_dir, "lib")
-      git_dir = File.join(lib_dir, ".git")
-      FileUtils.mkdir_p([lib_dir, git_dir])
-      File.write(File.join(lib_dir, "app.rb"), "class App; end")
-      File.write(File.join(git_dir, "config"), "git config")
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, additional_paths: [lib_dir])
 
@@ -106,9 +103,9 @@ class MakeFsCTest < Minitest::Test
   def test_make_fs_c_skips_binary_extensions
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
-      File.write(File.join(work_dir, "test.so"), "binary")
-      File.write(File.join(work_dir, "test.o"), "object")
-      File.write(File.join(work_dir, "image.png"), "image")
+      tmpdir << ["work/test.so", "binary"] \
+             << ["work/test.o", "object"] \
+             << ["work/image.png", "image"]
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
 
@@ -121,16 +118,15 @@ class MakeFsCTest < Minitest::Test
   def test_make_fs_c_with_gemfile
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir, content: "require 'bundler/setup'")
-      bundle_dir = File.join(work_dir, "bundle", "ruby", "3.4.0")
-      bundle_config_dir = File.join(work_dir, ".bundle")
-      FileUtils.mkdir_p([bundle_dir, bundle_config_dir])
-      File.write(File.join(work_dir, "Gemfile"), "source 'https://rubygems.org'")
-      File.write(File.join(work_dir, "Gemfile.lock"), "GEM\n  specs:\n")
-      File.write(File.join(bundle_config_dir, "config"), "BUNDLE_PATH: bundle")
+      tmpdir << "work/bundle/ruby/3.4.0/" \
+             << ["work/.bundle/config", "BUNDLE_PATH: bundle"] \
+             << ["work/Gemfile", "source 'https://rubygems.org'"] \
+             << ["work/Gemfile.lock", "GEM\n  specs:\n"]
 
+      bundle_dir = File.join(work_dir, "bundle", "ruby", "3.4.0")
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint,
         gemfile_exists: true,
-        bundler_config_path: File.join(bundle_config_dir, "config"),
+        bundler_config_path: File.join(work_dir, ".bundle", "config"),
         bundle_ruby_dir: bundle_dir)
 
       path = Kompo::MakeFsC.path
@@ -142,9 +138,8 @@ class MakeFsCTest < Minitest::Test
   def test_make_fs_c_with_kompoignore
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      tmpdir << ["project/.kompoignore", "*.log\ntmp/"]
       project_dir = File.join(tmpdir, "project")
-      FileUtils.mkdir_p(project_dir)
-      File.write(File.join(project_dir, ".kompoignore"), "*.log\ntmp/")
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
       mock_args(project_dir: project_dir)
@@ -158,12 +153,10 @@ class MakeFsCTest < Minitest::Test
   def test_make_fs_c_ignores_files_matching_kompoignore
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      tmpdir << ["work/debug.log", "DEBUG LOG CONTENT"] \
+             << ["work/tmp/cache.txt", "TEMP CACHE CONTENT"] \
+             << ["project/.kompoignore", "*.log\ntmp/"]
       project_dir = File.join(tmpdir, "project")
-      tmp_dir = File.join(work_dir, "tmp")
-      FileUtils.mkdir_p([project_dir, tmp_dir])
-      File.write(File.join(work_dir, "debug.log"), "DEBUG LOG CONTENT")
-      File.write(File.join(tmp_dir, "cache.txt"), "TEMP CACHE CONTENT")
-      File.write(File.join(project_dir, ".kompoignore"), "*.log\ntmp/")
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
       mock_args(project_dir: project_dir)
@@ -179,14 +172,10 @@ class MakeFsCTest < Minitest::Test
   def test_make_fs_c_skips_symlinks_escaping_base_directory
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      tmpdir << ["work/lib/app.rb", "class App; end"] \
+             << ["outside/secret.rb", "SECRET_DATA"]
       lib_dir = File.join(work_dir, "lib")
-      FileUtils.mkdir_p(lib_dir)
-      File.write(File.join(lib_dir, "app.rb"), "class App; end")
-
-      # Create a directory outside work_dir
       outside_dir = File.join(tmpdir, "outside")
-      FileUtils.mkdir_p(outside_dir)
-      File.write(File.join(outside_dir, "secret.rb"), "SECRET_DATA")
 
       # Create a symlink in lib_dir pointing to outside_dir
       symlink_path = File.join(lib_dir, "external_link")
@@ -212,10 +201,9 @@ class MakeFsCTest < Minitest::Test
   def test_make_fs_c_allows_symlinks_within_base_directory
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      tmpdir << ["work/lib/real/internal.rb", "INTERNAL_CONTENT"]
       lib_dir = File.join(work_dir, "lib")
       real_dir = File.join(lib_dir, "real")
-      FileUtils.mkdir_p(real_dir)
-      File.write(File.join(real_dir, "internal.rb"), "INTERNAL_CONTENT")
 
       # Create a symlink within the same base directory
       symlink_path = File.join(lib_dir, "linked.rb")
@@ -237,10 +225,8 @@ class MakeFsCTest < Minitest::Test
   def test_make_fs_c_handles_binary_content_correctly
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
-
-      # Create a directory with a binary file
+      tmpdir << "work/lib/"
       lib_dir = File.join(work_dir, "lib")
-      FileUtils.mkdir_p(lib_dir)
 
       # Create a file with binary content (non-UTF8 bytes)
       binary_content = "\x00\x01\x02\xFF\xFE\xFD"
@@ -283,10 +269,8 @@ class MakeFsCTest < Minitest::Test
   def test_make_fs_c_skips_duplicate_files_in_directory
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      tmpdir << ["work/lib/app.rb", "class App; end"]
       lib_dir = File.join(work_dir, "lib")
-      FileUtils.mkdir_p(lib_dir)
-      app_file = File.join(lib_dir, "app.rb")
-      File.write(app_file, "class App; end")
 
       # Add the same directory twice to simulate duplicate
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, additional_paths: [lib_dir, lib_dir])
@@ -308,7 +292,6 @@ class MakeFsCTest < Minitest::Test
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
       mock_args(compress: false)
-
       path = Kompo::MakeFsC.path
 
       assert File.exist?(path)
@@ -348,10 +331,9 @@ class MakeFsCTest < Minitest::Test
   def test_make_fs_c_compressed_data_is_smaller
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
-      lib_dir = File.join(work_dir, "lib")
-      FileUtils.mkdir_p(lib_dir)
       # Create a file with repetitive content that compresses well
-      File.write(File.join(lib_dir, "large.rb"), "puts 'hello world'\n" * 100)
+      tmpdir << ["work/lib/large.rb", "puts 'hello world'\n" * 100]
+      lib_dir = File.join(work_dir, "lib")
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, additional_paths: [lib_dir])
       mock_args(compress: true)
@@ -404,15 +386,11 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_does_not_skip_binary_extensions_for_project_paths
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
-
-      # Create project directory with image files
-      project_dir = File.join(work_dir, "app", "assets")
-      FileUtils.mkdir_p(project_dir)
-      File.write(File.join(project_dir, "logo.png"), "PNG_IMAGE_DATA")
-      File.write(File.join(project_dir, "photo.jpg"), "JPG_IMAGE_DATA")
-      File.write(File.join(project_dir, "icon.svg"), "SVG_DATA")
+      tmpdir << ["work/app/assets/logo.png", "PNG_IMAGE_DATA"] \
+             << ["work/app/assets/photo.jpg", "JPG_IMAGE_DATA"] \
+             << ["work/app/assets/icon.svg", "SVG_DATA"]
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint,
         additional_paths: [File.join(work_dir, "app")])
@@ -431,21 +409,18 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_skips_binary_extensions_for_gem_paths
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      gem_prefix = "work/bundle/ruby/3.4.0/gems/nokogiri-1.0"
+      tmpdir << ["#{gem_prefix}/lib.rb", "module Nokogiri; end"] \
+             << ["#{gem_prefix}/nokogiri.so", "BINARY_SO_DATA"] \
+             << ["#{gem_prefix}/image.png", "GEM_PNG_DATA"] \
+             << ["work/.bundle/config", "BUNDLE_PATH: bundle"] \
+             << ["work/Gemfile", "source 'https://rubygems.org'"] \
+             << ["work/Gemfile.lock", "GEM\n  specs:\n"]
 
-      # Create gem directory with binary files
       gem_dir = File.join(work_dir, "bundle", "ruby", "3.4.0", "gems", "nokogiri-1.0")
-      FileUtils.mkdir_p(gem_dir)
-      File.write(File.join(gem_dir, "lib.rb"), "module Nokogiri; end")
-      File.write(File.join(gem_dir, "nokogiri.so"), "BINARY_SO_DATA")
-      File.write(File.join(gem_dir, "image.png"), "GEM_PNG_DATA")
-
       bundle_config_dir = File.join(work_dir, ".bundle")
-      FileUtils.mkdir_p(bundle_config_dir)
-      File.write(File.join(bundle_config_dir, "config"), "BUNDLE_PATH: bundle")
-      File.write(File.join(work_dir, "Gemfile"), "source 'https://rubygems.org'")
-      File.write(File.join(work_dir, "Gemfile.lock"), "GEM\n  specs:\n")
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint,
         gemfile_exists: true,
@@ -466,14 +441,11 @@ class MakeFsCTest < Minitest::Test
   end
 
   def test_make_fs_c_skips_binary_extensions_for_stdlib_paths
-    Dir.mktmpdir do |tmpdir|
+    with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
-
-      # Create stdlib directory with binary files
+      tmpdir << ["ruby_install/lib/ruby/3.4.0/json.rb", "module JSON; end"] \
+             << ["ruby_install/lib/ruby/3.4.0/json.so", "BINARY_SO_DATA"]
       stdlib_dir = File.join(tmpdir, "ruby_install", "lib", "ruby", "3.4.0")
-      FileUtils.mkdir_p(stdlib_dir)
-      File.write(File.join(stdlib_dir, "json.rb"), "module JSON; end")
-      File.write(File.join(stdlib_dir, "json.so"), "BINARY_SO_DATA")
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, stdlib_paths: [stdlib_dir])
 
@@ -491,10 +463,9 @@ class MakeFsCTest < Minitest::Test
   private
 
   def setup_work_dir_with_entrypoint(tmpdir, content: "puts 'hello'")
+    tmpdir << ["work/main.rb", content]
     work_dir = File.join(tmpdir, "work")
-    FileUtils.mkdir_p(work_dir)
     entrypoint = File.join(work_dir, "main.rb")
-    File.write(entrypoint, content)
     [work_dir, entrypoint]
   end
 
