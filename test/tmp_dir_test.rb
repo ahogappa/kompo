@@ -88,6 +88,20 @@ class TmpDirTest < Minitest::Test
     end
   end
 
+  def test_shovel_empty_array_raises_error
+    with_tmpdir do |tmpdir|
+      assert_raises(ArgumentError) { tmpdir << [] }
+    end
+  end
+
+  def test_shovel_unsupported_type_raises_error
+    with_tmpdir do |tmpdir|
+      assert_raises(ArgumentError) { tmpdir << 123 }
+      assert_raises(ArgumentError) { tmpdir << nil }
+      assert_raises(ArgumentError) { tmpdir << {name: "file"} }
+    end
+  end
+
   def test_shovel_returns_self_for_chaining
     with_tmpdir do |tmpdir|
       tmpdir << "a.txt" << ["b.txt", "B"] << "subdir/"

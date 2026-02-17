@@ -79,8 +79,10 @@ class TmpDir
     when String
       [entry, nil]
     when Array
-      raise ArgumentError, "expected 1 or 2 elements, got #{entry.size}" if entry.size > 2
+      raise ArgumentError, "expected 1 or 2 elements, got #{entry.size}" if entry.size == 0 || entry.size > 2
       entry
+    else
+      raise ArgumentError, "expected String or Array, got #{entry.class}"
     end
   end
 end
