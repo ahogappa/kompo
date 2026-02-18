@@ -75,7 +75,7 @@ module Kompo
     private
 
     def path_inside_dir?(path, real_dir)
-      return true unless File.exist?(path)
+      return false unless File.exist?(path)
 
       real_path = File.realpath(path)
       real_path.start_with?(real_dir + File::SEPARATOR) || real_path == real_dir

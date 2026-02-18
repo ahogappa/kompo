@@ -28,12 +28,9 @@ module Kompo
             metadata = JSON.parse(File.read(cache_metadata_path))
             cached_work_dir = metadata["work_dir"]
 
-            if cached_work_dir
-              # Validate cached_work_dir is under system tmpdir
-              unless valid_tmpdir_path?(cached_work_dir)
-                warn "warn: #{cached_work_dir} is outside system temp directory, creating new work directory"
-                cached_work_dir = nil
-              end
+            if cached_work_dir && !valid_tmpdir_path?(cached_work_dir)
+              warn "warn: #{cached_work_dir} is outside system temp directory, creating new work directory"
+              cached_work_dir = nil
             end
 
             if cached_work_dir
@@ -105,8 +102,9 @@ module Kompo
     def valid_tmpdir_path?(path)
       return false unless path.start_with?("/")
 
+      expanded = File.expand_path(path)
       real_tmpdir = File.realpath(Dir.tmpdir)
-      path.start_with?(real_tmpdir + "/")
+      expanded == real_tmpdir || expanded.start_with?(real_tmpdir + "/")
     end
   end
 end

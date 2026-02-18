@@ -170,6 +170,8 @@ module Kompo
       end
     end
 
+    BUNDLER_VERSION_PATTERN = /\A\d+\.\d+(\.\d+)*([.-][a-zA-Z0-9.]+)*\z/
+
     private
 
     def install_matching_bundler
@@ -200,8 +202,6 @@ module Kompo
         )
       end
     end
-
-    BUNDLER_VERSION_PATTERN = /\A\d+\.\d+(\.\d+)*([.-][a-zA-Z0-9.]+)*\z/
 
     def parse_bundled_with(gemfile_lock_path)
       lines = File.readlines(gemfile_lock_path)

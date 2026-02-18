@@ -64,6 +64,10 @@ module Kompo
       prefix = content.scan(/target_prefix = (.*)/).flatten.first&.strip&.delete_prefix("/") || ""
       target_name = content.scan(/TARGET_NAME = (.*)/).flatten.first&.strip || fallback_name
 
+      if target_name.nil? || target_name.empty?
+        raise ValidationError, "Missing Makefile TARGET_NAME and no valid fallback_name provided"
+      end
+
       unless TARGET_NAME_PATTERN.match?(target_name)
         raise ValidationError, "Invalid Makefile TARGET_NAME: #{target_name.inspect}"
       end

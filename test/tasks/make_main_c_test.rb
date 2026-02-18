@@ -80,4 +80,23 @@ class MakeMainCTest < Minitest::Test
       assert_includes content, "/tmp/kompo-work/main.rb"
     end
   end
+
+  def test_main_c_escapes_control_characters_in_paths
+    with_tmpdir do |tmpdir|
+      tmpdir << "work/"
+      work_dir = File.join(tmpdir, "work")
+
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::CopyProjectFiles, entrypoint_path: "line1\nline2\ttab\rret")
+      mock_task(Kompo::BuildNativeGem, exts: [])
+      mock_task(Kompo::CopyGemfile, gemfile_exists: false)
+      mock_args(project_dir: File.join(tmpdir, "project"))
+
+      Kompo::MakeMainC.run
+      content = File.read(File.join(work_dir, "main.c"))
+
+      assert_includes content, "line1\\nline2\\ttab\\rret"
+      refute_includes content, "line1\nline2"
+    end
+  end
 end

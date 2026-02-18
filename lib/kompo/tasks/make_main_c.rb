@@ -38,8 +38,13 @@ module Kompo
 
     private
 
+    CONTROL_CHAR_MAP = {"\n" => "\\n", "\r" => "\\r", "\t" => "\\t"}.freeze
+
     def c_string_escape(str)
-      str.delete("\0").gsub("\\", "\\\\\\\\").gsub('"', '\\"')
+      str.delete("\0")
+        .gsub("\\") { "\\\\" }
+        .gsub('"') { '\\"' }
+        .gsub(/[\x01-\x1f]/) { |c| CONTROL_CHAR_MAP[c] || format("\\x%02x", c.ord) }
     end
 
     def build_template_context
