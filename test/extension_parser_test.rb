@@ -154,4 +154,60 @@ class ExtensionParserTest < Minitest::Test
     assert_equal "", prefix
     assert_equal "nokogiri", target_name
   end
+
+  def test_parse_makefile_metadata_rejects_invalid_target_name
+    content = <<~MAKEFILE
+      TARGET_NAME = evil;system("rm")
+      target_prefix =
+    MAKEFILE
+
+    assert_raises(Kompo::ExtensionParser::ValidationError) do
+      Kompo::ExtensionParser.parse_makefile_metadata(content, "fallback")
+    end
+  end
+
+  def test_parse_makefile_metadata_rejects_invalid_prefix
+    content = <<~MAKEFILE
+      TARGET_NAME = valid
+      target_prefix = /../../etc
+    MAKEFILE
+
+    assert_raises(Kompo::ExtensionParser::ValidationError) do
+      Kompo::ExtensionParser.parse_makefile_metadata(content, "fallback")
+    end
+  end
+
+  def test_parse_cargo_toml_target_name_rejects_invalid_name
+    content = <<~TOML
+      [lib]
+      name = "evil;hack"
+    TOML
+
+    assert_raises(Kompo::ExtensionParser::ValidationError) do
+      Kompo::ExtensionParser.parse_cargo_toml_target_name(content)
+    end
+  end
+
+  def test_parse_makefile_metadata_accepts_nested_prefix
+    content = <<~MAKEFILE
+      TARGET_NAME = parser
+      target_prefix = /json/ext
+    MAKEFILE
+
+    prefix, target_name = Kompo::ExtensionParser.parse_makefile_metadata(content, "fallback")
+
+    assert_equal "json/ext", prefix
+    assert_equal "parser", target_name
+  end
+
+  def test_parse_cargo_toml_target_name_accepts_hyphenated_name
+    content = <<~TOML
+      [lib]
+      name = "my-crate-name"
+    TOML
+
+    result = Kompo::ExtensionParser.parse_cargo_toml_target_name(content)
+
+    assert_equal "my-crate-name", result
+  end
 end

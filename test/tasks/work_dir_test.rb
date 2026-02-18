@@ -112,7 +112,7 @@ class WorkDirTest < Minitest::Test
 
       mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
 
-      # Capture stderr to verify warning about permission denied
+      # Capture stderr to verify warning about outside temp directory
       _out, err = capture_io do
         path = Kompo::WorkDir.path
 
@@ -123,7 +123,28 @@ class WorkDirTest < Minitest::Test
         assert File.exist?(File.join(path, Kompo::WorkDir::MARKER_FILE))
       end
 
-      assert_match(/permission denied.*creating new work directory/i, err)
+      assert_match(/outside.*temp/i, err)
+    end
+  end
+
+  def test_work_dir_rejects_cached_work_dir_outside_tmpdir
+    with_tmpdir do |tmpdir|
+      cached_work_dir = "/etc/evil_kompo_work"
+      metadata = {"work_dir" => cached_work_dir, "ruby_version" => RUBY_VERSION}
+
+      tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
+
+      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
+
+      _out, err = capture_io do
+        path = Kompo::WorkDir.path
+
+        refute_equal cached_work_dir, path
+        assert Dir.exist?(path)
+        assert File.exist?(File.join(path, Kompo::WorkDir::MARKER_FILE))
+      end
+
+      assert_match(/outside.*temp/i, err)
     end
   end
 

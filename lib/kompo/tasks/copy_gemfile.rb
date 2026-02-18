@@ -21,21 +21,32 @@ module Kompo
 
       gemfile_path = File.join(project_dir, "Gemfile")
       gemfile_lock_path = File.join(project_dir, "Gemfile.lock")
+      real_project_dir = File.realpath(project_dir)
 
       @gemfile_exists = File.exist?(gemfile_path)
       @gemspec_paths = []
 
       if @gemfile_exists
+        unless path_inside_dir?(gemfile_path, real_project_dir)
+          warn "warn: Gemfile escapes project directory, skipping"
+          @gemfile_exists = false
+          return
+        end
+
         FileUtils.cp(gemfile_path, work_dir)
         puts "Copied: Gemfile"
 
         if File.exist?(gemfile_lock_path)
-          FileUtils.cp(gemfile_lock_path, work_dir)
-          puts "Copied: Gemfile.lock"
+          if path_inside_dir?(gemfile_lock_path, real_project_dir)
+            FileUtils.cp(gemfile_lock_path, work_dir)
+            puts "Copied: Gemfile.lock"
+          else
+            warn "warn: Gemfile.lock escapes project directory, skipping"
+          end
         end
 
         # Copy gemspec files if Gemfile references gemspec
-        copy_gemspec_if_needed(gemfile_path, project_dir, work_dir)
+        copy_gemspec_if_needed(gemfile_path, project_dir, work_dir, real_project_dir)
       else
         puts "No Gemfile found, skipping"
       end
@@ -63,7 +74,14 @@ module Kompo
 
     private
 
-    def copy_gemspec_if_needed(gemfile_path, project_dir, work_dir)
+    def path_inside_dir?(path, real_dir)
+      return true unless File.exist?(path)
+
+      real_path = File.realpath(path)
+      real_path.start_with?(real_dir + File::SEPARATOR) || real_path == real_dir
+    end
+
+    def copy_gemspec_if_needed(gemfile_path, project_dir, work_dir, real_project_dir)
       gemfile_content = File.read(gemfile_path)
 
       # Check if Gemfile contains a gemspec directive
@@ -72,6 +90,11 @@ module Kompo
       # Copy all .gemspec files from project directory
       gemspec_files = Dir.glob(File.join(project_dir, "*.gemspec"))
       gemspec_files.each do |gemspec_path|
+        unless path_inside_dir?(gemspec_path, real_project_dir)
+          warn "warn: #{File.basename(gemspec_path)} escapes project directory, skipping"
+          next
+        end
+
         dest_path = File.join(work_dir, File.basename(gemspec_path))
         FileUtils.cp(gemspec_path, dest_path)
         @gemspec_paths << dest_path

@@ -201,13 +201,18 @@ module Kompo
       end
     end
 
+    BUNDLER_VERSION_PATTERN = /\A\d+\.\d+(\.\d+)*([.-][a-zA-Z0-9.]+)*\z/
+
     def parse_bundled_with(gemfile_lock_path)
       lines = File.readlines(gemfile_lock_path)
       bundled_with_index = lines.index { |l| l.strip == "BUNDLED WITH" }
       return unless bundled_with_index
 
       version = lines[bundled_with_index + 1]&.strip
-      (version.nil? || version.empty?) ? nil : version
+      return if version.nil? || version.empty?
+      return unless BUNDLER_VERSION_PATTERN.match?(version)
+
+      version
     end
 
     def cache_exists?

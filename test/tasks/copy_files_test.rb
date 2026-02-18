@@ -101,6 +101,29 @@ class CopyGemfileTest < Minitest::Test
     end
   end
 
+  def test_copy_gemfile_skips_symlink_escaping_project_dir
+    with_tmpdir do |tmpdir|
+      tmpdir << "work/" \
+             << "project/" \
+             << "outside/"
+      # Create a real Gemfile outside project_dir
+      File.write(File.join(tmpdir, "outside", "Gemfile"), "source 'https://rubygems.org'")
+      # Create a symlink from project_dir/Gemfile -> outside/Gemfile
+      File.symlink(File.join(tmpdir, "outside", "Gemfile"), File.join(tmpdir, "project", "Gemfile"))
+
+      work_dir = File.join(tmpdir, "work")
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_args(project_dir: File.join(tmpdir, "project"))
+
+      _out, err = capture_io do
+        refute Kompo::CopyGemfile.gemfile_exists
+      end
+
+      assert_match(/escap.*project directory/i, err)
+      refute File.exist?(File.join(work_dir, "Gemfile"))
+    end
+  end
+
   def test_copy_gemfile_skips_when_no_gemfile_option_specified
     with_tmpdir do |tmpdir|
       tmpdir << "work/" << ["project/Gemfile", "source 'https://rubygems.org'"]

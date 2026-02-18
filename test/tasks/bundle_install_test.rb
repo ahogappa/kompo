@@ -111,6 +111,59 @@ class BundleInstallTest < Minitest::Test
   end
 end
 
+class BundleInstallParseVersionTest < Minitest::Test
+  include Taski::TestHelper::Minitest
+  include TaskTestHelpers
+
+  def test_skips_bundler_install_with_invalid_version_format
+    with_tmpdir do |tmpdir|
+      # Gemfile.lock with malicious BUNDLED WITH value
+      gemfile_lock_content = "GEM\n  remote: https://rubygems.org/\n  specs:\n    sinatra (4.0.0)\n\nBUNDLED WITH\n   2.5.0; evil\n"
+      tmpdir << ["work/Gemfile", "source 'https://rubygems.org'\ngem 'sinatra'"] \
+             << ["work/Gemfile.lock", gemfile_lock_content] \
+             << "_ruby/"
+
+      work_dir = File.join(tmpdir, "work")
+      ruby_path = "/mock/ruby"
+      bundler_path = "/mock/bundler"
+      ruby_install_dir = File.join(tmpdir, "_ruby")
+
+      mock = setup_mock_command_runner
+
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::CopyGemfile, gemfile_exists: true)
+      mock_task(Kompo::InstallRuby,
+        ruby_path: ruby_path,
+        bundler_path: bundler_path,
+        ruby_install_dir: ruby_install_dir,
+        ruby_version: "3.4.1",
+        ruby_major_minor: "3.4")
+      mock_args(cache_dir: File.join(tmpdir, ".kompo", "cache"), no_cache: true)
+
+      # Mock bundler config set and install
+      mock.stub([ruby_path, bundler_path, "config", "set", "--local", "path", "bundle"],
+        output: "", success: true)
+      mock.stub([ruby_path, bundler_path, "install"],
+        output: "Bundle complete!", success: true)
+      mock.stub(["cc", "--version"],
+        output: "Apple clang version 15.0.0", success: true)
+
+      tmpdir << "work/bundle/ruby/3.4.0/" << ["work/.bundle/config", "BUNDLE_PATH: bundle"]
+
+      capture_io { Kompo::BundleInstall.run }
+
+      # Should NOT attempt to check or install bundler (invalid version skipped)
+      gem_path = File.join(ruby_install_dir, "bin", "gem")
+      refute mock.called?(:run, ruby_path, gem_path, "install", "bundler", "-v", "2.5.0; evil"),
+        "Should not install bundler with invalid version format"
+      refute mock.called?(:capture, ruby_path, "-e", "require 'bundler'; puts Bundler::VERSION"),
+        "Should not check bundler version when parsed version is invalid"
+
+      teardown_mock_command_runner
+    end
+  end
+end
+
 class BundleInstallFromSourceTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
