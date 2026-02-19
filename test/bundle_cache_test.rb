@@ -109,18 +109,17 @@ class BundleCacheTest < Minitest::Test
 
   def test_save_creates_cache_structure
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
       tmpdir << "work/bundle/ruby/3.4.0/" \
              << "work/.bundle/" \
              << ["work/.bundle/config", "BUNDLE_PATH: bundle"]
 
       cache = Kompo::BundleCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
 
-      cache.save(work_dir)
+      cache.save(tmpdir / "work")
 
       assert cache.exists?
       assert Dir.exist?(File.join(cache.cache_dir, "bundle", "ruby", "3.4.0"))
@@ -131,16 +130,15 @@ class BundleCacheTest < Minitest::Test
 
   def test_save_creates_metadata_with_correct_content
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
       tmpdir << "work/bundle/" << "work/.bundle/"
 
       cache = Kompo::BundleCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
 
-      cache.save(work_dir)
+      cache.save(tmpdir / "work")
 
       metadata = cache.metadata
       assert_equal "3.4.1", metadata["ruby_version"]
@@ -151,12 +149,11 @@ class BundleCacheTest < Minitest::Test
 
   def test_save_overwrites_existing_cache
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
       tmpdir << "work/bundle/" \
              << ["work/.bundle/config", "NEW_CONFIG"]
 
       cache = Kompo::BundleCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -167,7 +164,7 @@ class BundleCacheTest < Minitest::Test
       File.write(File.join(cache.cache_dir, ".bundle", "config"), "OLD_CONFIG")
       File.write(File.join(cache.cache_dir, "metadata.json"), "{}")
 
-      cache.save(work_dir)
+      cache.save(tmpdir / "work")
 
       content = File.read(File.join(cache.cache_dir, ".bundle", "config"))
       assert_equal "NEW_CONFIG", content
@@ -177,7 +174,7 @@ class BundleCacheTest < Minitest::Test
   def test_restore_copies_cache_to_work_dir
     with_tmpdir do |tmpdir|
       cache = Kompo::BundleCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -189,20 +186,20 @@ class BundleCacheTest < Minitest::Test
       File.write(File.join(cache.cache_dir, "metadata.json"), "{}")
 
       # Restore to work directory
-      work_dir = File.join(tmpdir, "work")
+      work_dir = tmpdir / "work"
       tmpdir << "work/"
 
       cache.restore(work_dir)
 
-      assert Dir.exist?(File.join(work_dir, "bundle", "ruby", "3.4.0", "gems", "sinatra-4.0.0"))
-      assert File.exist?(File.join(work_dir, ".bundle", "config"))
+      assert Dir.exist?(work_dir / "bundle" / "ruby" / "3.4.0" / "gems" / "sinatra-4.0.0")
+      assert File.exist?(work_dir / ".bundle" / "config")
     end
   end
 
   def test_restore_cleans_existing_files
     with_tmpdir do |tmpdir|
       cache = Kompo::BundleCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -214,15 +211,15 @@ class BundleCacheTest < Minitest::Test
       File.write(File.join(cache.cache_dir, "metadata.json"), "{}")
 
       # Create work directory with existing files
-      work_dir = File.join(tmpdir, "work")
+      work_dir = tmpdir / "work"
       tmpdir << "work/bundle/old/" \
              << ["work/.bundle/config", "OLD_CONFIG"]
 
       cache.restore(work_dir)
 
       # Old files should be replaced
-      refute Dir.exist?(File.join(work_dir, "bundle", "old"))
-      content = File.read(File.join(work_dir, ".bundle", "config"))
+      refute Dir.exist?(work_dir / "bundle" / "old")
+      content = File.read(work_dir / ".bundle" / "config")
       assert_equal "CACHED_CONFIG", content
     end
   end

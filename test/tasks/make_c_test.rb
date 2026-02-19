@@ -9,9 +9,9 @@ class MakeMainCTest < Minitest::Test
   def test_make_main_c_generates_file
     with_tmpdir do |tmpdir|
       tmpdir << "work/"
-      work_dir = File.join(tmpdir, "work")
-      main_c_path = File.join(work_dir, "main.c")
-      entrypoint = File.join(work_dir, "main.rb")
+      work_dir = tmpdir / "work"
+      main_c_path = work_dir / "main.c"
+      entrypoint = work_dir / "main.rb"
 
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::CopyProjectFiles, entrypoint_path: entrypoint, additional_paths: [])
@@ -31,7 +31,7 @@ class MakeMainCTest < Minitest::Test
 
       path = Kompo::MakeMainC.path
 
-      assert_equal main_c_path, path
+      assert_equal main_c_path.to_s, path
       assert File.exist?(main_c_path), "main.c should be generated"
       content = File.read(main_c_path)
       assert_includes content, "ruby_init"
@@ -139,11 +139,9 @@ class MakeFsCTest < Minitest::Test
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       tmpdir << ["project/.kompoignore", "*.log\ntmp/"]
-      project_dir = File.join(tmpdir, "project")
-
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
 
-      path = Kompo::MakeFsC.path(args: {project_dir: project_dir})
+      path = Kompo::MakeFsC.path(args: {project_dir: tmpdir / "project"})
 
       assert File.exist?(path)
     end
@@ -155,11 +153,9 @@ class MakeFsCTest < Minitest::Test
       tmpdir << ["work/debug.log", "DEBUG LOG CONTENT"] \
              << ["work/tmp/cache.txt", "TEMP CACHE CONTENT"] \
              << ["project/.kompoignore", "*.log\ntmp/"]
-      project_dir = File.join(tmpdir, "project")
-
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
 
-      path = Kompo::MakeFsC.path(args: {project_dir: project_dir})
+      path = Kompo::MakeFsC.path(args: {project_dir: tmpdir / "project"})
       path_list = decode_embedded_paths(File.read(path))
       refute path_list.any? { |p| p.include?("debug.log") }
       refute path_list.any? { |p| p.include?("cache.txt") }
@@ -173,7 +169,7 @@ class MakeFsCTest < Minitest::Test
       tmpdir << ["work/lib/app.rb", "class App; end"] \
              << ["outside/secret.rb", "SECRET_DATA"]
       lib_dir = File.join(work_dir, "lib")
-      outside_dir = File.join(tmpdir, "outside")
+      outside_dir = tmpdir / "outside"
 
       # Create a symlink in lib_dir pointing to outside_dir
       symlink_path = File.join(lib_dir, "external_link")
@@ -259,7 +255,7 @@ class MakeFsCTest < Minitest::Test
 
       # The entrypoint should only appear once, not twice
       path_list = decode_embedded_paths(content)
-      entrypoint_count = path_list.count { |p| p == entrypoint }
+      entrypoint_count = path_list.count { |p| p == entrypoint.to_s }
       assert_equal 1, entrypoint_count, "Entrypoint should only be embedded once"
     end
   end
@@ -439,9 +435,7 @@ class MakeFsCTest < Minitest::Test
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       tmpdir << ["ruby_install/lib/ruby/3.4.0/json.rb", "module JSON; end"] \
              << ["ruby_install/lib/ruby/3.4.0/json.so", "BINARY_SO_DATA"]
-      stdlib_dir = File.join(tmpdir, "ruby_install", "lib", "ruby", "3.4.0")
-
-      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, stdlib_paths: [stdlib_dir])
+      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, stdlib_paths: [tmpdir / "ruby_install" / "lib" / "ruby" / "3.4.0"])
 
       path = Kompo::MakeFsC.path
 
@@ -458,8 +452,8 @@ class MakeFsCTest < Minitest::Test
 
   def setup_work_dir_with_entrypoint(tmpdir, content: "puts 'hello'")
     tmpdir << ["work/main.rb", content]
-    work_dir = File.join(tmpdir, "work")
-    entrypoint = File.join(work_dir, "main.rb")
+    work_dir = tmpdir / "work"
+    entrypoint = work_dir / "main.rb"
     [work_dir, entrypoint]
   end
 

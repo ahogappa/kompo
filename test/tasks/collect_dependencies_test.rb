@@ -9,9 +9,8 @@ class CollectDependenciesTest < Minitest::Test
   def test_collect_dependencies_output_path_in_directory
     with_tmpdir do |tmpdir|
       tmpdir << "work/" << "myproject/" << "output/"
-      work_dir = File.join(tmpdir, "work")
-      project_dir = File.join(tmpdir, "myproject")
-      output_dir = File.join(tmpdir, "output")
+      work_dir = tmpdir / "work"
+      output_dir = tmpdir / "output"
 
       # Mock all dependencies
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
@@ -21,23 +20,22 @@ class CollectDependenciesTest < Minitest::Test
         ruby_major_minor: "3.4",
         ruby_build_path: "/path/to/build")
       mock_task(Kompo::KompoVfsPath, path: "/path/to/kompo_lib")
-      mock_task(Kompo::MakeMainC, path: File.join(work_dir, "main.c"))
-      mock_task(Kompo::MakeFsC, path: File.join(work_dir, "fs.c"))
+      mock_task(Kompo::MakeMainC, path: work_dir / "main.c")
+      mock_task(Kompo::MakeFsC, path: work_dir / "fs.c")
       mock_task(Kompo::BuildNativeGem, exts_dir: nil, exts: [])
       mock_task(Kompo::InstallDeps, lib_paths: "", static_libs: [])
-      output_path = Kompo::CollectDependencies.output_path(args: {project_dir: project_dir, output_dir: output_dir})
+      output_path = Kompo::CollectDependencies.output_path(args: {project_dir: tmpdir / "myproject", output_dir: output_dir})
 
       # Output should be in output_dir with project name
-      assert_equal File.join(output_dir, "myproject"), output_path
+      assert_equal (output_dir / "myproject").to_s, output_path
     end
   end
 
   def test_collect_dependencies_output_path_as_file
     with_tmpdir do |tmpdir|
       tmpdir << "work/" << "myproject/"
-      work_dir = File.join(tmpdir, "work")
-      project_dir = File.join(tmpdir, "myproject")
-      output_file = File.join(tmpdir, "mybinary")
+      work_dir = tmpdir / "work"
+      output_file = tmpdir / "mybinary"
 
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::InstallRuby,
@@ -46,11 +44,11 @@ class CollectDependenciesTest < Minitest::Test
         ruby_major_minor: "3.4",
         ruby_build_path: "/path/to/build")
       mock_task(Kompo::KompoVfsPath, path: "/path/to/kompo_lib")
-      mock_task(Kompo::MakeMainC, path: File.join(work_dir, "main.c"))
-      mock_task(Kompo::MakeFsC, path: File.join(work_dir, "fs.c"))
+      mock_task(Kompo::MakeMainC, path: work_dir / "main.c")
+      mock_task(Kompo::MakeFsC, path: work_dir / "fs.c")
       mock_task(Kompo::BuildNativeGem, exts_dir: nil, exts: [])
       mock_task(Kompo::InstallDeps, lib_paths: "", static_libs: [])
-      output_path = Kompo::CollectDependencies.output_path(args: {project_dir: project_dir, output_dir: output_file})
+      output_path = Kompo::CollectDependencies.output_path(args: {project_dir: tmpdir / "myproject", output_dir: output_file})
 
       # Output should be the specified file path
       assert_equal output_file, output_path
@@ -60,11 +58,7 @@ class CollectDependenciesTest < Minitest::Test
   def test_collect_dependencies_collects_all_dependencies
     with_tmpdir do |tmpdir|
       tmpdir << "work/" << "myproject/" << "output/"
-      work_dir = File.join(tmpdir, "work")
-      project_dir = File.join(tmpdir, "myproject")
-      output_dir = File.join(tmpdir, "output")
-
-      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::WorkDir, path: tmpdir / "work", original_dir: tmpdir)
       mock_task(Kompo::InstallRuby,
         ruby_install_dir: "/test/install",
         ruby_version: "3.4.1",
@@ -76,7 +70,7 @@ class CollectDependenciesTest < Minitest::Test
       mock_task(Kompo::BuildNativeGem, exts_dir: "/test/exts", exts: ["ext1"])
       mock_task(Kompo::InstallDeps, lib_paths: "", static_libs: [])
       # Access deps through exported value
-      deps = Kompo::CollectDependencies.deps(args: {project_dir: project_dir, output_dir: output_dir})
+      deps = Kompo::CollectDependencies.deps(args: {project_dir: tmpdir / "myproject", output_dir: tmpdir / "output"})
 
       # Verify all dependencies were collected
       assert_equal "/test/install", deps.ruby_install_dir

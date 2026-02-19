@@ -272,22 +272,20 @@ class KompoVfsPathFromGitHubReleaseDownloadTest < Minitest::Test
       url = "https://github.com/ahogappa/kompo-vfs/releases/download/v#{version}/kompo-vfs-v#{version}-#{@os}-#{@arch}.tar.gz"
       WebMock.stub_request(:get, url).to_return(body: "fake-tarball", status: 200)
 
-      lib_dir = File.join(tmpdir, "kompo-vfs-v#{version}-#{@os}-#{@arch}", "lib")
-
       @mock.stub(["tar", "xzf",
-        File.join(tmpdir, "kompo-vfs-v#{version}-#{@os}-#{@arch}.tar.gz"),
+        tmpdir / "kompo-vfs-v#{version}-#{@os}-#{@arch}.tar.gz",
         "-C", tmpdir], output: "", success: true)
 
       original_run = @mock.method(:run)
-      extracted_lib_dir = lib_dir
+      extracted_lib_dir = tmpdir / "kompo-vfs-v#{version}-#{@os}-#{@arch}" / "lib"
       extracted_version = version
       @mock.define_singleton_method(:run) do |*command, chdir: nil, env: nil, error_message: nil|
         result = original_run.call(*command, chdir: chdir, env: env, error_message: error_message)
         if command.include?("tar")
           FileUtils.mkdir_p(extracted_lib_dir)
-          File.write(File.join(extracted_lib_dir, "libkompo_fs.a"), "fake")
-          File.write(File.join(extracted_lib_dir, "libkompo_wrap.a"), "fake")
-          File.write(File.join(extracted_lib_dir, "KOMPO_VFS_VERSION"), extracted_version)
+          File.write(extracted_lib_dir / "libkompo_fs.a", "fake")
+          File.write(extracted_lib_dir / "libkompo_wrap.a", "fake")
+          File.write(extracted_lib_dir / "KOMPO_VFS_VERSION", extracted_version)
         end
         result
       end

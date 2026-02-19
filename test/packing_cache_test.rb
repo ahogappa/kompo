@@ -72,11 +72,11 @@ class PackingCacheTest < Minitest::Test
 
   def test_save_and_restore_roundtrip
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      ruby_build_path = File.join(tmpdir, "ruby_build")
+      work_dir = tmpdir / "work"
+      ruby_build_path = tmpdir / "ruby_build"
 
       cache = Kompo::PackingCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -103,8 +103,8 @@ class PackingCacheTest < Minitest::Test
       cache.save(work_dir, ruby_build_path, original_data)
 
       # Restore with different work_dir and ruby_build_path
-      new_work_dir = File.join(tmpdir, "new_work")
-      new_ruby_build_path = File.join(tmpdir, "new_ruby_build")
+      new_work_dir = tmpdir / "new_work"
+      new_ruby_build_path = tmpdir / "new_ruby_build"
       restored = cache.restore(new_work_dir, new_ruby_build_path)
 
       # ldflags should have work_dir replaced
@@ -135,7 +135,7 @@ class PackingCacheTest < Minitest::Test
 
       # Ruby paths should be preserved (they come from InstallRuby, not work_dir)
       assert_equal "/opt/ruby/lib", restored[:ruby_lib]
-      assert_equal ruby_build_path, restored[:ruby_build_path]
+      assert_equal ruby_build_path.to_s, restored[:ruby_build_path]
       assert_equal "/opt/ruby", restored[:ruby_install_dir]
       assert_equal "3.4.1", restored[:ruby_version]
       assert_equal "3.4", restored[:ruby_major_minor]
@@ -144,11 +144,8 @@ class PackingCacheTest < Minitest::Test
 
   def test_external_paths_unchanged
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      ruby_build_path = File.join(tmpdir, "ruby_build")
-
       cache = Kompo::PackingCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -160,7 +157,7 @@ class PackingCacheTest < Minitest::Test
         deps_lib_paths: "-L/opt/homebrew/lib"
       }
 
-      cache.save(work_dir, ruby_build_path, data)
+      cache.save(tmpdir / "work", tmpdir / "ruby_build", data)
       restored = cache.restore("/new/work/dir", "/new/ruby/build")
 
       # All external paths should be unchanged
@@ -174,7 +171,7 @@ class PackingCacheTest < Minitest::Test
   def test_static_libs_preserved
     with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -195,7 +192,7 @@ class PackingCacheTest < Minitest::Test
   def test_main_libs_preserved
     with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -212,7 +209,7 @@ class PackingCacheTest < Minitest::Test
   def test_extlibs_preserved
     with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -229,7 +226,7 @@ class PackingCacheTest < Minitest::Test
   def test_deps_lib_paths_preserved
     with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -246,7 +243,7 @@ class PackingCacheTest < Minitest::Test
   def test_save_creates_metadata_with_correct_content
     with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -264,7 +261,7 @@ class PackingCacheTest < Minitest::Test
   def test_save_overwrites_existing_cache
     with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -308,7 +305,7 @@ class PackingCacheTest < Minitest::Test
   def test_handles_empty_data
     with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -332,11 +329,11 @@ class PackingCacheTest < Minitest::Test
 
   def test_ruby_cflags_normalization
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      ruby_build_path = File.join(work_dir, "_ruby/build")
+      work_dir = tmpdir / "work"
+      ruby_build_path = work_dir / "_ruby/build"
 
       cache = Kompo::PackingCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -353,8 +350,8 @@ class PackingCacheTest < Minitest::Test
       cache.save(work_dir, ruby_build_path, original_data)
 
       # Restore with different work_dir
-      new_work_dir = File.join(tmpdir, "new_work")
-      new_ruby_build_path = File.join(new_work_dir, "_ruby/build")
+      new_work_dir = tmpdir / "new_work"
+      new_ruby_build_path = new_work_dir / "_ruby/build"
       restored = cache.restore(new_work_dir, new_ruby_build_path)
 
       # Ruby-related -I paths should be updated to new work_dir
@@ -368,11 +365,11 @@ class PackingCacheTest < Minitest::Test
 
   def test_ruby_paths_normalization
     with_tmpdir do |tmpdir|
-      work_dir = File.join(tmpdir, "work")
-      ruby_build_path = File.join(work_dir, "_ruby/build")
+      work_dir = tmpdir / "work"
+      ruby_build_path = work_dir / "_ruby/build"
 
       cache = Kompo::PackingCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
@@ -386,8 +383,8 @@ class PackingCacheTest < Minitest::Test
       cache.save(work_dir, ruby_build_path, original_data)
 
       # Restore with different work_dir
-      new_work_dir = File.join(tmpdir, "new_work")
-      new_ruby_build_path = File.join(new_work_dir, "_ruby/build")
+      new_work_dir = tmpdir / "new_work"
+      new_ruby_build_path = new_work_dir / "_ruby/build"
       restored = cache.restore(new_work_dir, new_ruby_build_path)
 
       # Ruby paths should be updated to new work_dir
@@ -400,7 +397,7 @@ class PackingCacheTest < Minitest::Test
   def test_external_ruby_paths_preserved
     with_tmpdir do |tmpdir|
       cache = Kompo::PackingCache.new(
-        cache_dir: File.join(tmpdir, "cache"),
+        cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
         gemfile_lock_hash: "abc123"
       )
