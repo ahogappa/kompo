@@ -272,14 +272,12 @@ class KompoVfsPathFromGitHubReleaseDownloadTest < Minitest::Test
       url = "https://github.com/ahogappa/kompo-vfs/releases/download/v#{version}/kompo-vfs-v#{version}-#{@os}-#{@arch}.tar.gz"
       WebMock.stub_request(:get, url).to_return(body: "fake-tarball", status: 200)
 
-      lib_dir = tmpdir / "kompo-vfs-v#{version}-#{@os}-#{@arch}" / "lib"
-
       @mock.stub(["tar", "xzf",
         tmpdir / "kompo-vfs-v#{version}-#{@os}-#{@arch}.tar.gz",
         "-C", tmpdir], output: "", success: true)
 
       original_run = @mock.method(:run)
-      extracted_lib_dir = lib_dir
+      extracted_lib_dir = tmpdir / "kompo-vfs-v#{version}-#{@os}-#{@arch}" / "lib"
       extracted_version = version
       @mock.define_singleton_method(:run) do |*command, chdir: nil, env: nil, error_message: nil|
         result = original_run.call(*command, chdir: chdir, env: env, error_message: error_message)

@@ -60,13 +60,11 @@ class BrewPackageTest < Minitest::Test
   def test_static_libs_returns_existing_files
     with_tmpdir do |tmpdir|
       tmpdir << "lib/libtest.a"
-      lib_dir = tmpdir / "lib"
-
       @mock.stub(["/brew", "--prefix", "testpkg"], output: tmpdir, success: true)
 
       libs = @package.static_libs("/brew")
 
-      assert_equal [File.join(lib_dir, "libtest.a")], libs
+      assert_equal [File.join(tmpdir / "lib", "libtest.a")], libs
     end
   end
 

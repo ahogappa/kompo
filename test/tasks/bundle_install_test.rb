@@ -20,9 +20,8 @@ class BundleInstallTest < Minitest::Test
   def test_bundle_install_skips_when_no_gemfile
     with_tmpdir do |tmpdir|
       tmpdir << "work/"
-      work_dir = tmpdir / "work"
 
-      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::WorkDir, path: tmpdir / "work", original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
       mock_task(Kompo::InstallRuby,
         bundler_path: "/path/to/bundler",
@@ -91,14 +90,12 @@ class BundleInstallTest < Minitest::Test
     with_tmpdir do |tmpdir|
       gemfile_lock_content = "GEM\n  specs:\n"
       tmpdir << ["work/Gemfile.lock", gemfile_lock_content]
-      work_dir = tmpdir / "work"
-
       # Verify BundleCache.from_work_dir is used
       hash = Digest::SHA256.hexdigest(gemfile_lock_content)[0..15]
       bundle_cache = Kompo::BundleCache.from_work_dir(
         cache_dir: tmpdir / ".kompo" / "cache",
         ruby_version: "3.4.1",
-        work_dir: work_dir
+        work_dir: tmpdir / "work"
       )
 
       assert_instance_of Kompo::BundleCache, bundle_cache
@@ -129,12 +126,11 @@ class BundleInstallParseVersionTest < Minitest::Test
              << ["work/Gemfile.lock", gemfile_lock_content] \
              << "_ruby/"
 
-      work_dir = tmpdir / "work"
       ruby_path = "/mock/ruby"
       bundler_path = "/mock/bundler"
       ruby_install_dir = tmpdir / "_ruby"
 
-      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::WorkDir, path: tmpdir / "work", original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
       mock_task(Kompo::InstallRuby,
         ruby_path: ruby_path,
@@ -185,12 +181,11 @@ class BundleInstallFromSourceTest < Minitest::Test
              << ["work/Gemfile.lock", gemfile_lock_content] \
              << "_ruby/"
 
-      work_dir = tmpdir / "work"
       ruby_path = "/mock/ruby"
       bundler_path = "/mock/bundler"
       ruby_install_dir = tmpdir / "_ruby"
 
-      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::WorkDir, path: tmpdir / "work", original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
       mock_task(Kompo::InstallRuby,
         ruby_path: ruby_path,
@@ -232,12 +227,11 @@ class BundleInstallFromSourceTest < Minitest::Test
              << ["work/Gemfile.lock", gemfile_lock_content] \
              << "_ruby/"
 
-      work_dir = tmpdir / "work"
       ruby_path = "/mock/ruby"
       bundler_path = "/mock/bundler"
       ruby_install_dir = tmpdir / "_ruby"
 
-      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::WorkDir, path: tmpdir / "work", original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
       mock_task(Kompo::InstallRuby,
         ruby_path: ruby_path,
@@ -276,17 +270,14 @@ class BundleInstallFromSourceTest < Minitest::Test
              << ["work/Gemfile.lock", gemfile_lock_content] \
              << "_ruby/"
 
-      work_dir = tmpdir / "work"
       ruby_path = "/mock/ruby"
       bundler_path = "/mock/bundler"
-      ruby_install_dir = tmpdir / "_ruby"
-
-      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::WorkDir, path: tmpdir / "work", original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
       mock_task(Kompo::InstallRuby,
         ruby_path: ruby_path,
         bundler_path: bundler_path,
-        ruby_install_dir: ruby_install_dir,
+        ruby_install_dir: tmpdir / "_ruby",
         ruby_version: "3.4.1",
         ruby_major_minor: "3.4")
       # Mock bundler config set and install
@@ -312,12 +303,11 @@ class BundleInstallFromSourceTest < Minitest::Test
       tmpdir << ["work/Gemfile", "source 'https://rubygems.org'\ngem 'sinatra'"] \
              << ["work/Gemfile.lock", gemfile_lock_content]
 
-      work_dir = tmpdir / "work"
       ruby_path = "/mock/ruby"
       bundler_path = "/mock/bundler"
       cache_dir = tmpdir / ".kompo" / "cache"
 
-      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+      mock_task(Kompo::WorkDir, path: tmpdir / "work", original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
       mock_task(Kompo::InstallRuby,
         ruby_path: ruby_path,

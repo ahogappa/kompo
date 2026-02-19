@@ -320,8 +320,7 @@ class InstallRubyFromSourceTest < Minitest::Test
       assert_equal "3.4.1", Kompo::InstallRuby.ruby_version(args: task_args)
 
       # Verify tarball was copied to cache
-      cache_tarball = tmpdir / ".kompo" / "cache" / "3.4.1" / "ruby-3.4.1.tar.gz"
-      assert File.exist?(cache_tarball)
+      assert File.exist?(tmpdir / ".kompo" / "cache" / "3.4.1" / "ruby-3.4.1.tar.gz")
     end
   end
 
@@ -347,14 +346,12 @@ class InstallRubyFromSourceTest < Minitest::Test
   def test_from_source_raises_for_unsupported_source_format
     with_tmpdir do |tmpdir|
       tmpdir << ["ruby.zip", "dummy"]
-      zip_file = tmpdir / "ruby.zip"
-
       mock_task(Kompo::RubyBuildPath, path: "/mock/ruby-build")
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
       task_args = {
         ruby_version: "3.4.1",
         kompo_cache: tmpdir / ".kompo" / "cache",
-        ruby_source_path: zip_file,
+        ruby_source_path: tmpdir / "ruby.zip",
         no_cache: true
       }
 

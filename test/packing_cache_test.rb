@@ -144,9 +144,6 @@ class PackingCacheTest < Minitest::Test
 
   def test_external_paths_unchanged
     with_tmpdir do |tmpdir|
-      work_dir = tmpdir / "work"
-      ruby_build_path = tmpdir / "ruby_build"
-
       cache = Kompo::PackingCache.new(
         cache_dir: tmpdir / "cache",
         ruby_version: "3.4.1",
@@ -160,7 +157,7 @@ class PackingCacheTest < Minitest::Test
         deps_lib_paths: "-L/opt/homebrew/lib"
       }
 
-      cache.save(work_dir, ruby_build_path, data)
+      cache.save(tmpdir / "work", tmpdir / "ruby_build", data)
       restored = cache.restore("/new/work/dir", "/new/ruby/build")
 
       # All external paths should be unchanged

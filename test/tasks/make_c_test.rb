@@ -139,11 +139,9 @@ class MakeFsCTest < Minitest::Test
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       tmpdir << ["project/.kompoignore", "*.log\ntmp/"]
-      project_dir = tmpdir / "project"
-
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
 
-      path = Kompo::MakeFsC.path(args: {project_dir: project_dir})
+      path = Kompo::MakeFsC.path(args: {project_dir: tmpdir / "project"})
 
       assert File.exist?(path)
     end
@@ -155,11 +153,9 @@ class MakeFsCTest < Minitest::Test
       tmpdir << ["work/debug.log", "DEBUG LOG CONTENT"] \
              << ["work/tmp/cache.txt", "TEMP CACHE CONTENT"] \
              << ["project/.kompoignore", "*.log\ntmp/"]
-      project_dir = tmpdir / "project"
-
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
 
-      path = Kompo::MakeFsC.path(args: {project_dir: project_dir})
+      path = Kompo::MakeFsC.path(args: {project_dir: tmpdir / "project"})
       path_list = decode_embedded_paths(File.read(path))
       refute path_list.any? { |p| p.include?("debug.log") }
       refute path_list.any? { |p| p.include?("cache.txt") }
@@ -439,9 +435,7 @@ class MakeFsCTest < Minitest::Test
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       tmpdir << ["ruby_install/lib/ruby/3.4.0/json.rb", "module JSON; end"] \
              << ["ruby_install/lib/ruby/3.4.0/json.so", "BINARY_SO_DATA"]
-      stdlib_dir = tmpdir / "ruby_install" / "lib" / "ruby" / "3.4.0"
-
-      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, stdlib_paths: [stdlib_dir])
+      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, stdlib_paths: [tmpdir / "ruby_install" / "lib" / "ruby" / "3.4.0"])
 
       path = Kompo::MakeFsC.path
 

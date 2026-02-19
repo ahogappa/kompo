@@ -35,9 +35,6 @@ class PackingForMacOSDryRunTest < Minitest::Test
     with_tmpdir do |tmpdir|
       work_dir = tmpdir
       ruby_install_dir = tmpdir / "ruby-install"
-      kompo_lib = tmpdir / "kompo-lib"
-      output_path = tmpdir / "output" / "myapp"
-
       # Create required directories and files
       tmpdir << "ruby-build/ruby-3.4.1/" \
              << "ruby-install/lib/pkgconfig/" \
@@ -46,9 +43,6 @@ class PackingForMacOSDryRunTest < Minitest::Test
              << ["main.c", "int main() { return 0; }"] \
              << ["fs.c", "// fs"]
 
-      main_c = tmpdir / "main.c"
-      fs_c = tmpdir / "fs.c"
-
       # Mock CollectDependencies
       deps = Kompo::CollectDependencies::Dependencies.new(
         ruby_install_dir: ruby_install_dir,
@@ -56,9 +50,9 @@ class PackingForMacOSDryRunTest < Minitest::Test
         ruby_major_minor: "3.4",
         ruby_build_path: tmpdir / "ruby-build",
         ruby_lib: File.join(ruby_install_dir, "lib"),
-        kompo_lib: kompo_lib,
-        main_c: main_c,
-        fs_c: fs_c,
+        kompo_lib: tmpdir / "kompo-lib",
+        main_c: tmpdir / "main.c",
+        fs_c: tmpdir / "fs.c",
         exts_dir: tmpdir / "exts",
         deps_lib_paths: "-L/opt/homebrew/opt/gmp/lib",
         static_libs: ["/opt/homebrew/opt/gmp/lib/libgmp.a"]
@@ -69,7 +63,7 @@ class PackingForMacOSDryRunTest < Minitest::Test
         deps: deps,
         ext_paths: [],
         enc_files: [],
-        output_path: output_path)
+        output_path: tmpdir / "output" / "myapp")
 
       # Mock pkg-config calls
       @mock.stub(["pkg-config", "--cflags", "#{ruby_install_dir}/lib/pkgconfig/ruby.pc"],
@@ -105,9 +99,6 @@ class PackingForLinuxDryRunTest < Minitest::Test
     with_tmpdir do |tmpdir|
       work_dir = tmpdir
       ruby_install_dir = tmpdir / "ruby-install"
-      kompo_lib = tmpdir / "kompo-lib"
-      output_path = tmpdir / "output" / "myapp"
-
       # Create required directories and files
       tmpdir << "ruby-build/ruby-3.4.1/" \
              << "ruby-install/lib/pkgconfig/" \
@@ -116,9 +107,6 @@ class PackingForLinuxDryRunTest < Minitest::Test
              << ["main.c", "int main() { return 0; }"] \
              << ["fs.c", "// fs"]
 
-      main_c = tmpdir / "main.c"
-      fs_c = tmpdir / "fs.c"
-
       # Mock CollectDependencies
       deps = Kompo::CollectDependencies::Dependencies.new(
         ruby_install_dir: ruby_install_dir,
@@ -126,9 +114,9 @@ class PackingForLinuxDryRunTest < Minitest::Test
         ruby_major_minor: "3.4",
         ruby_build_path: tmpdir / "ruby-build",
         ruby_lib: File.join(ruby_install_dir, "lib"),
-        kompo_lib: kompo_lib,
-        main_c: main_c,
-        fs_c: fs_c,
+        kompo_lib: tmpdir / "kompo-lib",
+        main_c: tmpdir / "main.c",
+        fs_c: tmpdir / "fs.c",
         exts_dir: tmpdir / "exts",
         deps_lib_paths: "-L/usr/lib/x86_64-linux-gnu",
         static_libs: ["/usr/lib/x86_64-linux-gnu/libz.a", "/usr/lib/x86_64-linux-gnu/libgmp.a"]
@@ -139,7 +127,7 @@ class PackingForLinuxDryRunTest < Minitest::Test
         deps: deps,
         ext_paths: [],
         enc_files: [],
-        output_path: output_path)
+        output_path: tmpdir / "output" / "myapp")
 
       # Mock pkg-config calls
       @mock.stub(["pkg-config", "--cflags", "#{ruby_install_dir}/lib/pkgconfig/ruby.pc"],

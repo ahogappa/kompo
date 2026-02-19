@@ -142,10 +142,9 @@ class CopyProjectFilesTest < Minitest::Test
       tmpdir << "work/" << ["project/main.rb", "puts 'hello'"]
 
       work_dir = tmpdir / "work"
-      project_dir = tmpdir / "project"
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
 
-      args = {project_dir: project_dir, entrypoint: "main.rb", files: []}
+      args = {project_dir: tmpdir / "project", entrypoint: "main.rb", files: []}
       entrypoint_path = Kompo::CopyProjectFiles.entrypoint_path(args: args)
       additional_paths = Kompo::CopyProjectFiles.additional_paths(args: args)
 
@@ -164,10 +163,9 @@ class CopyProjectFilesTest < Minitest::Test
              << ["project/lib/app.rb", "class App; end"]
 
       work_dir = tmpdir / "work"
-      project_dir = tmpdir / "project"
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
 
-      args = {project_dir: project_dir, entrypoint: "main.rb", files: ["lib"]}
+      args = {project_dir: tmpdir / "project", entrypoint: "main.rb", files: ["lib"]}
       entrypoint_path = Kompo::CopyProjectFiles.entrypoint_path(args: args)
       additional_paths = Kompo::CopyProjectFiles.additional_paths(args: args)
 
@@ -185,10 +183,9 @@ class CopyProjectFilesTest < Minitest::Test
              << ["project/config/settings.rb", "SETTINGS = {}"]
 
       work_dir = tmpdir / "work"
-      project_dir = tmpdir / "project"
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
 
-      args = {project_dir: project_dir, entrypoint: "main.rb", files: ["config/settings.rb"]}
+      args = {project_dir: tmpdir / "project", entrypoint: "main.rb", files: ["config/settings.rb"]}
       entrypoint_path = Kompo::CopyProjectFiles.entrypoint_path(args: args)
       additional_paths = Kompo::CopyProjectFiles.additional_paths(args: args)
 
@@ -207,10 +204,9 @@ class CopyProjectFilesTest < Minitest::Test
              << ["project/lib/app.rb", "class App; end"]
 
       work_dir = tmpdir / "work"
-      project_dir = tmpdir / "project"
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
 
-      args = {project_dir: project_dir, entrypoint: "main.rb", files: ["."]}
+      args = {project_dir: tmpdir / "project", entrypoint: "main.rb", files: ["."]}
       Kompo::CopyProjectFiles.entrypoint_path(args: args)
 
       # Verify all files were copied directly to work_dir (not into work_dir/project/)

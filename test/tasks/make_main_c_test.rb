@@ -28,14 +28,12 @@ class MakeMainCTest < Minitest::Test
     with_tmpdir do |tmpdir|
       tmpdir << "work/" << ['project "app"/.keep', ""]
       work_dir = tmpdir / "work"
-      project_dir = tmpdir / 'project "app"'
-
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::CopyProjectFiles, entrypoint_path: "/tmp/main.rb")
       mock_task(Kompo::BuildNativeGem, exts: [])
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
 
-      Kompo::MakeMainC.run(args: {project_dir: project_dir})
+      Kompo::MakeMainC.run(args: {project_dir: tmpdir / 'project "app"'})
       content = File.read(File.join(work_dir, "main.c"))
 
       assert_includes content, 'project \\"app\\"'

@@ -5,10 +5,8 @@ require_relative "test_helper"
 class CacheTest < Minitest::Test
   def test_clean_cache_no_directory
     with_tmpdir do |tmpdir|
-      cache_dir = tmpdir / ".kompo" / "cache"
-
       assert_output(/Cache directory does not exist/) do
-        Kompo.clean_cache("3.4.1", cache_dir: cache_dir)
+        Kompo.clean_cache("3.4.1", cache_dir: tmpdir / ".kompo" / "cache")
       end
     end
   end
@@ -78,10 +76,8 @@ class CacheTest < Minitest::Test
     with_tmpdir do |tmpdir|
       tmpdir << ".kompo/cache/"
 
-      cache_dir = tmpdir / ".kompo" / "cache"
-
       assert_output(/No cache found for Ruby 3\.4\.1/) do
-        Kompo.clean_cache("3.4.1", cache_dir: cache_dir)
+        Kompo.clean_cache("3.4.1", cache_dir: tmpdir / ".kompo" / "cache")
       end
     end
   end
@@ -106,10 +102,8 @@ class CacheTest < Minitest::Test
     with_tmpdir do |tmpdir|
       tmpdir << ".kompo/cache/"
 
-      cache_dir = tmpdir / ".kompo" / "cache"
-
       assert_output(/No caches found/) do
-        Kompo.clean_cache("all", cache_dir: cache_dir)
+        Kompo.clean_cache("all", cache_dir: tmpdir / ".kompo" / "cache")
       end
     end
   end

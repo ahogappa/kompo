@@ -109,7 +109,6 @@ class BundleCacheTest < Minitest::Test
 
   def test_save_creates_cache_structure
     with_tmpdir do |tmpdir|
-      work_dir = tmpdir / "work"
       tmpdir << "work/bundle/ruby/3.4.0/" \
              << "work/.bundle/" \
              << ["work/.bundle/config", "BUNDLE_PATH: bundle"]
@@ -120,7 +119,7 @@ class BundleCacheTest < Minitest::Test
         gemfile_lock_hash: "abc123"
       )
 
-      cache.save(work_dir)
+      cache.save(tmpdir / "work")
 
       assert cache.exists?
       assert Dir.exist?(File.join(cache.cache_dir, "bundle", "ruby", "3.4.0"))
@@ -131,7 +130,6 @@ class BundleCacheTest < Minitest::Test
 
   def test_save_creates_metadata_with_correct_content
     with_tmpdir do |tmpdir|
-      work_dir = tmpdir / "work"
       tmpdir << "work/bundle/" << "work/.bundle/"
 
       cache = Kompo::BundleCache.new(
@@ -140,7 +138,7 @@ class BundleCacheTest < Minitest::Test
         gemfile_lock_hash: "abc123"
       )
 
-      cache.save(work_dir)
+      cache.save(tmpdir / "work")
 
       metadata = cache.metadata
       assert_equal "3.4.1", metadata["ruby_version"]
@@ -151,7 +149,6 @@ class BundleCacheTest < Minitest::Test
 
   def test_save_overwrites_existing_cache
     with_tmpdir do |tmpdir|
-      work_dir = tmpdir / "work"
       tmpdir << "work/bundle/" \
              << ["work/.bundle/config", "NEW_CONFIG"]
 
@@ -167,7 +164,7 @@ class BundleCacheTest < Minitest::Test
       File.write(File.join(cache.cache_dir, ".bundle", "config"), "OLD_CONFIG")
       File.write(File.join(cache.cache_dir, "metadata.json"), "{}")
 
-      cache.save(work_dir)
+      cache.save(tmpdir / "work")
 
       content = File.read(File.join(cache.cache_dir, ".bundle", "config"))
       assert_equal "NEW_CONFIG", content

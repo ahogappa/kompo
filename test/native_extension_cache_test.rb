@@ -108,7 +108,6 @@ class NativeExtensionCacheTest < Minitest::Test
 
   def test_save_creates_cache_structure
     with_tmpdir do |tmpdir|
-      work_dir = tmpdir / "work"
       tmpdir << ["work/ext/nokogiri/nokogiri.o", "object file content"]
 
       cache = Kompo::NativeExtensionCache.new(
@@ -118,7 +117,7 @@ class NativeExtensionCacheTest < Minitest::Test
       )
 
       exts = [["nokogiri", "Init_nokogiri"]]
-      cache.save(work_dir, exts)
+      cache.save(tmpdir / "work", exts)
 
       assert cache.exists?
       assert Dir.exist?(File.join(cache.cache_dir, "ext", "nokogiri"))
@@ -129,7 +128,6 @@ class NativeExtensionCacheTest < Minitest::Test
 
   def test_save_creates_metadata_with_correct_content
     with_tmpdir do |tmpdir|
-      work_dir = tmpdir / "work"
       tmpdir << "work/ext/"
 
       cache = Kompo::NativeExtensionCache.new(
@@ -139,7 +137,7 @@ class NativeExtensionCacheTest < Minitest::Test
       )
 
       exts = [["nokogiri", "Init_nokogiri"], ["oj", "Init_oj"]]
-      cache.save(work_dir, exts)
+      cache.save(tmpdir / "work", exts)
 
       metadata = cache.metadata
       assert_equal "3.4.1", metadata["ruby_version"]
@@ -151,7 +149,6 @@ class NativeExtensionCacheTest < Minitest::Test
 
   def test_save_does_nothing_when_no_ext_dir
     with_tmpdir do |tmpdir|
-      work_dir = tmpdir / "work"
       tmpdir << "work/"
       # No ext/ directory
 
@@ -161,7 +158,7 @@ class NativeExtensionCacheTest < Minitest::Test
         gemfile_lock_hash: "abc123"
       )
 
-      cache.save(work_dir, [])
+      cache.save(tmpdir / "work", [])
 
       refute cache.exists?
     end
@@ -169,7 +166,6 @@ class NativeExtensionCacheTest < Minitest::Test
 
   def test_save_overwrites_existing_cache
     with_tmpdir do |tmpdir|
-      work_dir = tmpdir / "work"
       tmpdir << ["work/ext/new_gem/new.o", "new content"]
 
       cache = Kompo::NativeExtensionCache.new(
@@ -184,7 +180,7 @@ class NativeExtensionCacheTest < Minitest::Test
       File.write(File.join(cache.cache_dir, "metadata.json"), '{"exts": []}')
 
       new_exts = [["new_gem", "Init_new_gem"]]
-      cache.save(work_dir, new_exts)
+      cache.save(tmpdir / "work", new_exts)
 
       # Old files should be gone
       refute Dir.exist?(File.join(cache.cache_dir, "ext", "old_gem"))
@@ -279,7 +275,6 @@ class NativeExtensionCacheTest < Minitest::Test
 
   def test_save_copies_ports_directories
     with_tmpdir do |tmpdir|
-      work_dir = tmpdir / "work"
       tmpdir << ["work/ext/nokogiri/nokogiri.o", "object file content"]
 
       # Create ports directory structure like nokogiri
@@ -292,7 +287,7 @@ class NativeExtensionCacheTest < Minitest::Test
       )
 
       exts = [["nokogiri", "Init_nokogiri"]]
-      cache.save(work_dir, exts)
+      cache.save(tmpdir / "work", exts)
 
       # Verify ports directory was cached (relative path includes full path from gem)
       cached_ports = File.join(cache.cache_dir, "ports", "nokogiri-1.19.0/ports/x86_64-darwin/libxml2/2.12.0/lib/libxml2.a")
