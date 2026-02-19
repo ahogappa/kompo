@@ -102,6 +102,29 @@ class TmpDirTest < Minitest::Test
     end
   end
 
+  def test_slash_joins_path
+    with_tmpdir do |tmpdir|
+      result = tmpdir / "work"
+      assert_kind_of TmpDir, result
+      assert_equal File.join(tmpdir.to_s, "work"), result.to_s
+    end
+  end
+
+  def test_slash_chains_for_nested_path
+    with_tmpdir do |tmpdir|
+      result = tmpdir / "work" / "src"
+      assert_kind_of TmpDir, result
+      assert_equal File.join(tmpdir.to_s, "work", "src"), result.to_s
+    end
+  end
+
+  def test_slash_result_works_with_file_operations
+    with_tmpdir do |tmpdir|
+      tmpdir << ["work/hoge.rb", "puts 'hello'"]
+      assert_equal "puts 'hello'", File.read(tmpdir / "work" / "hoge.rb")
+    end
+  end
+
   def test_shovel_returns_self_for_chaining
     with_tmpdir do |tmpdir|
       tmpdir << "a.txt" << ["b.txt", "B"] << "subdir/"

@@ -59,6 +59,10 @@ class TmpDir
 
   alias_method :to_str, :to_s
 
+  def /(other)
+    self.class.new(File.join(@path, other))
+  end
+
   def <<(entry)
     name, content = parse_entry(entry)
 
