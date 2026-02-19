@@ -45,6 +45,8 @@ module Kompo
         end
       end
 
+      lib_name = nil if lib_name&.empty?
+      package_name = nil if package_name&.empty?
       name = lib_name || package_name
       return unless name
 
@@ -61,8 +63,11 @@ module Kompo
     # @return [Array<String>] [prefix, target_name] where prefix is empty string if not specified
     # @raise [ValidationError] if extracted values contain invalid characters
     def parse_makefile_metadata(content, fallback_name)
-      prefix = content.scan(/target_prefix = (.*)/).flatten.first&.strip&.delete_prefix("/") || ""
-      target_name = content.scan(/TARGET_NAME = (.*)/).flatten.first&.strip || fallback_name
+      raw_prefix = content.scan(/target_prefix = (.*)/).flatten.first&.strip
+      prefix = raw_prefix&.gsub(%r{\A/+}, "")&.squeeze("/") || ""
+
+      raw_target = content.scan(/TARGET_NAME = (.*)/).flatten.first&.strip
+      target_name = (raw_target.nil? || raw_target.empty?) ? fallback_name : raw_target
 
       if target_name.nil? || target_name.empty?
         raise ValidationError, "Missing Makefile TARGET_NAME and no valid fallback_name provided"

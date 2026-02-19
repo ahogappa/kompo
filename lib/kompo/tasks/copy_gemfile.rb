@@ -21,7 +21,15 @@ module Kompo
 
       gemfile_path = File.join(project_dir, "Gemfile")
       gemfile_lock_path = File.join(project_dir, "Gemfile.lock")
-      real_project_dir = File.realpath(project_dir)
+
+      begin
+        real_project_dir = File.realpath(project_dir)
+      rescue Errno::ENOENT
+        @gemfile_exists = false
+        @gemspec_paths = []
+        puts "No Gemfile found, skipping"
+        return
+      end
 
       @gemfile_exists = File.exist?(gemfile_path)
       @gemspec_paths = []
@@ -79,6 +87,8 @@ module Kompo
 
       real_path = File.realpath(path)
       real_path.start_with?(real_dir + File::SEPARATOR) || real_path == real_dir
+    rescue Errno::ENOENT, Errno::EACCES
+      false
     end
 
     def copy_gemspec_if_needed(gemfile_path, project_dir, work_dir, real_project_dir)
@@ -102,7 +112,7 @@ module Kompo
       end
 
       if gemspec_files.empty?
-        warn "Warning: Gemfile contains gemspec directive but no .gemspec files found"
+        warn "warn: Gemfile contains gemspec directive but no .gemspec files found"
       end
     end
   end

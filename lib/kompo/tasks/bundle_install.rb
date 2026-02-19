@@ -171,6 +171,7 @@ module Kompo
     end
 
     BUNDLER_VERSION_PATTERN = /\A\d+\.\d+(\.\d+)*([.-][a-zA-Z0-9.]+)*\z/
+    private_constant :BUNDLER_VERSION_PATTERN
 
     private
 

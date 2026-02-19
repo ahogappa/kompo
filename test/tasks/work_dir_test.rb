@@ -158,6 +158,7 @@ class WorkDirTest < Minitest::Test
 
         refute_equal cached_work_dir, path
         assert Dir.exist?(path)
+        assert File.exist?(File.join(path, Kompo::WorkDir::MARKER_FILE))
       end
 
       assert_match(/outside.*temp/i, err)
