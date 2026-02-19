@@ -76,9 +76,8 @@ class FindNativeExtensionsTest < Minitest::Test
              << ["#{bundled_ext_prefix}/bigdecimal.o", ""]
 
       mock_extension_tasks(ruby_install_dir, ruby_build_path, bundle_dir)
-      mock_args(no_stdlib: true)
 
-      extensions = Kompo::FindNativeExtensions.extensions
+      extensions = Kompo::FindNativeExtensions.extensions(args: {no_stdlib: true})
 
       bundled_ext = extensions.find { |e| e[:gem_ext_name] == "bigdecimal" }
       assert_nil bundled_ext, "Expected bundled gems to be skipped with --no-stdlib"
@@ -229,9 +228,7 @@ class BuildNativeGemWithMockTest < Minitest::Test
           is_prebuilt: true
         }
       ])
-      mock_args(no_cache: true)
-
-      capture_io { Kompo::BuildNativeGem.run }
+      capture_io { Kompo::BuildNativeGem.run(args: {no_cache: true}) }
 
       # Verify no extconf.rb or make commands were called for prebuilt extensions
       refute @mock.called?(:capture_all, "ruby", "extconf.rb")
@@ -270,14 +267,12 @@ class BuildNativeGemWithMockTest < Minitest::Test
           is_prebuilt: false
         }
       ])
-      mock_args(no_cache: true)
-
       # Create Makefile and .o files to simulate build
       tmpdir << ["ext/testgem/Makefile", makefile_content] \
              << ["ext/testgem/testgem.o", "fake object"] \
              << ["ext/testgem/helper.o", "fake object"]
 
-      capture_io { Kompo::BuildNativeGem.run }
+      capture_io { Kompo::BuildNativeGem.run(args: {no_cache: true}) }
 
       assert @mock.called?(:capture_all, "ruby", "extconf.rb")
       assert @mock.called?(:capture_all, "make", "-C", ext_dir)
@@ -316,9 +311,7 @@ class BuildNativeGemWithMockTest < Minitest::Test
           cargo_toml: cargo_toml
         }
       ])
-      mock_args(no_cache: true)
-
-      capture_io { Kompo::BuildNativeGem.run }
+      capture_io { Kompo::BuildNativeGem.run(args: {no_cache: true}) }
 
       assert @mock.called?(:run, "/usr/local/bin/cargo", "rustc", "--release")
     end

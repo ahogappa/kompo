@@ -9,11 +9,10 @@ class WorkDirTest < Minitest::Test
 
   def test_work_dir_creates_temp_directory
     with_tmpdir do |tmpdir|
-      # Mock Taski.args to use our temp directory for cache
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
+      args = {kompo_cache: File.join(tmpdir, ".kompo", "cache")}
 
-      path = Kompo::WorkDir.path
-      original_dir = Kompo::WorkDir.original_dir
+      path = Kompo::WorkDir.path(args: args)
+      original_dir = Kompo::WorkDir.original_dir(args: args)
 
       assert path
       assert Dir.exist?(path)
@@ -32,9 +31,7 @@ class WorkDirTest < Minitest::Test
              << ["cached_work/#{Kompo::WorkDir::MARKER_FILE}", "kompo-work-dir"] \
              << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
 
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
-
-      path = Kompo::WorkDir.path
+      path = Kompo::WorkDir.path(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache")})
 
       assert_equal cached_work_dir, path
     end
@@ -44,10 +41,8 @@ class WorkDirTest < Minitest::Test
     with_tmpdir do |tmpdir|
       tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", "not valid json"]
 
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
-
       # Should fallback to creating new work_dir
-      path = Kompo::WorkDir.path
+      path = Kompo::WorkDir.path(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache")})
 
       assert path
       assert Dir.exist?(path)
@@ -65,9 +60,7 @@ class WorkDirTest < Minitest::Test
       # Verify the directory doesn't exist
       refute Dir.exist?(cached_work_dir)
 
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
-
-      path = Kompo::WorkDir.path
+      path = Kompo::WorkDir.path(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache")})
 
       # Should recreate the cached work_dir path
       assert_equal cached_work_dir, path
@@ -86,11 +79,9 @@ class WorkDirTest < Minitest::Test
       tmpdir << "foreign_directory/" \
              << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
 
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
-
       # Capture stderr to verify warning
       _out, err = capture_io do
-        path = Kompo::WorkDir.path
+        path = Kompo::WorkDir.path(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache")})
         # Should NOT use the foreign directory, should create a new one
         refute_equal cached_work_dir, path
         assert Dir.exist?(path)
@@ -107,10 +98,8 @@ class WorkDirTest < Minitest::Test
       metadata = {"work_dir" => cached_work_dir, "ruby_version" => RUBY_VERSION}
       tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
 
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
-
       _out, err = capture_io do
-        path = Kompo::WorkDir.path
+        path = Kompo::WorkDir.path(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache")})
 
         refute_equal cached_work_dir, path
         assert Dir.exist?(path)
@@ -128,10 +117,8 @@ class WorkDirTest < Minitest::Test
 
       tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
 
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
-
       _out, err = capture_io do
-        path = Kompo::WorkDir.path
+        path = Kompo::WorkDir.path(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache")})
 
         refute_equal cached_work_dir, path
         assert Dir.exist?(path)
@@ -151,10 +138,8 @@ class WorkDirTest < Minitest::Test
 
       tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
 
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
-
       _out, err = capture_io do
-        path = Kompo::WorkDir.path
+        path = Kompo::WorkDir.path(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache")})
 
         refute_equal cached_work_dir, path
         assert Dir.exist?(path)
@@ -175,9 +160,7 @@ class WorkDirTest < Minitest::Test
              << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
 
       # Set no_cache option
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"), no_cache: true)
-
-      path = Kompo::WorkDir.path
+      path = Kompo::WorkDir.path(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache"), no_cache: true})
 
       # Should NOT use cached work_dir, should create a new one
       refute_equal cached_work_dir, path

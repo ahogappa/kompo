@@ -12,9 +12,8 @@ class CopyGemfileTest < Minitest::Test
       # No Gemfile in project_dir
 
       mock_task(Kompo::WorkDir, path: File.join(tmpdir, "work"), original_dir: tmpdir)
-      mock_args(project_dir: File.join(tmpdir, "project"))
 
-      refute Kompo::CopyGemfile.gemfile_exists
+      refute Kompo::CopyGemfile.gemfile_exists(args: {project_dir: File.join(tmpdir, "project")})
     end
   end
 
@@ -24,9 +23,8 @@ class CopyGemfileTest < Minitest::Test
 
       work_dir = File.join(tmpdir, "work")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: File.join(tmpdir, "project"))
 
-      assert Kompo::CopyGemfile.gemfile_exists
+      assert Kompo::CopyGemfile.gemfile_exists(args: {project_dir: File.join(tmpdir, "project")})
       # Verify Gemfile was copied to work_dir
       assert File.exist?(File.join(work_dir, "Gemfile"))
     end
@@ -40,9 +38,8 @@ class CopyGemfileTest < Minitest::Test
 
       work_dir = File.join(tmpdir, "work")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: File.join(tmpdir, "project"))
 
-      assert Kompo::CopyGemfile.gemfile_exists
+      assert Kompo::CopyGemfile.gemfile_exists(args: {project_dir: File.join(tmpdir, "project")})
       # Verify both files were copied to work_dir
       assert File.exist?(File.join(work_dir, "Gemfile"))
       assert File.exist?(File.join(work_dir, "Gemfile.lock"))
@@ -57,9 +54,8 @@ class CopyGemfileTest < Minitest::Test
 
       work_dir = File.join(tmpdir, "work")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: File.join(tmpdir, "project"))
 
-      assert Kompo::CopyGemfile.gemfile_exists
+      assert Kompo::CopyGemfile.gemfile_exists(args: {project_dir: File.join(tmpdir, "project")})
       # Verify Gemfile and gemspec were copied to work_dir
       assert File.exist?(File.join(work_dir, "Gemfile"))
       assert File.exist?(File.join(work_dir, "my_gem.gemspec"))
@@ -74,9 +70,8 @@ class CopyGemfileTest < Minitest::Test
 
       work_dir = File.join(tmpdir, "work")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: File.join(tmpdir, "project"))
 
-      assert Kompo::CopyGemfile.gemfile_exists
+      assert Kompo::CopyGemfile.gemfile_exists(args: {project_dir: File.join(tmpdir, "project")})
       # Verify Gemfile was copied but gemspec was not
       assert File.exist?(File.join(work_dir, "Gemfile"))
       refute File.exist?(File.join(work_dir, "my_gem.gemspec"))
@@ -92,9 +87,8 @@ class CopyGemfileTest < Minitest::Test
 
       work_dir = File.join(tmpdir, "work")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: File.join(tmpdir, "project"))
 
-      assert Kompo::CopyGemfile.gemfile_exists
+      assert Kompo::CopyGemfile.gemfile_exists(args: {project_dir: File.join(tmpdir, "project")})
       # Verify all gemspecs were copied
       assert File.exist?(File.join(work_dir, "my_gem.gemspec"))
       assert File.exist?(File.join(work_dir, "other_gem.gemspec"))
@@ -113,10 +107,9 @@ class CopyGemfileTest < Minitest::Test
 
       work_dir = File.join(tmpdir, "work")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: File.join(tmpdir, "project"))
 
       _out, err = capture_io do
-        refute Kompo::CopyGemfile.gemfile_exists
+        refute Kompo::CopyGemfile.gemfile_exists(args: {project_dir: File.join(tmpdir, "project")})
       end
 
       assert_match(/escap.*project directory/i, err)
@@ -130,10 +123,10 @@ class CopyGemfileTest < Minitest::Test
 
       work_dir = File.join(tmpdir, "work")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: File.join(tmpdir, "project"), no_gemfile: true)
 
+      args = {project_dir: File.join(tmpdir, "project"), no_gemfile: true}
       # gemfile_exists should be false even though Gemfile exists
-      refute Kompo::CopyGemfile.gemfile_exists
+      refute Kompo::CopyGemfile.gemfile_exists(args: args)
       # Verify Gemfile was NOT copied to work_dir
       refute File.exist?(File.join(work_dir, "Gemfile"))
     end
@@ -151,10 +144,10 @@ class CopyProjectFilesTest < Minitest::Test
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: project_dir, entrypoint: "main.rb", files: [])
 
-      entrypoint_path = Kompo::CopyProjectFiles.entrypoint_path
-      additional_paths = Kompo::CopyProjectFiles.additional_paths
+      args = {project_dir: project_dir, entrypoint: "main.rb", files: []}
+      entrypoint_path = Kompo::CopyProjectFiles.entrypoint_path(args: args)
+      additional_paths = Kompo::CopyProjectFiles.additional_paths(args: args)
 
       assert_equal File.join(work_dir, "main.rb"), entrypoint_path
       assert_equal [], additional_paths
@@ -173,10 +166,10 @@ class CopyProjectFilesTest < Minitest::Test
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: project_dir, entrypoint: "main.rb", files: ["lib"])
 
-      entrypoint_path = Kompo::CopyProjectFiles.entrypoint_path
-      additional_paths = Kompo::CopyProjectFiles.additional_paths
+      args = {project_dir: project_dir, entrypoint: "main.rb", files: ["lib"]}
+      entrypoint_path = Kompo::CopyProjectFiles.entrypoint_path(args: args)
+      additional_paths = Kompo::CopyProjectFiles.additional_paths(args: args)
 
       assert_equal File.join(work_dir, "main.rb"), entrypoint_path
       assert_includes additional_paths, File.join(work_dir, "lib")
@@ -194,10 +187,10 @@ class CopyProjectFilesTest < Minitest::Test
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: project_dir, entrypoint: "main.rb", files: ["config/settings.rb"])
 
-      entrypoint_path = Kompo::CopyProjectFiles.entrypoint_path
-      additional_paths = Kompo::CopyProjectFiles.additional_paths
+      args = {project_dir: project_dir, entrypoint: "main.rb", files: ["config/settings.rb"]}
+      entrypoint_path = Kompo::CopyProjectFiles.entrypoint_path(args: args)
+      additional_paths = Kompo::CopyProjectFiles.additional_paths(args: args)
 
       assert_equal File.join(work_dir, "main.rb"), entrypoint_path
       assert_includes additional_paths, File.join(work_dir, "config/settings.rb")
@@ -216,9 +209,9 @@ class CopyProjectFilesTest < Minitest::Test
       work_dir = File.join(tmpdir, "work")
       project_dir = File.join(tmpdir, "project")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
-      mock_args(project_dir: project_dir, entrypoint: "main.rb", files: ["."])
 
-      Kompo::CopyProjectFiles.entrypoint_path
+      args = {project_dir: project_dir, entrypoint: "main.rb", files: ["."]}
+      Kompo::CopyProjectFiles.entrypoint_path(args: args)
 
       # Verify all files were copied directly to work_dir (not into work_dir/project/)
       assert File.exist?(File.join(work_dir, "main.rb"))

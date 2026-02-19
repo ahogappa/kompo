@@ -22,9 +22,8 @@ class CheckStdlibsTest < Minitest::Test
     with_tmpdir do |tmpdir|
       tmpdir << "lib/ruby/3.4.0/"
       mock_install_ruby_with_dir(tmpdir)
-      mock_args(no_stdlib: true)
 
-      paths = Kompo::CheckStdlibs.paths
+      paths = Kompo::CheckStdlibs.paths(args: {no_stdlib: true})
 
       assert_equal [], paths
     end

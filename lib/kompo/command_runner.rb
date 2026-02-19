@@ -39,6 +39,13 @@ module Kompo
     end
 
     class << self
+      attr_writer :verbose, :dry_run
+
+      def reset_options!
+        @verbose = nil
+        @dry_run = nil
+      end
+
       # Capture stdout (replacement for backticks and Open3.capture2)
       # @param command [Array<String>] Command and arguments
       # @param chdir [String, nil] Working directory
@@ -169,11 +176,11 @@ module Kompo
       private
 
       def verbose?
-        defined?(Taski) && Taski.args&.[](:verbose)
+        @verbose
       end
 
       def dry_run?
-        defined?(Taski) && Taski.args&.[](:dry_run)
+        @dry_run
       end
 
       def log_command(command)

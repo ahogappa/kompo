@@ -19,7 +19,6 @@ class InstallRubyTest < Minitest::Test
              << ["#{cache_prefix}/ruby/bin/bundle", "#!/bin/sh"]
 
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
 
       # InstallRuby.run should select FromCache when cache exists
       # We test that the Task properly reads cache metadata
@@ -73,10 +72,9 @@ class InstallRubyTest < Minitest::Test
       FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "gem"))
 
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
 
       # Trigger task execution and get result
-      ruby_install_dir = Kompo::InstallRuby.ruby_install_dir
+      ruby_install_dir = Kompo::InstallRuby.ruby_install_dir(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache")})
 
       # Check that ruby was installed
       assert Dir.exist?(ruby_install_dir)
@@ -108,10 +106,9 @@ class InstallRubyTest < Minitest::Test
       FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "rake"))
 
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
 
       # Trigger task execution
-      ruby_install_dir = Kompo::InstallRuby.ruby_install_dir
+      ruby_install_dir = Kompo::InstallRuby.ruby_install_dir(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache")})
 
       # Verify shebangs were updated
       irb_content = File.read(File.join(ruby_install_dir, "bin", "irb"))
@@ -157,11 +154,11 @@ class InstallRubyFromSourceTest < Minitest::Test
 
       mock_task(Kompo::RubyBuildPath, path: ruby_build_path)
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: work_dir)
-      mock_args(
+      task_args = {
         ruby_version: "3.4.1",
         kompo_cache: File.join(tmpdir, ".kompo", "cache"),
         no_cache: true
-      )
+      }
 
       # Mock ruby-build --definitions to return available versions
       @mock.stub([ruby_build_path, "--definitions"],
@@ -179,16 +176,16 @@ class InstallRubyFromSourceTest < Minitest::Test
       # Create the expected directory structure that would be created by ruby-build
       tmpdir << ["_ruby/bin/ruby", "#!/bin/sh"] << "_ruby/_build/"
 
-      capture_io { Kompo::InstallRuby.run }
+      capture_io { Kompo::InstallRuby.run(args: task_args) }
 
       # Verify ruby-build was called
       ruby_install_dir = File.join(work_dir, "_ruby")
       assert @mock.called?(:run, ruby_build_path, "--verbose", "--keep", "3.4.1", ruby_install_dir)
 
       # Verify exports return expected values
-      assert_equal ruby_path, Kompo::InstallRuby.ruby_path
-      assert_equal "3.4.1", Kompo::InstallRuby.ruby_version
-      assert_equal "3.4", Kompo::InstallRuby.ruby_major_minor
+      assert_equal ruby_path, Kompo::InstallRuby.ruby_path(args: task_args)
+      assert_equal "3.4.1", Kompo::InstallRuby.ruby_version(args: task_args)
+      assert_equal "3.4", Kompo::InstallRuby.ruby_major_minor(args: task_args)
     end
   end
 
@@ -198,18 +195,18 @@ class InstallRubyFromSourceTest < Minitest::Test
 
       mock_task(Kompo::RubyBuildPath, path: ruby_build_path)
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
-      mock_args(
+      task_args = {
         ruby_version: "9.9.9",
         kompo_cache: File.join(tmpdir, ".kompo", "cache"),
         no_cache: true
-      )
+      }
 
       # Mock ruby-build --definitions to return versions that don't include 9.9.9
       @mock.stub([ruby_build_path, "--definitions"],
         output: "3.4.0\n3.4.1\n3.4.2\n", success: true)
 
       error = assert_raises(Taski::AggregateError) do
-        capture_io { Kompo::InstallRuby.run }
+        capture_io { Kompo::InstallRuby.run(args: task_args) }
       end
 
       assert_match(/not available in ruby-build/, error.message)
@@ -232,17 +229,17 @@ class InstallRubyFromSourceTest < Minitest::Test
 
       mock_task(Kompo::RubyBuildPath, path: ruby_build_path)
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: work_dir)
-      mock_args(
+      task_args = {
         ruby_version: "3.4.1",
         kompo_cache: File.join(tmpdir, ".kompo", "cache")
-      )
+      }
 
       # Mock ruby --version
       ruby_path = File.join(work_dir, "_ruby", "bin", "ruby")
       @mock.stub([ruby_path, "--version"],
         output: "ruby 3.4.1", success: true)
 
-      capture_io { Kompo::InstallRuby.run }
+      capture_io { Kompo::InstallRuby.run(args: task_args) }
 
       # ruby-build should NOT be called when restoring from cache
       ruby_install_dir = File.join(work_dir, "_ruby")
@@ -250,7 +247,7 @@ class InstallRubyFromSourceTest < Minitest::Test
         "ruby-build should not be called when valid cache exists"
 
       # Verify exports
-      assert_equal "3.4.1", Kompo::InstallRuby.ruby_version
+      assert_equal "3.4.1", Kompo::InstallRuby.ruby_version(args: task_args)
     end
   end
 
@@ -263,12 +260,12 @@ class InstallRubyFromSourceTest < Minitest::Test
 
       mock_task(Kompo::RubyBuildPath, path: ruby_build_path)
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: work_dir)
-      mock_args(
+      task_args = {
         ruby_version: "3.4.1",
         kompo_cache: File.join(tmpdir, ".kompo", "cache"),
         ruby_source_path: source_dir,
         no_cache: true
-      )
+      }
 
       # Mock ruby-build execution with source directory
       @mock.stub([ruby_build_path, "--verbose", "--keep", source_dir, File.join(work_dir, "_ruby")],
@@ -282,7 +279,7 @@ class InstallRubyFromSourceTest < Minitest::Test
       # Create expected directory structure
       tmpdir << ["_ruby/bin/ruby", "#!/bin/sh"]
 
-      capture_io { Kompo::InstallRuby.run }
+      capture_io { Kompo::InstallRuby.run(args: task_args) }
 
       # Verify ruby-build was called with source directory
       ruby_install_dir = File.join(work_dir, "_ruby")
@@ -299,11 +296,11 @@ class InstallRubyFromSourceTest < Minitest::Test
 
       mock_task(Kompo::RubyBuildPath, path: ruby_build_path)
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: work_dir)
-      mock_args(
+      task_args = {
         kompo_cache: File.join(tmpdir, ".kompo", "cache"),
         ruby_source_path: tarball,
         no_cache: true
-      )
+      }
 
       # Mock ruby-build execution
       @mock.stub([ruby_build_path, "--verbose", "--keep", "3.4.1", File.join(work_dir, "_ruby")],
@@ -317,10 +314,10 @@ class InstallRubyFromSourceTest < Minitest::Test
       # Create expected directory structure
       tmpdir << ["_ruby/bin/ruby", "#!/bin/sh"]
 
-      capture_io { Kompo::InstallRuby.run }
+      capture_io { Kompo::InstallRuby.run(args: task_args) }
 
       # Verify version was extracted from tarball
-      assert_equal "3.4.1", Kompo::InstallRuby.ruby_version
+      assert_equal "3.4.1", Kompo::InstallRuby.ruby_version(args: task_args)
 
       # Verify tarball was copied to cache
       cache_tarball = File.join(tmpdir, ".kompo", "cache", "3.4.1", "ruby-3.4.1.tar.gz")
@@ -332,15 +329,15 @@ class InstallRubyFromSourceTest < Minitest::Test
     with_tmpdir do |tmpdir|
       mock_task(Kompo::RubyBuildPath, path: "/mock/ruby-build")
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
-      mock_args(
+      task_args = {
         ruby_version: "3.4.1",
         kompo_cache: File.join(tmpdir, ".kompo", "cache"),
         ruby_source_path: "/nonexistent/path",
         no_cache: true
-      )
+      }
 
       error = assert_raises(Taski::AggregateError) do
-        capture_io { Kompo::InstallRuby.run }
+        capture_io { Kompo::InstallRuby.run(args: task_args) }
       end
 
       assert_match(/does not exist/, error.message)
@@ -354,15 +351,15 @@ class InstallRubyFromSourceTest < Minitest::Test
 
       mock_task(Kompo::RubyBuildPath, path: "/mock/ruby-build")
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
-      mock_args(
+      task_args = {
         ruby_version: "3.4.1",
         kompo_cache: File.join(tmpdir, ".kompo", "cache"),
         ruby_source_path: zip_file,
         no_cache: true
-      )
+      }
 
       error = assert_raises(Taski::AggregateError) do
-        capture_io { Kompo::InstallRuby.run }
+        capture_io { Kompo::InstallRuby.run(args: task_args) }
       end
 
       assert_match(/Unsupported source format/, error.message)
@@ -377,11 +374,11 @@ class InstallRubyFromSourceTest < Minitest::Test
 
       mock_task(Kompo::RubyBuildPath, path: ruby_build_path)
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: work_dir)
-      mock_args(
+      task_args = {
         ruby_version: "3.4.1",
         kompo_cache: kompo_cache,
         no_cache: true
-      )
+      }
 
       # Mock ruby-build --definitions to return available versions
       @mock.stub([ruby_build_path, "--definitions"],
@@ -399,7 +396,7 @@ class InstallRubyFromSourceTest < Minitest::Test
       # Create the expected directory structure that would be created by ruby-build
       tmpdir << ["_ruby/bin/ruby", "#!/bin/sh"] << "_ruby/_build/"
 
-      capture_io { Kompo::InstallRuby.run }
+      capture_io { Kompo::InstallRuby.run(args: task_args) }
 
       # Verify cache was NOT created due to no_cache option
       version_cache_dir = File.join(kompo_cache, "3.4.1")
@@ -434,10 +431,9 @@ class InstallRubyFromCacheRubyPcFixTest < Minitest::Test
       FileUtils.chmod(0o755, File.join(tmpdir, cache_prefix, "ruby", "bin", "ruby"))
 
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
-      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
 
       # Trigger task execution via public API
-      ruby_install_dir = Kompo::InstallRuby.ruby_install_dir
+      ruby_install_dir = Kompo::InstallRuby.ruby_install_dir(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache")})
 
       # Verify ruby.pc was updated (observable external behavior)
       ruby_pc_content = File.read(File.join(ruby_install_dir, "lib", "pkgconfig", "ruby.pc"))
