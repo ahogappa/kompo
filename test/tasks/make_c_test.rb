@@ -9,7 +9,7 @@ class MakeMainCTest < Minitest::Test
   def test_make_main_c_generates_file
     with_tmpdir do |tmpdir|
       tmpdir << "work/"
-      work_dir = File.join(tmpdir, "work")
+      work_dir = tmpdir / "work"
       main_c_path = File.join(work_dir, "main.c")
       entrypoint = File.join(work_dir, "main.rb")
 
@@ -139,7 +139,7 @@ class MakeFsCTest < Minitest::Test
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       tmpdir << ["project/.kompoignore", "*.log\ntmp/"]
-      project_dir = File.join(tmpdir, "project")
+      project_dir = tmpdir / "project"
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
 
@@ -155,7 +155,7 @@ class MakeFsCTest < Minitest::Test
       tmpdir << ["work/debug.log", "DEBUG LOG CONTENT"] \
              << ["work/tmp/cache.txt", "TEMP CACHE CONTENT"] \
              << ["project/.kompoignore", "*.log\ntmp/"]
-      project_dir = File.join(tmpdir, "project")
+      project_dir = tmpdir / "project"
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
 
@@ -173,7 +173,7 @@ class MakeFsCTest < Minitest::Test
       tmpdir << ["work/lib/app.rb", "class App; end"] \
              << ["outside/secret.rb", "SECRET_DATA"]
       lib_dir = File.join(work_dir, "lib")
-      outside_dir = File.join(tmpdir, "outside")
+      outside_dir = tmpdir / "outside"
 
       # Create a symlink in lib_dir pointing to outside_dir
       symlink_path = File.join(lib_dir, "external_link")
@@ -439,7 +439,7 @@ class MakeFsCTest < Minitest::Test
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       tmpdir << ["ruby_install/lib/ruby/3.4.0/json.rb", "module JSON; end"] \
              << ["ruby_install/lib/ruby/3.4.0/json.so", "BINARY_SO_DATA"]
-      stdlib_dir = File.join(tmpdir, "ruby_install", "lib", "ruby", "3.4.0")
+      stdlib_dir = tmpdir / "ruby_install" / "lib" / "ruby" / "3.4.0"
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, stdlib_paths: [stdlib_dir])
 
@@ -458,7 +458,7 @@ class MakeFsCTest < Minitest::Test
 
   def setup_work_dir_with_entrypoint(tmpdir, content: "puts 'hello'")
     tmpdir << ["work/main.rb", content]
-    work_dir = File.join(tmpdir, "work")
+    work_dir = tmpdir / "work"
     entrypoint = File.join(work_dir, "main.rb")
     [work_dir, entrypoint]
   end

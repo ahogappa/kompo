@@ -5,7 +5,7 @@ require_relative "test_helper"
 class CacheTest < Minitest::Test
   def test_clean_cache_no_directory
     with_tmpdir do |tmpdir|
-      cache_dir = File.join(tmpdir, ".kompo", "cache")
+      cache_dir = tmpdir / ".kompo" / "cache"
 
       assert_output(/Cache directory does not exist/) do
         Kompo.clean_cache("3.4.1", cache_dir: cache_dir)
@@ -19,7 +19,7 @@ class CacheTest < Minitest::Test
              << [".kompo/cache/3.4.1/metadata.json", "{}"] \
              << [".kompo/cache/3.4.1/ruby-3.4.1.tar.gz", "dummy tarball"]
 
-      cache_dir = File.join(tmpdir, ".kompo", "cache")
+      cache_dir = tmpdir / ".kompo" / "cache"
       version_dir = File.join(cache_dir, "3.4.1")
 
       assert_output(/Removed.*3\.4\.1.*Cache for Ruby 3\.4\.1 cleaned successfully/m) do
@@ -40,7 +40,7 @@ class CacheTest < Minitest::Test
              << [".kompo/cache/3.4.1/bundle-abc123def456/metadata.json", "{}"] \
              << ".kompo/cache/3.4.1/bundle-xyz789/bundle/"
 
-      cache_dir = File.join(tmpdir, ".kompo", "cache")
+      cache_dir = tmpdir / ".kompo" / "cache"
       version_dir = File.join(cache_dir, "3.4.1")
 
       assert_output(/Removed.*3\.4\.1.*Cache for Ruby 3\.4\.1 cleaned successfully/m) do
@@ -61,7 +61,7 @@ class CacheTest < Minitest::Test
       tmpdir << ".kompo/cache/4.0.0/ruby/" \
              << ".kompo/cache/4.0.0/bundle-xyz789/"
 
-      cache_dir = File.join(tmpdir, ".kompo", "cache")
+      cache_dir = tmpdir / ".kompo" / "cache"
       version_341 = File.join(cache_dir, "3.4.1")
       version_400 = File.join(cache_dir, "4.0.0")
 
@@ -78,7 +78,7 @@ class CacheTest < Minitest::Test
     with_tmpdir do |tmpdir|
       tmpdir << ".kompo/cache/"
 
-      cache_dir = File.join(tmpdir, ".kompo", "cache")
+      cache_dir = tmpdir / ".kompo" / "cache"
 
       assert_output(/No cache found for Ruby 3\.4\.1/) do
         Kompo.clean_cache("3.4.1", cache_dir: cache_dir)
@@ -92,7 +92,7 @@ class CacheTest < Minitest::Test
       tmpdir << ".kompo/cache/3.4.1/ruby/" \
              << ".kompo/cache/4.0.0/ruby/"
 
-      cache_dir = File.join(tmpdir, ".kompo", "cache")
+      cache_dir = tmpdir / ".kompo" / "cache"
 
       assert_output(/All caches cleaned successfully/) do
         Kompo.clean_cache("all", cache_dir: cache_dir)
@@ -106,7 +106,7 @@ class CacheTest < Minitest::Test
     with_tmpdir do |tmpdir|
       tmpdir << ".kompo/cache/"
 
-      cache_dir = File.join(tmpdir, ".kompo", "cache")
+      cache_dir = tmpdir / ".kompo" / "cache"
 
       assert_output(/No caches found/) do
         Kompo.clean_cache("all", cache_dir: cache_dir)

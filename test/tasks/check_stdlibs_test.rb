@@ -13,7 +13,7 @@ class CheckStdlibsTest < Minitest::Test
 
       paths = Kompo::CheckStdlibs.paths
 
-      assert_includes paths, File.join(tmpdir, "lib", "ruby", "3.4.0")
+      assert_includes paths, (tmpdir / "lib" / "ruby" / "3.4.0").to_s
       assert_task_accessed(Kompo::InstallRuby, :ruby_install_dir)
     end
   end
@@ -37,8 +37,8 @@ class CheckStdlibsTest < Minitest::Test
 
       paths = Kompo::CheckStdlibs.paths
 
-      assert_includes paths, File.join(tmpdir, "lib", "ruby", "3.4.0")
-      assert_includes paths, File.join(tmpdir, "lib", "ruby", "gems", "3.4.0", "specifications")
+      assert_includes paths, (tmpdir / "lib" / "ruby" / "3.4.0").to_s
+      assert_includes paths, (tmpdir / "lib" / "ruby" / "gems" / "3.4.0" / "specifications").to_s
     end
   end
 

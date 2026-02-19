@@ -20,65 +20,65 @@ class TmpDirTest < Minitest::Test
   def test_shovel_string_creates_empty_file
     with_tmpdir do |tmpdir|
       tmpdir << "empty.txt"
-      assert File.exist?(File.join(tmpdir, "empty.txt"))
-      assert_equal "", File.read(File.join(tmpdir, "empty.txt"))
+      assert File.exist?(tmpdir / "empty.txt")
+      assert_equal "", File.read(tmpdir / "empty.txt")
     end
   end
 
   def test_shovel_array_creates_file_with_content
     with_tmpdir do |tmpdir|
       tmpdir << ["hello.txt", "hello world"]
-      assert_equal "hello world", File.read(File.join(tmpdir, "hello.txt"))
+      assert_equal "hello world", File.read(tmpdir / "hello.txt")
     end
   end
 
   def test_shovel_string_with_trailing_slash_creates_directory
     with_tmpdir do |tmpdir|
       tmpdir << "subdir/"
-      assert Dir.exist?(File.join(tmpdir, "subdir"))
+      assert Dir.exist?(tmpdir / "subdir")
     end
   end
 
   def test_shovel_nested_path_creates_parent_dirs
     with_tmpdir do |tmpdir|
       tmpdir << ["deep/nested/file.txt", "content"]
-      assert_equal "content", File.read(File.join(tmpdir, "deep/nested/file.txt"))
+      assert_equal "content", File.read(tmpdir / "deep/nested/file.txt")
     end
   end
 
   def test_shovel_nested_empty_file_creates_parent_dirs
     with_tmpdir do |tmpdir|
       tmpdir << "deep/nested/empty.txt"
-      assert File.exist?(File.join(tmpdir, "deep/nested/empty.txt"))
+      assert File.exist?(tmpdir / "deep/nested/empty.txt")
     end
   end
 
   def test_shovel_nested_directory_creates_full_path
     with_tmpdir do |tmpdir|
       tmpdir << "a/b/c/"
-      assert Dir.exist?(File.join(tmpdir, "a/b/c"))
+      assert Dir.exist?(tmpdir / "a/b/c")
     end
   end
 
   def test_shovel_single_element_array_creates_empty_file
     with_tmpdir do |tmpdir|
       tmpdir << ["empty.txt"]
-      assert File.exist?(File.join(tmpdir, "empty.txt"))
-      assert_equal "", File.read(File.join(tmpdir, "empty.txt"))
+      assert File.exist?(tmpdir / "empty.txt")
+      assert_equal "", File.read(tmpdir / "empty.txt")
     end
   end
 
   def test_shovel_single_element_array_with_trailing_slash_creates_directory
     with_tmpdir do |tmpdir|
       tmpdir << ["subdir/"]
-      assert Dir.exist?(File.join(tmpdir, "subdir"))
+      assert Dir.exist?(tmpdir / "subdir")
     end
   end
 
   def test_shovel_single_element_array_with_nested_path_creates_parent_dirs
     with_tmpdir do |tmpdir|
       tmpdir << ["deep/nested/empty.txt"]
-      assert File.exist?(File.join(tmpdir, "deep/nested/empty.txt"))
+      assert File.exist?(tmpdir / "deep/nested/empty.txt")
     end
   end
 
@@ -128,9 +128,9 @@ class TmpDirTest < Minitest::Test
   def test_shovel_returns_self_for_chaining
     with_tmpdir do |tmpdir|
       tmpdir << "a.txt" << ["b.txt", "B"] << "subdir/"
-      assert File.exist?(File.join(tmpdir, "a.txt"))
-      assert_equal "B", File.read(File.join(tmpdir, "b.txt"))
-      assert Dir.exist?(File.join(tmpdir, "subdir"))
+      assert File.exist?(tmpdir / "a.txt")
+      assert_equal "B", File.read(tmpdir / "b.txt")
+      assert Dir.exist?(tmpdir / "subdir")
     end
   end
 end

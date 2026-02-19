@@ -59,6 +59,18 @@ class TmpDir
 
   alias_method :to_str, :to_s
 
+  def method_missing(method, ...)
+    if @path.respond_to?(method)
+      @path.send(method, ...)
+    else
+      super
+    end
+  end
+
+  def respond_to_missing?(method, include_private = false)
+    @path.respond_to?(method, include_private) || super
+  end
+
   def /(other)
     self.class.new(File.join(@path, other))
   end

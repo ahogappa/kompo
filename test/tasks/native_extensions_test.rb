@@ -113,7 +113,7 @@ class FindNativeExtensionsTest < Minitest::Test
              << ["#{bundled_prefix}/bigdecimal.o", ""] \
              << ["#{gemfile_prefix}/extconf.rb", "require 'mkmf'"]
 
-      gemfile_ext_dir = File.join(tmpdir, gemfile_prefix)
+      gemfile_ext_dir = tmpdir / gemfile_prefix
 
       mock_extension_tasks(ruby_install_dir, ruby_build_path, bundle_dir)
 
@@ -126,7 +126,7 @@ class FindNativeExtensionsTest < Minitest::Test
       # Should be the Gemfile version (not prebuilt)
       ext = bigdecimal_exts.first
       refute ext[:is_prebuilt], "Expected Gemfile version to replace prebuilt bundled gem"
-      assert_equal gemfile_ext_dir, ext[:dir_name], "Expected dir_name to be from Gemfile version"
+      assert_equal gemfile_ext_dir.to_s, ext[:dir_name], "Expected dir_name to be from Gemfile version"
     end
   end
 
@@ -154,9 +154,9 @@ class FindNativeExtensionsTest < Minitest::Test
     tmpdir << "bundle/ruby/3.4.0/" \
            << ["ruby_install/lib/libruby-static.a", ""] \
            << "ruby_build/"
-    bundle_dir = File.join(tmpdir, "bundle", "ruby", "3.4.0")
-    ruby_install_dir = File.join(tmpdir, "ruby_install")
-    ruby_build_path = File.join(tmpdir, "ruby_build")
+    bundle_dir = tmpdir / "bundle" / "ruby" / "3.4.0"
+    ruby_install_dir = tmpdir / "ruby_install"
+    ruby_build_path = tmpdir / "ruby_build"
     [bundle_dir, ruby_install_dir, ruby_build_path]
   end
 
@@ -209,8 +209,8 @@ class BuildNativeGemWithMockTest < Minitest::Test
   def test_build_prebuilt_extension_does_not_run_extconf
     with_tmpdir do |tmpdir|
       tmpdir << "work/"
-      work_dir = File.join(tmpdir, "work")
-      ext_dir = File.join(tmpdir, "ext", "bigdecimal")
+      work_dir = tmpdir / "work"
+      ext_dir = tmpdir / "ext" / "bigdecimal"
 
       tmpdir << ["ext/bigdecimal/Makefile", <<~MAKEFILE]
         TARGET = bigdecimal
@@ -239,8 +239,8 @@ class BuildNativeGemWithMockTest < Minitest::Test
   def test_build_c_extension_runs_extconf_and_make
     with_tmpdir do |tmpdir|
       tmpdir << "work/" << ["ext/testgem/extconf.rb", "require 'mkmf'"]
-      work_dir = File.join(tmpdir, "work")
-      ext_dir = File.join(tmpdir, "ext", "testgem")
+      work_dir = tmpdir / "work"
+      ext_dir = tmpdir / "ext" / "testgem"
 
       # Stub extconf.rb execution - it creates Makefile
       @mock.stub(["ruby", "extconf.rb"], output: "", success: true)
@@ -295,8 +295,8 @@ class BuildNativeGemWithMockTest < Minitest::Test
              << ["ext/rustgem/Cargo.toml", cargo_toml_content] \
              << ["ext/rustgem/target/release/librustgem.a", "fake static lib"]
 
-      work_dir = File.join(tmpdir, "work")
-      ext_dir = File.join(tmpdir, "ext", "rustgem")
+      work_dir = tmpdir / "work"
+      ext_dir = tmpdir / "ext" / "rustgem"
       cargo_toml = File.join(ext_dir, "Cargo.toml")
 
       mock_task(Kompo::CargoPath, path: "/usr/local/bin/cargo")
