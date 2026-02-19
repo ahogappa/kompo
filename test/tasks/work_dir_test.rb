@@ -100,30 +100,68 @@ class WorkDirTest < Minitest::Test
     end
   end
 
-  def test_work_dir_falls_back_on_permission_denied
+  def test_work_dir_rejects_cached_work_dir_at_nonexistent_root
     with_tmpdir do |tmpdir|
-      # Use a path that requires root permission to create
-      # (path inside /private/var which we can't write to as normal user)
       cached_work_dir = "/nonexistent_root_path_#{SecureRandom.uuid}/work"
 
-      # Create metadata file with cached work_dir path that we can't create
       metadata = {"work_dir" => cached_work_dir, "ruby_version" => RUBY_VERSION}
       tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
 
       mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
 
-      # Capture stderr to verify warning about permission denied
       _out, err = capture_io do
         path = Kompo::WorkDir.path
 
-        # Should fallback to creating a new temp directory, not use the cached path
         refute_equal cached_work_dir, path
         assert Dir.exist?(path)
-        # Should have marker file
         assert File.exist?(File.join(path, Kompo::WorkDir::MARKER_FILE))
       end
 
-      assert_match(/permission denied.*creating new work directory/i, err)
+      assert_match(/outside.*temp/i, err)
+    end
+  end
+
+  def test_work_dir_rejects_cached_work_dir_outside_tmpdir
+    with_tmpdir do |tmpdir|
+      cached_work_dir = "/etc/evil_kompo_work"
+      metadata = {"work_dir" => cached_work_dir, "ruby_version" => RUBY_VERSION}
+
+      tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
+
+      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
+
+      _out, err = capture_io do
+        path = Kompo::WorkDir.path
+
+        refute_equal cached_work_dir, path
+        assert Dir.exist?(path)
+        assert File.exist?(File.join(path, Kompo::WorkDir::MARKER_FILE))
+      end
+
+      assert_match(/outside.*temp/i, err)
+    end
+  end
+
+  def test_work_dir_rejects_cached_work_dir_with_dot_dot_traversal
+    with_tmpdir do |tmpdir|
+      real_tmpdir = File.realpath(Dir.tmpdir)
+      # Path that starts with tmpdir but escapes via ..
+      cached_work_dir = "#{real_tmpdir}/../etc/evil"
+      metadata = {"work_dir" => cached_work_dir, "ruby_version" => RUBY_VERSION}
+
+      tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
+
+      mock_args(kompo_cache: File.join(tmpdir, ".kompo", "cache"))
+
+      _out, err = capture_io do
+        path = Kompo::WorkDir.path
+
+        refute_equal cached_work_dir, path
+        assert Dir.exist?(path)
+        assert File.exist?(File.join(path, Kompo::WorkDir::MARKER_FILE))
+      end
+
+      assert_match(/outside.*temp/i, err)
     end
   end
 

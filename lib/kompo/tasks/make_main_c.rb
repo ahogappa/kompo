@@ -38,16 +38,29 @@ module Kompo
 
     private
 
+    CONTROL_CHAR_MAP = {"\n" => "\\n", "\r" => "\\r", "\t" => "\\t"}.freeze
+    private_constant :CONTROL_CHAR_MAP
+
+    def c_string_escape(str)
+      str.delete("\0")
+        .gsub("\\") { "\\\\" }
+        .gsub('"') { '\\"' }
+        .gsub(/[\x01-\x1f\x7f]/) { |c| CONTROL_CHAR_MAP[c] || format("\\x%02x", c.ord) }
+    end
+
     def build_template_context
       project_dir = Taski.args.fetch(:project_dir, Taski.env.working_directory) || Taski.env.working_directory
       work_dir = WorkDir.path
       entrypoint = CopyProjectFiles.entrypoint_path
 
+      raw_exts = BuildNativeGem.exts || []
+      escaped_exts = raw_exts.map { |ext_path, func| [c_string_escape(ext_path), func] }
+
       TemplateContext.new(
-        exts: BuildNativeGem.exts || [],
+        exts: escaped_exts,
         work_dir: work_dir,
-        work_dir_entrypoint: entrypoint,
-        project_dir: project_dir,
+        work_dir_entrypoint: c_string_escape(entrypoint),
+        project_dir: c_string_escape(project_dir),
         has_gemfile: CopyGemfile.gemfile_exists
       )
     end

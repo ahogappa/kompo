@@ -170,6 +170,9 @@ module Kompo
       end
     end
 
+    BUNDLER_VERSION_PATTERN = /\A\d+\.\d+(\.\d+)*([.-][a-zA-Z0-9.]+)*\z/
+    private_constant :BUNDLER_VERSION_PATTERN
+
     private
 
     def install_matching_bundler
@@ -207,7 +210,10 @@ module Kompo
       return unless bundled_with_index
 
       version = lines[bundled_with_index + 1]&.strip
-      (version.nil? || version.empty?) ? nil : version
+      return if version.nil? || version.empty?
+      return unless BUNDLER_VERSION_PATTERN.match?(version)
+
+      version
     end
 
     def cache_exists?

@@ -28,6 +28,11 @@ module Kompo
             metadata = JSON.parse(File.read(cache_metadata_path))
             cached_work_dir = metadata["work_dir"]
 
+            if cached_work_dir && !valid_tmpdir_path?(cached_work_dir)
+              warn "warn: #{cached_work_dir} is outside system temp directory, creating new work directory"
+              cached_work_dir = nil
+            end
+
             if cached_work_dir
               # Check if the directory exists and belongs to us (has marker) or doesn't exist at all
               # In CI environments, the temp directory is cleaned between runs, so we recreate it
@@ -90,6 +95,16 @@ module Kompo
 
       FileUtils.rm_rf(@path)
       puts "Cleaned up working directory: #{@path}"
+    end
+
+    private
+
+    def valid_tmpdir_path?(path)
+      return false unless path.start_with?("/")
+
+      expanded = File.expand_path(path)
+      real_tmpdir = File.realpath(Dir.tmpdir)
+      expanded == real_tmpdir || expanded.start_with?(real_tmpdir + "/")
     end
   end
 end
