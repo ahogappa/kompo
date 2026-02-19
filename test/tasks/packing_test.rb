@@ -71,15 +71,13 @@ class PackingForMacOSDryRunTest < Minitest::Test
         enc_files: [],
         output_path: output_path)
 
-      mock_args(dry_run: true)
-
       # Mock pkg-config calls
       @mock.stub(["pkg-config", "--cflags", "#{ruby_install_dir}/lib/pkgconfig/ruby.pc"],
         output: "-I#{ruby_install_dir}/include")
       @mock.stub(["pkg-config", "--variable=MAINLIBS", "#{ruby_install_dir}/lib/pkgconfig/ruby.pc"],
         output: "-lpthread -lm")
 
-      capture_io { Kompo::Packing.run }
+      capture_io { Kompo::Packing.run(args: {dry_run: true}) }
 
       # Verify clang was NOT actually called (dry_run skips execution)
       refute @mock.called?(:run, "clang"), "clang should not be executed in dry_run mode"
@@ -143,15 +141,13 @@ class PackingForLinuxDryRunTest < Minitest::Test
         enc_files: [],
         output_path: output_path)
 
-      mock_args(dry_run: true)
-
       # Mock pkg-config calls
       @mock.stub(["pkg-config", "--cflags", "#{ruby_install_dir}/lib/pkgconfig/ruby.pc"],
         output: "-I#{ruby_install_dir}/include")
       @mock.stub(["pkg-config", "--variable=MAINLIBS", "#{ruby_install_dir}/lib/pkgconfig/ruby.pc"],
         output: "-lz -lgmp -lpthread -ldl -lm")
 
-      stdout, = capture_io { Kompo::Packing.run }
+      stdout, = capture_io { Kompo::Packing.run(args: {dry_run: true}) }
 
       # Verify gcc was NOT actually called (dry_run skips execution)
       refute @mock.called?(:run, "gcc"), "gcc should not be executed in dry_run mode"

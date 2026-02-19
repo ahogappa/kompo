@@ -25,9 +25,7 @@ class CollectDependenciesTest < Minitest::Test
       mock_task(Kompo::MakeFsC, path: File.join(work_dir, "fs.c"))
       mock_task(Kompo::BuildNativeGem, exts_dir: nil, exts: [])
       mock_task(Kompo::InstallDeps, lib_paths: "", static_libs: [])
-      mock_args(project_dir: project_dir, output_dir: output_dir)
-
-      output_path = Kompo::CollectDependencies.output_path
+      output_path = Kompo::CollectDependencies.output_path(args: {project_dir: project_dir, output_dir: output_dir})
 
       # Output should be in output_dir with project name
       assert_equal File.join(output_dir, "myproject"), output_path
@@ -52,9 +50,7 @@ class CollectDependenciesTest < Minitest::Test
       mock_task(Kompo::MakeFsC, path: File.join(work_dir, "fs.c"))
       mock_task(Kompo::BuildNativeGem, exts_dir: nil, exts: [])
       mock_task(Kompo::InstallDeps, lib_paths: "", static_libs: [])
-      mock_args(project_dir: project_dir, output_dir: output_file)
-
-      output_path = Kompo::CollectDependencies.output_path
+      output_path = Kompo::CollectDependencies.output_path(args: {project_dir: project_dir, output_dir: output_file})
 
       # Output should be the specified file path
       assert_equal output_file, output_path
@@ -79,10 +75,8 @@ class CollectDependenciesTest < Minitest::Test
       mock_task(Kompo::MakeFsC, path: "/test/fs.c")
       mock_task(Kompo::BuildNativeGem, exts_dir: "/test/exts", exts: ["ext1"])
       mock_task(Kompo::InstallDeps, lib_paths: "", static_libs: [])
-      mock_args(project_dir: project_dir, output_dir: output_dir)
-
       # Access deps through exported value
-      deps = Kompo::CollectDependencies.deps
+      deps = Kompo::CollectDependencies.deps(args: {project_dir: project_dir, output_dir: output_dir})
 
       # Verify all dependencies were collected
       assert_equal "/test/install", deps.ruby_install_dir

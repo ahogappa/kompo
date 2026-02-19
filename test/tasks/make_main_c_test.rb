@@ -15,9 +15,8 @@ class MakeMainCTest < Minitest::Test
       mock_task(Kompo::CopyProjectFiles, entrypoint_path: 'path\to\main.rb')
       mock_task(Kompo::BuildNativeGem, exts: [])
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
-      mock_args(project_dir: File.join(tmpdir, "project"))
 
-      Kompo::MakeMainC.run
+      Kompo::MakeMainC.run(args: {project_dir: File.join(tmpdir, "project")})
       content = File.read(File.join(work_dir, "main.c"))
 
       assert_includes content, 'path\\\\to\\\\main.rb'
@@ -35,9 +34,8 @@ class MakeMainCTest < Minitest::Test
       mock_task(Kompo::CopyProjectFiles, entrypoint_path: "/tmp/main.rb")
       mock_task(Kompo::BuildNativeGem, exts: [])
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
-      mock_args(project_dir: project_dir)
 
-      Kompo::MakeMainC.run
+      Kompo::MakeMainC.run(args: {project_dir: project_dir})
       content = File.read(File.join(work_dir, "main.c"))
 
       assert_includes content, 'project \\"app\\"'
@@ -53,9 +51,8 @@ class MakeMainCTest < Minitest::Test
       mock_task(Kompo::CopyProjectFiles, entrypoint_path: "cle\0an.rb")
       mock_task(Kompo::BuildNativeGem, exts: [])
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
-      mock_args(project_dir: File.join(tmpdir, "project"))
 
-      Kompo::MakeMainC.run
+      Kompo::MakeMainC.run(args: {project_dir: File.join(tmpdir, "project")})
       content = File.read(File.join(work_dir, "main.c"))
 
       assert_includes content, "clean.rb"
@@ -72,9 +69,8 @@ class MakeMainCTest < Minitest::Test
       mock_task(Kompo::CopyProjectFiles, entrypoint_path: "/tmp/kompo-work/main.rb")
       mock_task(Kompo::BuildNativeGem, exts: [])
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
-      mock_args(project_dir: File.join(tmpdir, "project"))
 
-      Kompo::MakeMainC.run
+      Kompo::MakeMainC.run(args: {project_dir: File.join(tmpdir, "project")})
       content = File.read(File.join(work_dir, "main.c"))
 
       assert_includes content, "/tmp/kompo-work/main.rb"
@@ -90,9 +86,8 @@ class MakeMainCTest < Minitest::Test
       mock_task(Kompo::CopyProjectFiles, entrypoint_path: "/tmp/main.rb")
       mock_task(Kompo::BuildNativeGem, exts: [['path"evil', "Init_evil"]])
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
-      mock_args(project_dir: File.join(tmpdir, "project"))
 
-      Kompo::MakeMainC.run
+      Kompo::MakeMainC.run(args: {project_dir: File.join(tmpdir, "project")})
       content = File.read(File.join(work_dir, "main.c"))
 
       assert_includes content, 'path\\"evil'
@@ -109,9 +104,8 @@ class MakeMainCTest < Minitest::Test
       mock_task(Kompo::CopyProjectFiles, entrypoint_path: "line1\nline2\ttab\rret")
       mock_task(Kompo::BuildNativeGem, exts: [])
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
-      mock_args(project_dir: File.join(tmpdir, "project"))
 
-      Kompo::MakeMainC.run
+      Kompo::MakeMainC.run(args: {project_dir: File.join(tmpdir, "project")})
       content = File.read(File.join(work_dir, "main.c"))
 
       assert_includes content, "line1\\nline2\\ttab\\rret"

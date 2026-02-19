@@ -6,17 +6,6 @@ class KompoVfsPathTest < Minitest::Test
   include Taski::TestHelper::Minitest
   include TaskTestHelpers
 
-  def test_kompo_vfs_path_impl_can_access_local_path_arg
-    with_tmpdir do |tmpdir|
-      tmpdir << "kompo-vfs/"
-      vfs_path = File.join(tmpdir, "kompo-vfs")
-
-      mock_args(local_kompo_vfs_path: vfs_path)
-
-      assert_equal vfs_path, Taski.args[:local_kompo_vfs_path]
-    end
-  end
-
   def test_kompo_vfs_path_is_task
     assert Kompo::KompoVfsPath < Taski::Task
     assert_includes Kompo::KompoVfsPath.exported_methods, :path

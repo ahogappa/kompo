@@ -235,12 +235,15 @@ class CommandRunnerWhichTest < Minitest::Test
 end
 
 class CommandRunnerDryRunTest < Minitest::Test
-  include Taski::TestHelper::Minitest
-  include TaskTestHelpers
+  def setup
+    Kompo::CommandRunner.dry_run = true
+  end
+
+  def teardown
+    Kompo::CommandRunner.reset_options!
+  end
 
   def test_capture_in_dry_run_mode_does_not_execute
-    mock_args(dry_run: true)
-
     # This would fail if actually executed
     result = Kompo::CommandRunner.capture("nonexistent_command_that_would_fail")
 
@@ -250,8 +253,6 @@ class CommandRunnerDryRunTest < Minitest::Test
   end
 
   def test_capture_all_in_dry_run_mode_does_not_execute
-    mock_args(dry_run: true)
-
     result = Kompo::CommandRunner.capture_all("nonexistent_command_that_would_fail")
 
     assert result.success?
@@ -259,8 +260,6 @@ class CommandRunnerDryRunTest < Minitest::Test
   end
 
   def test_run_in_dry_run_mode_does_not_execute
-    mock_args(dry_run: true)
-
     # This would fail if actually executed
     result = Kompo::CommandRunner.run("nonexistent_command_that_would_fail")
 
@@ -269,8 +268,6 @@ class CommandRunnerDryRunTest < Minitest::Test
   end
 
   def test_which_in_dry_run_mode_returns_nil
-    mock_args(dry_run: true)
-
     result = Kompo::CommandRunner.which("any_command")
 
     # In dry-run mode, which returns nil
@@ -279,12 +276,15 @@ class CommandRunnerDryRunTest < Minitest::Test
 end
 
 class CommandRunnerVerboseTest < Minitest::Test
-  include Taski::TestHelper::Minitest
-  include TaskTestHelpers
+  def setup
+    Kompo::CommandRunner.verbose = true
+  end
+
+  def teardown
+    Kompo::CommandRunner.reset_options!
+  end
 
   def test_capture_in_verbose_mode_outputs_command
-    mock_args(verbose: true)
-
     output = capture_io do
       Kompo::CommandRunner.capture("echo", "hello")
     end
@@ -294,8 +294,6 @@ class CommandRunnerVerboseTest < Minitest::Test
   end
 
   def test_run_in_verbose_mode_outputs_command
-    mock_args(verbose: true)
-
     output = capture_io do
       Kompo::CommandRunner.run("true")
     end
@@ -305,8 +303,6 @@ class CommandRunnerVerboseTest < Minitest::Test
   end
 
   def test_run_failure_in_verbose_mode_outputs_fail
-    mock_args(verbose: true)
-
     output = capture_io do
       Kompo::CommandRunner.run("false")
     end
@@ -316,8 +312,6 @@ class CommandRunnerVerboseTest < Minitest::Test
   end
 
   def test_capture_failure_in_verbose_mode_outputs_exit_code
-    mock_args(verbose: true)
-
     output = capture_io do
       Kompo::CommandRunner.capture("sh", "-c", "exit 42")
     end

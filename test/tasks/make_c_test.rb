@@ -142,9 +142,8 @@ class MakeFsCTest < Minitest::Test
       project_dir = File.join(tmpdir, "project")
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
-      mock_args(project_dir: project_dir)
 
-      path = Kompo::MakeFsC.path
+      path = Kompo::MakeFsC.path(args: {project_dir: project_dir})
 
       assert File.exist?(path)
     end
@@ -159,9 +158,8 @@ class MakeFsCTest < Minitest::Test
       project_dir = File.join(tmpdir, "project")
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
-      mock_args(project_dir: project_dir)
 
-      path = Kompo::MakeFsC.path
+      path = Kompo::MakeFsC.path(args: {project_dir: project_dir})
       path_list = decode_embedded_paths(File.read(path))
       refute path_list.any? { |p| p.include?("debug.log") }
       refute path_list.any? { |p| p.include?("cache.txt") }
@@ -291,8 +289,7 @@ class MakeFsCTest < Minitest::Test
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
-      mock_args(compress: false)
-      path = Kompo::MakeFsC.path
+      path = Kompo::MakeFsC.path(args: {compress: false})
 
       assert File.exist?(path)
       content = File.read(path)
@@ -310,9 +307,8 @@ class MakeFsCTest < Minitest::Test
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
-      mock_args(compress: true)
 
-      path = Kompo::MakeFsC.path
+      path = Kompo::MakeFsC.path(args: {compress: true})
 
       assert File.exist?(path)
       content = File.read(path)
@@ -336,9 +332,8 @@ class MakeFsCTest < Minitest::Test
       lib_dir = File.join(work_dir, "lib")
 
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint, additional_paths: [lib_dir])
-      mock_args(compress: true)
 
-      path = Kompo::MakeFsC.path
+      path = Kompo::MakeFsC.path(args: {compress: true})
 
       assert File.exist?(path)
       content = File.read(path)
@@ -365,9 +360,8 @@ class MakeFsCTest < Minitest::Test
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir, content: "TEST_CONTENT_FOR_DECOMPRESSION")
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
-      mock_args(compress: true)
 
-      path = Kompo::MakeFsC.path
+      path = Kompo::MakeFsC.path(args: {compress: true})
       content = File.read(path)
 
       # Extract COMPRESSED_FILES data

@@ -64,6 +64,8 @@ opt.parse!(ARGV)
 args[:files] = ARGV
 
 Kompo.configure_progress(args.delete(:progress))
+Kompo::CommandRunner.verbose = args[:verbose]
+Kompo::CommandRunner.dry_run = args[:dry_run]
 
 if args[:init]
   project_dir = Dir.pwd

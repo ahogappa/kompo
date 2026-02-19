@@ -54,10 +54,8 @@ class BundleInstallTest < Minitest::Test
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
       mock_task(Kompo::InstallRuby, ruby_version: "3.4.1", ruby_major_minor: "3.4")
-      mock_args(cache_dir: File.join(tmpdir, ".kompo", "cache"))
-
       # Execute and verify FromCache was selected (it restores bundle directory)
-      Kompo::BundleInstall.bundle_ruby_dir
+      Kompo::BundleInstall.bundle_ruby_dir(args: {cache_dir: File.join(tmpdir, ".kompo", "cache")})
       assert Dir.exist?(File.join(work_dir, "bundle")), "FromCache should restore bundle directory"
     end
   end
@@ -79,9 +77,7 @@ class BundleInstallTest < Minitest::Test
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::CopyGemfile, gemfile_exists: true)
       mock_task(Kompo::InstallRuby, ruby_version: "3.4.1", ruby_major_minor: "3.4")
-      mock_args(cache_dir: File.join(tmpdir, ".kompo", "cache"))
-
-      bundle_ruby_dir = Kompo::BundleInstall.bundle_ruby_dir
+      bundle_ruby_dir = Kompo::BundleInstall.bundle_ruby_dir(args: {cache_dir: File.join(tmpdir, ".kompo", "cache")})
 
       # Verify cache was restored
       assert Dir.exist?(File.join(work_dir, "bundle"))
@@ -146,8 +142,6 @@ class BundleInstallParseVersionTest < Minitest::Test
         ruby_install_dir: ruby_install_dir,
         ruby_version: "3.4.1",
         ruby_major_minor: "3.4")
-      mock_args(cache_dir: File.join(tmpdir, ".kompo", "cache"), no_cache: true)
-
       # Mock bundler config set and install
       @mock.stub([ruby_path, bundler_path, "config", "set", "--local", "path", "bundle"],
         output: "", success: true)
@@ -158,7 +152,7 @@ class BundleInstallParseVersionTest < Minitest::Test
 
       tmpdir << "work/bundle/ruby/3.4.0/" << ["work/.bundle/config", "BUNDLE_PATH: bundle"]
 
-      capture_io { Kompo::BundleInstall.run }
+      capture_io { Kompo::BundleInstall.run(args: {cache_dir: File.join(tmpdir, ".kompo", "cache"), no_cache: true}) }
 
       # Should NOT attempt to check or install bundler (invalid version skipped)
       gem_path = File.join(ruby_install_dir, "bin", "gem")
@@ -204,8 +198,6 @@ class BundleInstallFromSourceTest < Minitest::Test
         ruby_install_dir: ruby_install_dir,
         ruby_version: "3.4.1",
         ruby_major_minor: "3.4")
-      mock_args(cache_dir: File.join(tmpdir, ".kompo", "cache"), no_cache: true)
-
       # Mock: get current bundler version (different from BUNDLED WITH)
       @mock.stub([ruby_path, "-e", "require 'bundler'; puts Bundler::VERSION"],
         output: "2.6.9", success: true)
@@ -226,7 +218,7 @@ class BundleInstallFromSourceTest < Minitest::Test
       # Create expected directory structure
       tmpdir << "work/bundle/ruby/3.4.0/" << ["work/.bundle/config", "BUNDLE_PATH: bundle"]
 
-      capture_io { Kompo::BundleInstall.run }
+      capture_io { Kompo::BundleInstall.run(args: {cache_dir: File.join(tmpdir, ".kompo", "cache"), no_cache: true}) }
 
       assert @mock.called?(:run, ruby_path, gem_path, "install", "bundler", "-v", "2.5.0"),
         "Should install bundler matching BUNDLED WITH version"
@@ -253,8 +245,6 @@ class BundleInstallFromSourceTest < Minitest::Test
         ruby_install_dir: ruby_install_dir,
         ruby_version: "3.4.1",
         ruby_major_minor: "3.4")
-      mock_args(cache_dir: File.join(tmpdir, ".kompo", "cache"), no_cache: true)
-
       # Mock: get current bundler version (same as BUNDLED WITH)
       @mock.stub([ruby_path, "-e", "require 'bundler'; puts Bundler::VERSION"],
         output: "2.6.9", success: true)
@@ -270,7 +260,7 @@ class BundleInstallFromSourceTest < Minitest::Test
       # Create expected directory structure
       tmpdir << "work/bundle/ruby/3.4.0/" << ["work/.bundle/config", "BUNDLE_PATH: bundle"]
 
-      capture_io { Kompo::BundleInstall.run }
+      capture_io { Kompo::BundleInstall.run(args: {cache_dir: File.join(tmpdir, ".kompo", "cache"), no_cache: true}) }
 
       gem_path = File.join(ruby_install_dir, "bin", "gem")
       refute @mock.called?(:run, ruby_path, gem_path, "install", "bundler", "-v", "2.6.9"),
@@ -299,8 +289,6 @@ class BundleInstallFromSourceTest < Minitest::Test
         ruby_install_dir: ruby_install_dir,
         ruby_version: "3.4.1",
         ruby_major_minor: "3.4")
-      mock_args(cache_dir: File.join(tmpdir, ".kompo", "cache"), no_cache: true)
-
       # Mock bundler config set and install
       @mock.stub([ruby_path, bundler_path, "config", "set", "--local", "path", "bundle"],
         output: "", success: true)
@@ -311,7 +299,7 @@ class BundleInstallFromSourceTest < Minitest::Test
 
       tmpdir << "work/bundle/ruby/3.4.0/" << ["work/.bundle/config", "BUNDLE_PATH: bundle"]
 
-      capture_io { Kompo::BundleInstall.run }
+      capture_io { Kompo::BundleInstall.run(args: {cache_dir: File.join(tmpdir, ".kompo", "cache"), no_cache: true}) }
 
       refute @mock.called?(:capture, ruby_path, "-e", "require 'bundler'; puts Bundler::VERSION"),
         "Should not check bundler version when BUNDLED WITH is empty"
@@ -336,8 +324,6 @@ class BundleInstallFromSourceTest < Minitest::Test
         bundler_path: bundler_path,
         ruby_version: "3.4.1",
         ruby_major_minor: "3.4")
-      mock_args(cache_dir: cache_dir, no_cache: true)
-
       # Mock bundler config set command
       @mock.stub([ruby_path, bundler_path, "config", "set", "--local", "path", "bundle"],
         output: "", success: true)
@@ -353,7 +339,7 @@ class BundleInstallFromSourceTest < Minitest::Test
       # Create expected directory structure that bundle install would create
       tmpdir << "work/bundle/ruby/3.4.0/" << ["work/.bundle/config", "BUNDLE_PATH: bundle"]
 
-      capture_io { Kompo::BundleInstall.run }
+      capture_io { Kompo::BundleInstall.run(args: {cache_dir: cache_dir, no_cache: true}) }
 
       # Verify bundle install was called
       assert @mock.called?(:run, ruby_path, bundler_path, "install")
