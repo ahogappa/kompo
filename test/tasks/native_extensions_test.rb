@@ -287,7 +287,7 @@ class BuildNativeGemWithMockTest < Minitest::Test
              << ["ext/rustgem/target/release/librustgem.a", "fake static lib"]
 
       ext_dir = tmpdir / "ext" / "rustgem"
-      cargo_toml = File.join(ext_dir, "Cargo.toml")
+      cargo_toml = ext_dir / "Cargo.toml"
 
       mock_task(Kompo::CargoPath, path: "/usr/local/bin/cargo")
       mock_task(Kompo::WorkDir, path: tmpdir / "work")

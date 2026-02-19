@@ -330,7 +330,7 @@ class PackingCacheTest < Minitest::Test
   def test_ruby_cflags_normalization
     with_tmpdir do |tmpdir|
       work_dir = tmpdir / "work"
-      ruby_build_path = File.join(work_dir, "_ruby/build")
+      ruby_build_path = work_dir / "_ruby/build"
 
       cache = Kompo::PackingCache.new(
         cache_dir: tmpdir / "cache",
@@ -351,7 +351,7 @@ class PackingCacheTest < Minitest::Test
 
       # Restore with different work_dir
       new_work_dir = tmpdir / "new_work"
-      new_ruby_build_path = File.join(new_work_dir, "_ruby/build")
+      new_ruby_build_path = new_work_dir / "_ruby/build"
       restored = cache.restore(new_work_dir, new_ruby_build_path)
 
       # Ruby-related -I paths should be updated to new work_dir
@@ -366,7 +366,7 @@ class PackingCacheTest < Minitest::Test
   def test_ruby_paths_normalization
     with_tmpdir do |tmpdir|
       work_dir = tmpdir / "work"
-      ruby_build_path = File.join(work_dir, "_ruby/build")
+      ruby_build_path = work_dir / "_ruby/build"
 
       cache = Kompo::PackingCache.new(
         cache_dir: tmpdir / "cache",
@@ -384,7 +384,7 @@ class PackingCacheTest < Minitest::Test
 
       # Restore with different work_dir
       new_work_dir = tmpdir / "new_work"
-      new_ruby_build_path = File.join(new_work_dir, "_ruby/build")
+      new_ruby_build_path = new_work_dir / "_ruby/build"
       restored = cache.restore(new_work_dir, new_ruby_build_path)
 
       # Ruby paths should be updated to new work_dir

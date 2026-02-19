@@ -20,14 +20,14 @@ class CollectDependenciesTest < Minitest::Test
         ruby_major_minor: "3.4",
         ruby_build_path: "/path/to/build")
       mock_task(Kompo::KompoVfsPath, path: "/path/to/kompo_lib")
-      mock_task(Kompo::MakeMainC, path: File.join(work_dir, "main.c"))
-      mock_task(Kompo::MakeFsC, path: File.join(work_dir, "fs.c"))
+      mock_task(Kompo::MakeMainC, path: work_dir / "main.c")
+      mock_task(Kompo::MakeFsC, path: work_dir / "fs.c")
       mock_task(Kompo::BuildNativeGem, exts_dir: nil, exts: [])
       mock_task(Kompo::InstallDeps, lib_paths: "", static_libs: [])
       output_path = Kompo::CollectDependencies.output_path(args: {project_dir: tmpdir / "myproject", output_dir: output_dir})
 
       # Output should be in output_dir with project name
-      assert_equal File.join(output_dir, "myproject"), output_path
+      assert_equal (output_dir / "myproject").to_s, output_path
     end
   end
 
@@ -44,8 +44,8 @@ class CollectDependenciesTest < Minitest::Test
         ruby_major_minor: "3.4",
         ruby_build_path: "/path/to/build")
       mock_task(Kompo::KompoVfsPath, path: "/path/to/kompo_lib")
-      mock_task(Kompo::MakeMainC, path: File.join(work_dir, "main.c"))
-      mock_task(Kompo::MakeFsC, path: File.join(work_dir, "fs.c"))
+      mock_task(Kompo::MakeMainC, path: work_dir / "main.c")
+      mock_task(Kompo::MakeFsC, path: work_dir / "fs.c")
       mock_task(Kompo::BuildNativeGem, exts_dir: nil, exts: [])
       mock_task(Kompo::InstallDeps, lib_paths: "", static_libs: [])
       output_path = Kompo::CollectDependencies.output_path(args: {project_dir: tmpdir / "myproject", output_dir: output_file})

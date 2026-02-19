@@ -12,7 +12,7 @@ class TmpDirTest < Minitest::Test
 
   def test_works_with_file_join
     with_tmpdir do |tmpdir|
-      path = File.join(tmpdir, "foo")
+      path = tmpdir / "foo"
       assert path.end_with?("/foo")
     end
   end

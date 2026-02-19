@@ -67,9 +67,9 @@ class InstallRubyTest < Minitest::Test
              << ["#{cache_prefix}/metadata.json", JSON.generate(metadata)]
 
       cache_install_dir = tmpdir / cache_prefix / "ruby"
-      FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "ruby"))
-      FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "bundler"))
-      FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "gem"))
+      FileUtils.chmod(0o755, cache_install_dir / "bin" / "ruby")
+      FileUtils.chmod(0o755, cache_install_dir / "bin" / "bundler")
+      FileUtils.chmod(0o755, cache_install_dir / "bin" / "gem")
 
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
 
@@ -101,9 +101,9 @@ class InstallRubyTest < Minitest::Test
              << ["#{cache_prefix}/metadata.json", JSON.generate(metadata)]
 
       cache_install_dir = tmpdir / cache_prefix / "ruby"
-      FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "ruby"))
-      FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "irb"))
-      FileUtils.chmod(0o755, File.join(cache_install_dir, "bin", "rake"))
+      FileUtils.chmod(0o755, cache_install_dir / "bin" / "ruby")
+      FileUtils.chmod(0o755, cache_install_dir / "bin" / "irb")
+      FileUtils.chmod(0o755, cache_install_dir / "bin" / "rake")
 
       mock_task(Kompo::WorkDir, path: tmpdir, original_dir: tmpdir)
 
@@ -165,11 +165,11 @@ class InstallRubyFromSourceTest < Minitest::Test
         output: "3.4.0\n3.4.1\n3.4.2\n", success: true)
 
       # Mock ruby-build execution
-      @mock.stub([ruby_build_path, "--verbose", "--keep", "3.4.1", File.join(work_dir, "_ruby")],
+      @mock.stub([ruby_build_path, "--verbose", "--keep", "3.4.1", work_dir / "_ruby"],
         output: "Building Ruby 3.4.1...", success: true)
 
       # Mock ruby --version after build
-      ruby_path = File.join(work_dir, "_ruby", "bin", "ruby")
+      ruby_path = work_dir / "_ruby" / "bin" / "ruby"
       @mock.stub([ruby_path, "--version"],
         output: "ruby 3.4.1 (2025-01-01) [arm64-darwin24]", success: true)
 
@@ -179,11 +179,11 @@ class InstallRubyFromSourceTest < Minitest::Test
       capture_io { Kompo::InstallRuby.run(args: task_args) }
 
       # Verify ruby-build was called
-      ruby_install_dir = File.join(work_dir, "_ruby")
+      ruby_install_dir = work_dir / "_ruby"
       assert @mock.called?(:run, ruby_build_path, "--verbose", "--keep", "3.4.1", ruby_install_dir)
 
       # Verify exports return expected values
-      assert_equal ruby_path, Kompo::InstallRuby.ruby_path(args: task_args)
+      assert_equal ruby_path.to_s, Kompo::InstallRuby.ruby_path(args: task_args)
       assert_equal "3.4.1", Kompo::InstallRuby.ruby_version(args: task_args)
       assert_equal "3.4", Kompo::InstallRuby.ruby_major_minor(args: task_args)
     end
@@ -235,14 +235,14 @@ class InstallRubyFromSourceTest < Minitest::Test
       }
 
       # Mock ruby --version
-      ruby_path = File.join(work_dir, "_ruby", "bin", "ruby")
+      ruby_path = work_dir / "_ruby" / "bin" / "ruby"
       @mock.stub([ruby_path, "--version"],
         output: "ruby 3.4.1", success: true)
 
       capture_io { Kompo::InstallRuby.run(args: task_args) }
 
       # ruby-build should NOT be called when restoring from cache
-      ruby_install_dir = File.join(work_dir, "_ruby")
+      ruby_install_dir = work_dir / "_ruby"
       refute @mock.called?(:run, ruby_build_path, "--verbose", "--keep", "3.4.1", ruby_install_dir),
         "ruby-build should not be called when valid cache exists"
 
@@ -268,11 +268,11 @@ class InstallRubyFromSourceTest < Minitest::Test
       }
 
       # Mock ruby-build execution with source directory
-      @mock.stub([ruby_build_path, "--verbose", "--keep", source_dir, File.join(work_dir, "_ruby")],
+      @mock.stub([ruby_build_path, "--verbose", "--keep", source_dir, work_dir / "_ruby"],
         output: "Building Ruby from source...", success: true)
 
       # Mock ruby --version
-      ruby_path = File.join(work_dir, "_ruby", "bin", "ruby")
+      ruby_path = work_dir / "_ruby" / "bin" / "ruby"
       @mock.stub([ruby_path, "--version"],
         output: "ruby 3.4.1", success: true)
 
@@ -282,7 +282,7 @@ class InstallRubyFromSourceTest < Minitest::Test
       capture_io { Kompo::InstallRuby.run(args: task_args) }
 
       # Verify ruby-build was called with source directory
-      ruby_install_dir = File.join(work_dir, "_ruby")
+      ruby_install_dir = work_dir / "_ruby"
       assert @mock.called?(:run, ruby_build_path, "--verbose", "--keep", source_dir, ruby_install_dir)
     end
   end
@@ -303,11 +303,11 @@ class InstallRubyFromSourceTest < Minitest::Test
       }
 
       # Mock ruby-build execution
-      @mock.stub([ruby_build_path, "--verbose", "--keep", "3.4.1", File.join(work_dir, "_ruby")],
+      @mock.stub([ruby_build_path, "--verbose", "--keep", "3.4.1", work_dir / "_ruby"],
         output: "Building Ruby...", success: true)
 
       # Mock ruby --version
-      ruby_path = File.join(work_dir, "_ruby", "bin", "ruby")
+      ruby_path = work_dir / "_ruby" / "bin" / "ruby"
       @mock.stub([ruby_path, "--version"],
         output: "ruby 3.4.1", success: true)
 
@@ -382,11 +382,11 @@ class InstallRubyFromSourceTest < Minitest::Test
         output: "3.4.0\n3.4.1\n3.4.2\n", success: true)
 
       # Mock ruby-build execution
-      @mock.stub([ruby_build_path, "--verbose", "--keep", "3.4.1", File.join(work_dir, "_ruby")],
+      @mock.stub([ruby_build_path, "--verbose", "--keep", "3.4.1", work_dir / "_ruby"],
         output: "Building Ruby 3.4.1...", success: true)
 
       # Mock ruby --version after build
-      ruby_path = File.join(work_dir, "_ruby", "bin", "ruby")
+      ruby_path = work_dir / "_ruby" / "bin" / "ruby"
       @mock.stub([ruby_path, "--version"],
         output: "ruby 3.4.1 (2025-01-01) [arm64-darwin24]", success: true)
 
@@ -396,7 +396,7 @@ class InstallRubyFromSourceTest < Minitest::Test
       capture_io { Kompo::InstallRuby.run(args: task_args) }
 
       # Verify cache was NOT created due to no_cache option
-      version_cache_dir = File.join(kompo_cache, "3.4.1")
+      version_cache_dir = kompo_cache / "3.4.1"
       cache_ruby_dir = File.join(version_cache_dir, "ruby")
       metadata_path = File.join(version_cache_dir, "metadata.json")
 

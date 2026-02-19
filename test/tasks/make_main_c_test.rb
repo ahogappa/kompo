@@ -17,7 +17,7 @@ class MakeMainCTest < Minitest::Test
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
 
       Kompo::MakeMainC.run(args: {project_dir: tmpdir / "project"})
-      content = File.read(File.join(work_dir, "main.c"))
+      content = File.read(work_dir / "main.c")
 
       assert_includes content, 'path\\\\to\\\\main.rb'
       refute_includes content, 'path\to\main.rb'
@@ -34,7 +34,7 @@ class MakeMainCTest < Minitest::Test
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
 
       Kompo::MakeMainC.run(args: {project_dir: tmpdir / 'project "app"'})
-      content = File.read(File.join(work_dir, "main.c"))
+      content = File.read(work_dir / "main.c")
 
       assert_includes content, 'project \\"app\\"'
     end
@@ -51,7 +51,7 @@ class MakeMainCTest < Minitest::Test
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
 
       Kompo::MakeMainC.run(args: {project_dir: tmpdir / "project"})
-      content = File.read(File.join(work_dir, "main.c"))
+      content = File.read(work_dir / "main.c")
 
       assert_includes content, "clean.rb"
       refute_includes content, "\0"
@@ -69,7 +69,7 @@ class MakeMainCTest < Minitest::Test
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
 
       Kompo::MakeMainC.run(args: {project_dir: tmpdir / "project"})
-      content = File.read(File.join(work_dir, "main.c"))
+      content = File.read(work_dir / "main.c")
 
       assert_includes content, "/tmp/kompo-work/main.rb"
     end
@@ -86,7 +86,7 @@ class MakeMainCTest < Minitest::Test
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
 
       Kompo::MakeMainC.run(args: {project_dir: tmpdir / "project"})
-      content = File.read(File.join(work_dir, "main.c"))
+      content = File.read(work_dir / "main.c")
 
       assert_includes content, 'path\\"evil'
       refute_includes content, 'path"evil'
@@ -104,7 +104,7 @@ class MakeMainCTest < Minitest::Test
       mock_task(Kompo::CopyGemfile, gemfile_exists: false)
 
       Kompo::MakeMainC.run(args: {project_dir: tmpdir / "project"})
-      content = File.read(File.join(work_dir, "main.c"))
+      content = File.read(work_dir / "main.c")
 
       assert_includes content, "line1\\nline2\\ttab\\rret"
       refute_includes content, "line1\nline2"

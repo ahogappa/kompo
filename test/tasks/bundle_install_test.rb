@@ -55,7 +55,7 @@ class BundleInstallTest < Minitest::Test
       mock_task(Kompo::InstallRuby, ruby_version: "3.4.1", ruby_major_minor: "3.4")
       # Execute and verify FromCache was selected (it restores bundle directory)
       Kompo::BundleInstall.bundle_ruby_dir(args: {cache_dir: tmpdir / ".kompo" / "cache"})
-      assert Dir.exist?(File.join(work_dir, "bundle")), "FromCache should restore bundle directory"
+      assert Dir.exist?(work_dir / "bundle"), "FromCache should restore bundle directory"
     end
   end
 
@@ -79,10 +79,10 @@ class BundleInstallTest < Minitest::Test
       bundle_ruby_dir = Kompo::BundleInstall.bundle_ruby_dir(args: {cache_dir: tmpdir / ".kompo" / "cache"})
 
       # Verify cache was restored
-      assert Dir.exist?(File.join(work_dir, "bundle"))
-      assert Dir.exist?(File.join(work_dir, ".bundle"))
-      assert File.exist?(File.join(work_dir, ".bundle", "config"))
-      assert_equal File.join(work_dir, "bundle", "ruby", "3.4.0"), bundle_ruby_dir
+      assert Dir.exist?(work_dir / "bundle")
+      assert Dir.exist?(work_dir / ".bundle")
+      assert File.exist?(work_dir / ".bundle" / "config")
+      assert_equal (work_dir / "bundle" / "ruby" / "3.4.0").to_s, bundle_ruby_dir
     end
   end
 
@@ -151,7 +151,7 @@ class BundleInstallParseVersionTest < Minitest::Test
       capture_io { Kompo::BundleInstall.run(args: {cache_dir: tmpdir / ".kompo" / "cache", no_cache: true}) }
 
       # Should NOT attempt to check or install bundler (invalid version skipped)
-      gem_path = File.join(ruby_install_dir, "bin", "gem")
+      gem_path = ruby_install_dir / "bin" / "gem"
       refute @mock.called?(:run, ruby_path, gem_path, "install", "bundler", "-v", "2.5.0; evil"),
         "Should not install bundler with invalid version format"
       refute @mock.called?(:capture, ruby_path, "-e", "require 'bundler'; puts Bundler::VERSION"),
@@ -198,7 +198,7 @@ class BundleInstallFromSourceTest < Minitest::Test
         output: "2.6.9", success: true)
 
       # Mock: gem install bundler
-      gem_path = File.join(ruby_install_dir, "bin", "gem")
+      gem_path = ruby_install_dir / "bin" / "gem"
       @mock.stub([ruby_path, gem_path, "install", "bundler", "-v", "2.5.0"],
         output: "Successfully installed bundler-2.5.0", success: true)
 
@@ -256,7 +256,7 @@ class BundleInstallFromSourceTest < Minitest::Test
 
       capture_io { Kompo::BundleInstall.run(args: {cache_dir: tmpdir / ".kompo" / "cache", no_cache: true}) }
 
-      gem_path = File.join(ruby_install_dir, "bin", "gem")
+      gem_path = ruby_install_dir / "bin" / "gem"
       refute @mock.called?(:run, ruby_path, gem_path, "install", "bundler", "-v", "2.6.9"),
         "Should not install bundler when version already matches"
     end
@@ -337,7 +337,7 @@ class BundleInstallFromSourceTest < Minitest::Test
       # Verify cache was NOT created due to no_cache option
       hash = Digest::SHA256.hexdigest(gemfile_lock_content)[0..15]
       bundle_cache_name = "bundle-#{hash}"
-      version_cache_dir = File.join(cache_dir, "3.4.1")
+      version_cache_dir = cache_dir / "3.4.1"
       bundle_cache_dir = File.join(version_cache_dir, bundle_cache_name)
 
       refute Dir.exist?(bundle_cache_dir), "Bundle cache directory should not be created with no_cache option"

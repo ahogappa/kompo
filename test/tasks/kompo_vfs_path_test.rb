@@ -283,9 +283,9 @@ class KompoVfsPathFromGitHubReleaseDownloadTest < Minitest::Test
         result = original_run.call(*command, chdir: chdir, env: env, error_message: error_message)
         if command.include?("tar")
           FileUtils.mkdir_p(extracted_lib_dir)
-          File.write(File.join(extracted_lib_dir, "libkompo_fs.a"), "fake")
-          File.write(File.join(extracted_lib_dir, "libkompo_wrap.a"), "fake")
-          File.write(File.join(extracted_lib_dir, "KOMPO_VFS_VERSION"), extracted_version)
+          File.write(extracted_lib_dir / "libkompo_fs.a", "fake")
+          File.write(extracted_lib_dir / "libkompo_wrap.a", "fake")
+          File.write(extracted_lib_dir / "KOMPO_VFS_VERSION", extracted_version)
         end
         result
       end

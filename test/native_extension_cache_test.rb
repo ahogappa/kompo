@@ -210,8 +210,8 @@ class NativeExtensionCacheTest < Minitest::Test
 
       restored_exts = cache.restore(work_dir)
 
-      assert Dir.exist?(File.join(work_dir, "ext", "nokogiri"))
-      assert File.exist?(File.join(work_dir, "ext", "nokogiri", "nokogiri.o"))
+      assert Dir.exist?(work_dir / "ext" / "nokogiri")
+      assert File.exist?(work_dir / "ext" / "nokogiri" / "nokogiri.o")
       assert_equal exts, restored_exts
     end
   end
@@ -236,8 +236,8 @@ class NativeExtensionCacheTest < Minitest::Test
       cache.restore(work_dir)
 
       # Old files should be replaced
-      refute Dir.exist?(File.join(work_dir, "ext", "old_gem"))
-      assert Dir.exist?(File.join(work_dir, "ext", "cached_gem"))
+      refute Dir.exist?(work_dir / "ext" / "old_gem")
+      assert Dir.exist?(work_dir / "ext" / "cached_gem")
     end
   end
 
@@ -324,14 +324,14 @@ class NativeExtensionCacheTest < Minitest::Test
 
       # Create work directory with bundle structure (simulating BundleCache restore)
       work_dir = tmpdir / "work"
-      gem_dir = File.join(work_dir, "bundle/ruby/3.4.0/gems/nokogiri-1.19.0")
+      gem_dir = work_dir / "bundle/ruby/3.4.0/gems/nokogiri-1.19.0"
       tmpdir << "work/bundle/ruby/3.4.0/gems/nokogiri-1.19.0/"
 
       # Restore
       cache.restore(work_dir)
 
       # Verify ext was restored
-      assert File.exist?(File.join(work_dir, "ext/nokogiri/nokogiri.o"))
+      assert File.exist?(work_dir / "ext/nokogiri/nokogiri.o")
 
       # Verify ports was restored to gem directory
       restored_ports = File.join(gem_dir, "ports/x86_64-darwin/libxml2/2.12.0/lib/libxml2.a")
@@ -358,7 +358,7 @@ class NativeExtensionCacheTest < Minitest::Test
       # Should not raise
       cache.restore(work_dir)
 
-      assert File.exist?(File.join(work_dir, "ext/simple_gem/simple.o"))
+      assert File.exist?(work_dir / "ext/simple_gem/simple.o")
     end
   end
 
@@ -391,7 +391,7 @@ class NativeExtensionCacheTest < Minitest::Test
       cache.restore(work_dir)
 
       # ext should be restored
-      assert File.exist?(File.join(work_dir, "ext/nokogiri/nokogiri.o"))
+      assert File.exist?(work_dir / "ext/nokogiri/nokogiri.o")
     end
   end
 
@@ -422,7 +422,7 @@ class NativeExtensionCacheTest < Minitest::Test
       cache.restore(new_work_dir)
 
       # Verify nested ports restored
-      restored = File.join(new_work_dir, "bundle/ruby/3.4.0/gems/nokogiri-1.19.0/ext/nokogiri/ports/arm64-darwin/libgumbo/lib/libgumbo.a")
+      restored = new_work_dir / "bundle/ruby/3.4.0/gems/nokogiri-1.19.0/ext/nokogiri/ports/arm64-darwin/libgumbo/lib/libgumbo.a"
       assert File.exist?(restored), "Nested ext ports should be restored"
     end
   end

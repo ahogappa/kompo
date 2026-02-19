@@ -191,8 +191,8 @@ class BundleCacheTest < Minitest::Test
 
       cache.restore(work_dir)
 
-      assert Dir.exist?(File.join(work_dir, "bundle", "ruby", "3.4.0", "gems", "sinatra-4.0.0"))
-      assert File.exist?(File.join(work_dir, ".bundle", "config"))
+      assert Dir.exist?(work_dir / "bundle" / "ruby" / "3.4.0" / "gems" / "sinatra-4.0.0")
+      assert File.exist?(work_dir / ".bundle" / "config")
     end
   end
 
@@ -218,8 +218,8 @@ class BundleCacheTest < Minitest::Test
       cache.restore(work_dir)
 
       # Old files should be replaced
-      refute Dir.exist?(File.join(work_dir, "bundle", "old"))
-      content = File.read(File.join(work_dir, ".bundle", "config"))
+      refute Dir.exist?(work_dir / "bundle" / "old")
+      content = File.read(work_dir / ".bundle" / "config")
       assert_equal "CACHED_CONFIG", content
     end
   end

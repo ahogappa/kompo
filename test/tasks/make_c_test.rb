@@ -10,8 +10,8 @@ class MakeMainCTest < Minitest::Test
     with_tmpdir do |tmpdir|
       tmpdir << "work/"
       work_dir = tmpdir / "work"
-      main_c_path = File.join(work_dir, "main.c")
-      entrypoint = File.join(work_dir, "main.rb")
+      main_c_path = work_dir / "main.c"
+      entrypoint = work_dir / "main.rb"
 
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
       mock_task(Kompo::CopyProjectFiles, entrypoint_path: entrypoint, additional_paths: [])
@@ -31,7 +31,7 @@ class MakeMainCTest < Minitest::Test
 
       path = Kompo::MakeMainC.path
 
-      assert_equal main_c_path, path
+      assert_equal main_c_path.to_s, path
       assert File.exist?(main_c_path), "main.c should be generated"
       content = File.read(main_c_path)
       assert_includes content, "ruby_init"
@@ -255,7 +255,7 @@ class MakeFsCTest < Minitest::Test
 
       # The entrypoint should only appear once, not twice
       path_list = decode_embedded_paths(content)
-      entrypoint_count = path_list.count { |p| p == entrypoint }
+      entrypoint_count = path_list.count { |p| p == entrypoint.to_s }
       assert_equal 1, entrypoint_count, "Entrypoint should only be embedded once"
     end
   end
@@ -453,7 +453,7 @@ class MakeFsCTest < Minitest::Test
   def setup_work_dir_with_entrypoint(tmpdir, content: "puts 'hello'")
     tmpdir << ["work/main.rb", content]
     work_dir = tmpdir / "work"
-    entrypoint = File.join(work_dir, "main.rb")
+    entrypoint = work_dir / "main.rb"
     [work_dir, entrypoint]
   end
 
