@@ -364,15 +364,8 @@ class MakeFsCTest < Minitest::Test
       path = Kompo::MakeFsC.path(args: {compress: true})
       content = File.read(path)
 
-      # Extract COMPRESSED_FILES data
-      compressed_match = content.match(/const char COMPRESSED_FILES\[\] = \{([^}]+)\}/)
-      assert compressed_match, "Should have COMPRESSED_FILES array"
-
-      # Convert the byte array back to binary data
-      compressed_bytes = compressed_match[1].split(",").map(&:to_i).pack("C*")
-
-      # Decompress using Zlib
-      decompressed = Zlib.inflate(compressed_bytes)
+      # Decompress the embedded COMPRESSED_FILES data using Zlib
+      decompressed = Zlib.inflate(decode_byte_array(content, "COMPRESSED_FILES"))
 
       # The decompressed data should contain our test content
       assert_includes decompressed, "TEST_CONTENT_FOR_DECOMPRESSION"
@@ -454,18 +447,29 @@ class MakeFsCTest < Minitest::Test
     end
   end
 
-  def test_make_fs_c_normalizes_work_dir_in_wd
+  def test_make_fs_c_emits_work_dir_as_wd_prefix_of_paths
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
-
-      # A work_dir restored from metadata.json can come back unnormalized. kompo-vfs
-      # matches WD as a raw byte prefix of every embedded path, so a trailing slash
-      # here would make every lookup miss and silently disable the VFS.
-      mock_fs_c_dependencies("#{work_dir}/", tmpdir, entrypoint)
+      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
 
       content = File.read(Kompo::MakeFsC.path)
+      wd = decode_wd(content)
 
-      assert_equal work_dir, decode_wd(content)
+      # kompo-vfs matches WD as a raw byte prefix of every embedded path, so WD must
+      # carry no trailing slash and every PATHS entry must start with it.
+      assert_equal work_dir, wd
+      assert decode_embedded_paths(content).all? { |p| p.start_with?("#{wd}/") }
+    end
+  end
+
+  def test_make_fs_c_rejects_unnormalized_work_dir
+    with_tmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      mock_fs_c_dependencies("#{work_dir}/", tmpdir, entrypoint)
+
+      # Shipping a binary whose WD never matches is worse than failing the build.
+      error = assert_raises(Taski::AggregateError) { Kompo::MakeFsC.path }
+      assert_match(/canonical absolute path/, error.message)
     end
   end
 
@@ -502,18 +506,21 @@ class MakeFsCTest < Minitest::Test
     [work_dir, entrypoint]
   end
 
-  # Decode the PATHS array from generated fs.c content into a list of embedded path strings
-  def decode_embedded_paths(fs_c_content)
-    paths_match = fs_c_content.match(/const char PATHS\[\] = \{([^}]+)\}/)
-    assert paths_match, "Should have PATHS array"
-    paths_match[1].split(",").map(&:to_i).pack("C*").split("\0")
+  # Decode a `const char NAME[] = {...}` byte array from generated fs.c content
+  def decode_byte_array(fs_c_content, name)
+    match = fs_c_content.match(/const char #{name}\[\] = \{([^}]+)\}/)
+    assert match, "Should have #{name} array"
+    match[1].split(",").map(&:to_i).pack("C*")
   end
 
-  # Decode the NUL-terminated WD array from generated fs.c content
+  # Decode the PATHS array into a list of embedded path strings
+  def decode_embedded_paths(fs_c_content)
+    decode_byte_array(fs_c_content, "PATHS").split("\0")
+  end
+
+  # Decode the NUL-terminated WD array
   def decode_wd(fs_c_content)
-    wd_match = fs_c_content.match(/const char WD\[\] = \{([^}]+)\}/)
-    assert wd_match, "Should have WD array"
-    wd_match[1].split(",").map(&:to_i).pack("C*").delete_suffix("\0")
+    decode_byte_array(fs_c_content, "WD").delete_suffix("\0")
   end
 
   def mock_fs_c_dependencies(work_dir, tmpdir, entrypoint,

@@ -34,6 +34,4 @@ const unsigned long long ORIGINAL_SIZES[] = {0};
 // Path data (always uncompressed)
 const char PATHS[] = {<%= @paths.join(',') %>};
 const int PATHS_SIZE = <%= @paths.size %>;
-<%# work_dir is normalized by MakeFsC#run; kompo-vfs matches WD as a raw byte
-    prefix of every PATHS entry, so it must not carry a trailing slash or "." %>
 const char WD[] = {<%= context.work_dir.bytes.join(',') %>,0};

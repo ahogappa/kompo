@@ -28,18 +28,14 @@ module Kompo
             metadata = JSON.parse(File.read(cache_metadata_path))
             cached_work_dir = metadata["work_dir"]
 
-            # Normalize before use. This value ends up in fs.c as WD[], and kompo-vfs
-            # compares WD byte-for-byte as a prefix of every embedded path. A trailing
-            # slash or a "." component here makes every path fail that prefix check,
-            # which silently disables the VFS and falls through to the real filesystem.
-            # Only absolute paths are normalized so relative ones are still rejected
-            # by valid_tmpdir_path? below.
-            cached_work_dir = File.expand_path(cached_work_dir) if cached_work_dir&.start_with?("/")
-
             if cached_work_dir && !valid_tmpdir_path?(cached_work_dir)
               warn "warn: #{cached_work_dir} is outside system temp directory, creating new work directory"
               cached_work_dir = nil
             end
+
+            # Canonicalized after validating, so a relative path is still rejected
+            # above instead of being made absolute against the cwd first.
+            cached_work_dir &&= canonical_path(cached_work_dir)
 
             if cached_work_dir
               # Check if the directory exists and belongs to us (has marker) or doesn't exist at all
@@ -80,10 +76,7 @@ module Kompo
 
       # No valid cache, create new work_dir
       tmpdir = Dir.mktmpdir(SecureRandom.uuid)
-      # Resolve symlinks to get the real path
-      # On macOS, /var/folders is a symlink to /private/var/folders
-      # If we don't resolve this, paths won't match at runtime
-      @path = File.realpath(tmpdir)
+      @path = canonical_path(tmpdir)
 
       # Create marker file to identify this as a Kompo work directory
       File.write(File.join(@path, MARKER_FILE), "kompo-work-dir")
@@ -106,6 +99,16 @@ module Kompo
     end
 
     private
+
+    # The single place work_dir is canonicalized, so both branches of #run export
+    # the same shape. Everything downstream compares this byte-for-byte: it is
+    # emitted as WD[] in fs.c, it prefixes every entry in PATHS, and it prefixes
+    # the entrypoint in main.c. A trailing slash, a "." component, or an unresolved
+    # symlink (on macOS /var/folders is a symlink to /private/var/folders) makes
+    # kompo-vfs miss every lookup and silently fall through to the real filesystem.
+    def canonical_path(path)
+      File.exist?(path) ? File.realpath(path) : File.expand_path(path)
+    end
 
     def valid_tmpdir_path?(path)
       return false unless path.start_with?("/")

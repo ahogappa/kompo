@@ -59,12 +59,9 @@ module Kompo
       TemplateContext.new(
         exts: escaped_exts,
         work_dir: work_dir,
-        # This string is handed to kompo_fs_set_entrypoint_dir() and must be
-        # byte-identical to the matching PATHS entry, which MakeFsC derives with
-        # File.expand_path. CopyProjectFiles#run normalizes entrypoint_path for that
-        # reason - do not reintroduce a raw File.join there. Normalizing again here
-        # would be redundant and would turn junk input into an exception rather than
-        # sanitizing it, which is what c_string_escape is for.
+        # Already canonical (CopyProjectFiles#run); must stay byte-identical to the
+        # matching PATHS entry. Escaping only here, so junk input is sanitized
+        # rather than raising.
         work_dir_entrypoint: c_string_escape(entrypoint),
         project_dir: c_string_escape(project_dir),
         has_gemfile: CopyGemfile.gemfile_exists

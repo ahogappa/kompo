@@ -37,6 +37,24 @@ class WorkDirTest < Minitest::Test
     end
   end
 
+  def test_work_dir_canonicalizes_cached_work_dir
+    with_tmpdir do |tmpdir|
+      cached_work_dir = File.join(tmpdir, "cached_work")
+      # metadata.json is the one input that can carry an unnormalized path. It ends
+      # up as WD[] in fs.c, which kompo-vfs matches as a raw byte prefix of every
+      # embedded path, so a trailing slash there silently disables the whole VFS.
+      metadata = {"work_dir" => "#{cached_work_dir}/", "ruby_version" => RUBY_VERSION}
+
+      tmpdir << "cached_work/" \
+             << ["cached_work/#{Kompo::WorkDir::MARKER_FILE}", "kompo-work-dir"] \
+             << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
+
+      path = Kompo::WorkDir.path(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache")})
+
+      assert_equal cached_work_dir, path
+    end
+  end
+
   def test_work_dir_handles_invalid_metadata_json
     with_tmpdir do |tmpdir|
       tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", "not valid json"]
