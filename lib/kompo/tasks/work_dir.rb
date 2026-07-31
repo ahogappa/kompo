@@ -28,6 +28,14 @@ module Kompo
             metadata = JSON.parse(File.read(cache_metadata_path))
             cached_work_dir = metadata["work_dir"]
 
+            # Normalize before use. This value ends up in fs.c as WD[], and kompo-vfs
+            # compares WD byte-for-byte as a prefix of every embedded path. A trailing
+            # slash or a "." component here makes every path fail that prefix check,
+            # which silently disables the VFS and falls through to the real filesystem.
+            # Only absolute paths are normalized so relative ones are still rejected
+            # by valid_tmpdir_path? below.
+            cached_work_dir = File.expand_path(cached_work_dir) if cached_work_dir&.start_with?("/")
+
             if cached_work_dir && !valid_tmpdir_path?(cached_work_dir)
               warn "warn: #{cached_work_dir} is outside system temp directory, creating new work directory"
               cached_work_dir = nil

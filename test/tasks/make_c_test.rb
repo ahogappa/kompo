@@ -454,6 +454,45 @@ class MakeFsCTest < Minitest::Test
     end
   end
 
+  def test_make_fs_c_normalizes_work_dir_in_wd
+    with_tmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+
+      # A work_dir restored from metadata.json can come back unnormalized. kompo-vfs
+      # matches WD as a raw byte prefix of every embedded path, so a trailing slash
+      # here would make every lookup miss and silently disable the VFS.
+      mock_fs_c_dependencies("#{work_dir}/", tmpdir, entrypoint)
+
+      content = File.read(Kompo::MakeFsC.path)
+
+      assert_equal work_dir, decode_wd(content)
+    end
+  end
+
+  def test_make_fs_c_deduplicates_on_embedded_path
+    with_tmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      tmpdir << ["current/lib/x.rb", "module X; end"] \
+             << ["orig/lib/x.rb", "module X; end"]
+      current_install = File.join(tmpdir, "current")
+      orig_install = File.join(tmpdir, "orig")
+
+      # When the two install dirs differ, add_file rewrites paths under the current
+      # dir to the original one. Two distinct source paths then collapse onto the
+      # same embedded path, which must still produce a single PATHS entry.
+      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint,
+        ruby_install_dir: current_install,
+        original_ruby_install_dir: orig_install,
+        stdlib_paths: [File.join(current_install, "lib"), File.join(orig_install, "lib")])
+
+      path_list = decode_embedded_paths(File.read(Kompo::MakeFsC.path))
+      embedded = File.join(orig_install, "lib", "x.rb")
+
+      assert_equal 1, path_list.count { |p| p == embedded }
+      refute path_list.any? { |p| p.start_with?(current_install) }
+    end
+  end
+
   private
 
   def setup_work_dir_with_entrypoint(tmpdir, content: "puts 'hello'")
@@ -470,17 +509,26 @@ class MakeFsCTest < Minitest::Test
     paths_match[1].split(",").map(&:to_i).pack("C*").split("\0")
   end
 
+  # Decode the NUL-terminated WD array from generated fs.c content
+  def decode_wd(fs_c_content)
+    wd_match = fs_c_content.match(/const char WD\[\] = \{([^}]+)\}/)
+    assert wd_match, "Should have WD array"
+    wd_match[1].split(",").map(&:to_i).pack("C*").delete_suffix("\0")
+  end
+
   def mock_fs_c_dependencies(work_dir, tmpdir, entrypoint,
     additional_paths: [],
     gemfile_exists: false,
     gemspec_paths: [],
     bundler_config_path: nil,
     bundle_ruby_dir: nil,
-    stdlib_paths: [])
+    stdlib_paths: [],
+    ruby_install_dir: "/path/to/install",
+    original_ruby_install_dir: "/path/to/install")
     mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
     mock_task(Kompo::InstallRuby,
-      ruby_install_dir: "/path/to/install",
-      original_ruby_install_dir: "/path/to/install",
+      ruby_install_dir: ruby_install_dir,
+      original_ruby_install_dir: original_ruby_install_dir,
       ruby_major_minor: "3.4")
     mock_task(Kompo::CopyProjectFiles, entrypoint_path: entrypoint, additional_paths: additional_paths)
     mock_task(Kompo::CopyGemfile, gemfile_exists: gemfile_exists, gemspec_paths: gemspec_paths)
