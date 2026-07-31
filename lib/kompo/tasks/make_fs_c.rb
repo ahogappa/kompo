@@ -57,11 +57,9 @@ module Kompo
       @original_total_size = 0
       @compressed_total_size = 0
 
-      # PATHS ordering is part of the fs.c contract, not an accident: entries land
-      # in add_file call order, which keeps every directory - and so every gem -
-      # contiguous in both PATHS and FILES. kompo-vfs assigns node IDs in this order
-      # and inherits that locality, so do not sort PATHS globally or otherwise
-      # regroup it. Nothing will fail loudly; the VFS just gets slower.
+      # kompo-vfs assigns node IDs in PATHS order and inherits the per-directory (so
+      # per-gem) locality this emission order produces. Do not sort PATHS globally or
+      # otherwise regroup it: nothing fails loudly, the VFS just gets slower.
       group("Collecting files") do
         collect_embed_paths.each do |category, paths|
           skip_ext = category != :project
@@ -133,11 +131,10 @@ module Kompo
       # Resolve base directory to ensure symlink safety
       real_base = File.realpath(dir_path)
 
-      # Depth-first pre-order with siblings sorted by name is what gives PATHS the
-      # locality described in #run, so Dir.glob("**/*") is not a drop-in replacement.
+      # Find's sorted depth-first walk is what produces the locality #run relies on;
+      # Dir.glob("**/*") is not a drop-in replacement.
       Find.find(dir_path) do |path|
-        # Prune certain directories; directories themselves are never emitted as
-        # PATHS entries, only the files inside them.
+        # Prune certain directories
         if File.directory?(path)
           base = File.basename(path)
           Find.prune if PRUNE_DIRS.any? { |d| base == d || path.end_with?("/#{d}") }
@@ -191,10 +188,9 @@ module Kompo
         path
       end
 
-      # Dedup after the rewrite, not before: two source paths can map onto one
-      # embedded path, and emitting it twice would orphan the earlier bytes in FILES
-      # (kompo-vfs keeps only the last entry for a path). Equal source paths always
-      # produce equal embedded paths, so source duplicates are still caught.
+      # Two source paths can collapse onto one embedded path, and emitting it twice
+      # would orphan the earlier bytes in FILES: kompo-vfs keeps only the last entry
+      # for a given path.
       if @added_paths.include?(embedded_path)
         @duplicate_count += 1
         puts "skip: duplicate path #{path}" if @verbose
@@ -219,11 +215,9 @@ module Kompo
     end
 
     def build_template_context
-      # WD[] is compared byte-for-byte by kompo-vfs as a prefix of every entry in
-      # PATHS, so an unnormalized work_dir would not fail the build - it would ship
-      # a binary whose VFS never matches anything. WorkDir#canonical_path
-      # guarantees this; check it here rather than silently re-normalizing, so a
-      # regression upstream surfaces at build time.
+      # An unnormalized work_dir would not break the build, it would ship a binary
+      # whose VFS never matches anything (see WorkDir#canonical_path). Fail loudly
+      # rather than repairing it here, so the upstream regression gets fixed.
       unless @work_dir == File.expand_path(@work_dir)
         raise "work_dir must be a canonical absolute path, got: #{@work_dir.inspect}"
       end

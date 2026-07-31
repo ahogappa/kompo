@@ -59,9 +59,9 @@ module Kompo
       TemplateContext.new(
         exts: escaped_exts,
         work_dir: work_dir,
-        # Already canonical (CopyProjectFiles#run); must stay byte-identical to the
-        # matching PATHS entry. Escaping only here, so junk input is sanitized
-        # rather than raising.
+        # Normalized upstream (CopyProjectFiles#run) to stay byte-identical to the
+        # matching PATHS entry. Deliberately not re-normalized here: File.expand_path
+        # raises on the junk input c_string_escape exists to absorb.
         work_dir_entrypoint: c_string_escape(entrypoint),
         project_dir: c_string_escape(project_dir),
         has_gemfile: CopyGemfile.gemfile_exists

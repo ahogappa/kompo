@@ -455,8 +455,7 @@ class MakeFsCTest < Minitest::Test
       content = File.read(Kompo::MakeFsC.path)
       wd = decode_wd(content)
 
-      # kompo-vfs matches WD as a raw byte prefix of every embedded path, so WD must
-      # carry no trailing slash and every PATHS entry must start with it.
+      # kompo-vfs resolves every embedded path by stripping WD as a raw byte prefix.
       assert_equal work_dir, wd
       assert decode_embedded_paths(content).all? { |p| p.start_with?("#{wd}/") }
     end
@@ -481,9 +480,8 @@ class MakeFsCTest < Minitest::Test
       current_install = File.join(tmpdir, "current")
       orig_install = File.join(tmpdir, "orig")
 
-      # When the two install dirs differ, add_file rewrites paths under the current
-      # dir to the original one. Two distinct source paths then collapse onto the
-      # same embedded path, which must still produce a single PATHS entry.
+      # Diverging install dirs are the one configuration where two distinct source
+      # paths collapse onto the same embedded path.
       mock_fs_c_dependencies(work_dir, tmpdir, entrypoint,
         ruby_install_dir: current_install,
         original_ruby_install_dir: orig_install,
@@ -506,19 +504,16 @@ class MakeFsCTest < Minitest::Test
     [work_dir, entrypoint]
   end
 
-  # Decode a `const char NAME[] = {...}` byte array from generated fs.c content
   def decode_byte_array(fs_c_content, name)
     match = fs_c_content.match(/const char #{name}\[\] = \{([^}]+)\}/)
     assert match, "Should have #{name} array"
     match[1].split(",").map(&:to_i).pack("C*")
   end
 
-  # Decode the PATHS array into a list of embedded path strings
   def decode_embedded_paths(fs_c_content)
     decode_byte_array(fs_c_content, "PATHS").split("\0")
   end
 
-  # Decode the NUL-terminated WD array
   def decode_wd(fs_c_content)
     decode_byte_array(fs_c_content, "WD").delete_suffix("\0")
   end

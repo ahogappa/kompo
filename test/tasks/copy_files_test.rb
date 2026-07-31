@@ -165,9 +165,8 @@ class CopyProjectFilesTest < Minitest::Test
       project_dir = File.join(tmpdir, "project")
       mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
 
-      # "lib/../main.rb" resolves inside project_dir, so it passes the escape check
-      # and an unnormalized ".." would reach main.c. kompo-vfs derives WORKING_DIR
-      # from Path::parent() of this string, and parent() does not collapse "..".
+      # "lib/../main.rb" resolves inside project_dir, so the escape check above lets
+      # it through and the ".." reaches main.c.
       args = {project_dir: project_dir, entrypoint: "lib/../main.rb", files: []}
       entrypoint_path = Kompo::CopyProjectFiles.entrypoint_path(args: args)
 

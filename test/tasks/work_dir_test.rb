@@ -40,9 +40,7 @@ class WorkDirTest < Minitest::Test
   def test_work_dir_canonicalizes_cached_work_dir
     with_tmpdir do |tmpdir|
       cached_work_dir = File.join(tmpdir, "cached_work")
-      # metadata.json is the one input that can carry an unnormalized path. It ends
-      # up as WD[] in fs.c, which kompo-vfs matches as a raw byte prefix of every
-      # embedded path, so a trailing slash there silently disables the whole VFS.
+      # metadata.json is the only input that can hand WorkDir an unnormalized path.
       metadata = {"work_dir" => "#{cached_work_dir}/", "ruby_version" => RUBY_VERSION}
 
       tmpdir << "cached_work/" \

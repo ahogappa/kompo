@@ -33,8 +33,8 @@ module Kompo
               cached_work_dir = nil
             end
 
-            # Canonicalized after validating, so a relative path is still rejected
-            # above instead of being made absolute against the cwd first.
+            # After validating, not before: expanding first would make a relative path
+            # absolute against the cwd and slip it past valid_tmpdir_path?.
             cached_work_dir &&= canonical_path(cached_work_dir)
 
             if cached_work_dir
@@ -100,11 +100,9 @@ module Kompo
 
     private
 
-    # The single place work_dir is canonicalized, so both branches of #run export
-    # the same shape. Everything downstream compares this byte-for-byte: it is
-    # emitted as WD[] in fs.c, it prefixes every entry in PATHS, and it prefixes
-    # the entrypoint in main.c. A trailing slash, a "." component, or an unresolved
-    # symlink (on macOS /var/folders is a symlink to /private/var/folders) makes
+    # Everything downstream compares this byte-for-byte: WD[] in fs.c, the prefix of
+    # every PATHS entry, the entrypoint in main.c. A trailing slash, a "." component,
+    # or an unresolved symlink (macOS /var/folders -> /private/var/folders) makes
     # kompo-vfs miss every lookup and silently fall through to the real filesystem.
     def canonical_path(path)
       File.exist?(path) ? File.realpath(path) : File.expand_path(path)
