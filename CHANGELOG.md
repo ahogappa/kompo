@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Require kompo-vfs >= 0.7.0. This is also the version fetched by the prebuilt-binary
+  installer and built from source in CI, so existing 0.6.x installations must be upgraded
+  (`brew upgrade kompo-vfs`, or `git pull && cargo build --release` in `~/.kompo/kompo-vfs`)
+
 ## [0.4.0] - 2025-01-26
 
 ### Added
