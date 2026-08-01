@@ -55,21 +55,31 @@ class WorkDirTest < Minitest::Test
 
   def test_work_dir_rejects_cached_work_dir_behind_an_escaping_symlink
     with_tmpdir do |tmpdir|
-      outside = File.expand_path("../..", __dir__)
-      link = File.join(tmpdir, "escape")
-      File.symlink(outside, link)
-      escaped = File.join(link, "kompo_escape_probe")
+      tmpdir << "tmp/" << "outside/"
+      fake_tmpdir = File.join(tmpdir, "tmp")
+      outside = File.join(tmpdir, "outside")
+      escaped = File.join(fake_tmpdir, "escape", "work")
+      File.symlink(outside, File.join(fake_tmpdir, "escape"))
 
-      # Lexically this sits under Dir.tmpdir, so only resolving the symlink reveals
-      # that mkdir_p would create the work directory outside the temp directory.
       metadata = {"work_dir" => escaped, "ruby_version" => RUBY_VERSION}
       tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
 
-      path = Kompo::WorkDir.path(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache")})
+      # Driving Dir.tmpdir keeps both ends of the escape inside the per-test tmpdir:
+      # the target stays writable, so a regression really does create the directory
+      # and gets caught, and the mess is cleaned up even when an assertion fails.
+      original_tmpdir = ENV["TMPDIR"]
+      ENV["TMPDIR"] = fake_tmpdir
+      begin
+        path = Kompo::WorkDir.path(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache")})
+      ensure
+        ENV["TMPDIR"] = original_tmpdir
+      end
 
-      refute_equal File.join(outside, "kompo_escape_probe"), path
-      refute Dir.exist?(File.join(outside, "kompo_escape_probe"))
-      assert path.start_with?(File.realpath(Dir.tmpdir))
+      # Lexically escaped sits under Dir.tmpdir; only resolving the symlink shows
+      # that mkdir_p would land outside it.
+      refute_equal File.join(outside, "work"), path
+      refute Dir.exist?(File.join(outside, "work"))
+      assert path.start_with?("#{fake_tmpdir}#{File::SEPARATOR}")
     end
   end
 
