@@ -57,6 +57,9 @@ module Kompo
       @original_total_size = 0
       @compressed_total_size = 0
 
+      # kompo-vfs assigns node IDs in PATHS order and inherits the per-directory (so
+      # per-gem) locality this emission order produces. Do not sort PATHS globally or
+      # otherwise regroup it: nothing fails loudly, the VFS just gets slower.
       group("Collecting files") do
         collect_embed_paths.each do |category, paths|
           skip_ext = category != :project
@@ -128,6 +131,8 @@ module Kompo
       # Resolve base directory to ensure symlink safety
       real_base = File.realpath(dir_path)
 
+      # Find's sorted depth-first walk is what produces the locality #run relies on;
+      # Dir.glob("**/*") is not a drop-in replacement.
       Find.find(dir_path) do |path|
         # Prune certain directories
         if File.directory?(path)
@@ -171,23 +176,27 @@ module Kompo
     end
 
     def add_file(path)
-      # Skip duplicate files (same absolute path)
-      if @added_paths.include?(path)
-        @duplicate_count += 1
-        puts "skip: duplicate path #{path}" if @verbose
-        return
-      end
-      @added_paths.add(path)
-
       # Keep original paths for VFS - the caching system already ensures
       # the same work_dir path is reused across builds via metadata.json
       # Ruby's $LOAD_PATH uses work_dir paths, so embedded files must match.
+      # Inert today: InstallRuby sets original_ruby_install_dir to ruby_install_dir
+      # on every code path, so this replacement never fires.
       embedded_path = if @current_ruby_install_dir != @original_ruby_install_dir && path.start_with?(@current_ruby_install_dir)
         # Ruby install dir path replacement for cache compatibility (when paths differ)
         path.sub(@current_ruby_install_dir, @original_ruby_install_dir)
       else
         path
       end
+
+      # Two source paths can collapse onto one embedded path, and emitting it twice
+      # would orphan the earlier bytes in FILES: kompo-vfs keeps only the last entry
+      # for a given path.
+      if @added_paths.include?(embedded_path)
+        @duplicate_count += 1
+        puts "skip: duplicate path #{path}" if @verbose
+        return
+      end
+      @added_paths.add(embedded_path)
 
       puts "#{path} -> #{embedded_path}" if path != embedded_path
 
@@ -206,6 +215,13 @@ module Kompo
     end
 
     def build_template_context
+      # An unnormalized work_dir would not break the build, it would ship a binary
+      # whose VFS never matches anything (see WorkDir#canonical_path). Fail loudly
+      # rather than repairing it here, so the upstream regression gets fixed.
+      unless @work_dir == File.realpath(@work_dir)
+        raise "work_dir must be a canonical absolute path, got: #{@work_dir.inspect}"
+      end
+
       FsCTemplateContext.new(
         work_dir: @work_dir
       )

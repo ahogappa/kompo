@@ -157,6 +157,24 @@ class CopyProjectFilesTest < Minitest::Test
     end
   end
 
+  def test_copy_project_files_normalizes_entrypoint_path
+    with_tmpdir do |tmpdir|
+      tmpdir << "work/" << ["project/main.rb", "puts 'hello'"] << "project/lib/"
+
+      work_dir = File.join(tmpdir, "work")
+      project_dir = File.join(tmpdir, "project")
+      mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
+
+      # "lib/../main.rb" resolves inside project_dir, so the escape check above lets
+      # it through and the ".." reaches main.c.
+      args = {project_dir: project_dir, entrypoint: "lib/../main.rb", files: []}
+      entrypoint_path = Kompo::CopyProjectFiles.entrypoint_path(args: args)
+
+      assert_equal File.join(work_dir, "main.rb"), entrypoint_path
+      assert File.exist?(entrypoint_path)
+    end
+  end
+
   def test_copy_project_files_copies_additional_files
     with_tmpdir do |tmpdir|
       tmpdir << "work/" \

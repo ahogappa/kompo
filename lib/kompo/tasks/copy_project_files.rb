@@ -24,7 +24,11 @@ module Kompo
         raise "Entrypoint path escapes project directory: #{entrypoint}"
       end
 
-      @entrypoint_path = File.join(work_dir, entrypoint)
+      # MakeMainC embeds this export verbatim into main.c, before MakeFsC expands it
+      # for PATHS. kompo-vfs takes Path::parent() of it as the WORKING_DIR, and
+      # parent() does not collapse "..": the parent of "/work/lib/../main.rb" is
+      # "/work/lib/..", which breaks every relative lookup after it.
+      @entrypoint_path = File.expand_path(File.join(work_dir, entrypoint))
       FileUtils.mkdir_p(File.dirname(@entrypoint_path))
       FileUtils.cp(src_entrypoint, @entrypoint_path)
       puts "Copied entrypoint: #{entrypoint}"

@@ -28,6 +28,12 @@ module Kompo
             metadata = JSON.parse(File.read(cache_metadata_path))
             cached_work_dir = metadata["work_dir"]
 
+            # Canonicalized before validating so the check below sees where the path
+            # actually lands: "/tmp/link/work" satisfies a lexical check no matter
+            # where link points. Relative paths are left alone so valid_tmpdir_path?
+            # still rejects them instead of canonical_path resolving them against cwd.
+            cached_work_dir = canonical_path(cached_work_dir) if cached_work_dir&.start_with?("/")
+
             if cached_work_dir && !valid_tmpdir_path?(cached_work_dir)
               warn "warn: #{cached_work_dir} is outside system temp directory, creating new work directory"
               cached_work_dir = nil
@@ -72,10 +78,7 @@ module Kompo
 
       # No valid cache, create new work_dir
       tmpdir = Dir.mktmpdir(SecureRandom.uuid)
-      # Resolve symlinks to get the real path
-      # On macOS, /var/folders is a symlink to /private/var/folders
-      # If we don't resolve this, paths won't match at runtime
-      @path = File.realpath(tmpdir)
+      @path = canonical_path(tmpdir)
 
       # Create marker file to identify this as a Kompo work directory
       File.write(File.join(@path, MARKER_FILE), "kompo-work-dir")
@@ -98,6 +101,22 @@ module Kompo
     end
 
     private
+
+    # Everything downstream compares this byte-for-byte: WD[] in fs.c, the prefix of
+    # every PATHS entry, the entrypoint in main.c. A trailing slash, a "." component,
+    # or an unresolved symlink (macOS /var/folders -> /private/var/folders) makes
+    # kompo-vfs miss every lookup and silently fall through to the real filesystem.
+    def canonical_path(path)
+      return File.realpath(path) if File.exist?(path)
+
+      # Not created yet, so realpath cannot run: resolve the deepest existing ancestor
+      # instead, or a symlinked parent smuggles the path past the tmpdir check and
+      # mkdir_p creates the work directory wherever that symlink points.
+      parent = File.dirname(path)
+      return File.expand_path(path) if parent == path
+
+      File.join(canonical_path(parent), File.basename(path))
+    end
 
     def valid_tmpdir_path?(path)
       return false unless path.start_with?("/")

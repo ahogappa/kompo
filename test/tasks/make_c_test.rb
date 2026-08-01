@@ -364,15 +364,8 @@ class MakeFsCTest < Minitest::Test
       path = Kompo::MakeFsC.path(args: {compress: true})
       content = File.read(path)
 
-      # Extract COMPRESSED_FILES data
-      compressed_match = content.match(/const char COMPRESSED_FILES\[\] = \{([^}]+)\}/)
-      assert compressed_match, "Should have COMPRESSED_FILES array"
-
-      # Convert the byte array back to binary data
-      compressed_bytes = compressed_match[1].split(",").map(&:to_i).pack("C*")
-
-      # Decompress using Zlib
-      decompressed = Zlib.inflate(compressed_bytes)
+      # Decompress the embedded COMPRESSED_FILES data using Zlib
+      decompressed = Zlib.inflate(decode_byte_array(content, "COMPRESSED_FILES"))
 
       # The decompressed data should contain our test content
       assert_includes decompressed, "TEST_CONTENT_FOR_DECOMPRESSION"
@@ -454,6 +447,68 @@ class MakeFsCTest < Minitest::Test
     end
   end
 
+  def test_make_fs_c_emits_work_dir_as_wd_prefix_of_paths
+    with_tmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint)
+
+      content = File.read(Kompo::MakeFsC.path)
+      wd = decode_wd(content)
+
+      # kompo-vfs resolves every embedded path by stripping WD as a raw byte prefix.
+      assert_equal work_dir, wd
+      assert decode_embedded_paths(content).all? { |p| p.start_with?("#{wd}/") }
+    end
+  end
+
+  def test_make_fs_c_rejects_unnormalized_work_dir
+    with_tmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      mock_fs_c_dependencies("#{work_dir}/", tmpdir, entrypoint)
+
+      # Shipping a binary whose WD never matches is worse than failing the build.
+      error = assert_raises(Taski::AggregateError) { Kompo::MakeFsC.path }
+      assert_match(/canonical absolute path/, error.message)
+    end
+  end
+
+  def test_make_fs_c_rejects_symlinked_work_dir
+    with_tmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      link = File.join(tmpdir, "work_link")
+      File.symlink(work_dir, link)
+
+      # An alias is lexically clean but still not the path Ruby reports at runtime.
+      mock_fs_c_dependencies(link, tmpdir, entrypoint)
+
+      error = assert_raises(Taski::AggregateError) { Kompo::MakeFsC.path }
+      assert_match(/canonical absolute path/, error.message)
+    end
+  end
+
+  def test_make_fs_c_deduplicates_on_embedded_path
+    with_tmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      tmpdir << ["current/lib/x.rb", "module X; end"] \
+             << ["orig/lib/x.rb", "module X; end"]
+      current_install = File.join(tmpdir, "current")
+      orig_install = File.join(tmpdir, "orig")
+
+      # Diverging install dirs are the one configuration where two distinct source
+      # paths collapse onto the same embedded path.
+      mock_fs_c_dependencies(work_dir, tmpdir, entrypoint,
+        ruby_install_dir: current_install,
+        original_ruby_install_dir: orig_install,
+        stdlib_paths: [File.join(current_install, "lib"), File.join(orig_install, "lib")])
+
+      path_list = decode_embedded_paths(File.read(Kompo::MakeFsC.path))
+      embedded = File.join(orig_install, "lib", "x.rb")
+
+      assert_equal 1, path_list.count { |p| p == embedded }
+      refute path_list.any? { |p| p.start_with?(current_install) }
+    end
+  end
+
   private
 
   def setup_work_dir_with_entrypoint(tmpdir, content: "puts 'hello'")
@@ -463,11 +518,18 @@ class MakeFsCTest < Minitest::Test
     [work_dir, entrypoint]
   end
 
-  # Decode the PATHS array from generated fs.c content into a list of embedded path strings
+  def decode_byte_array(fs_c_content, name)
+    match = fs_c_content.match(/const char #{name}\[\] = \{([^}]+)\}/)
+    assert match, "Should have #{name} array"
+    match[1].split(",").map(&:to_i).pack("C*")
+  end
+
   def decode_embedded_paths(fs_c_content)
-    paths_match = fs_c_content.match(/const char PATHS\[\] = \{([^}]+)\}/)
-    assert paths_match, "Should have PATHS array"
-    paths_match[1].split(",").map(&:to_i).pack("C*").split("\0")
+    decode_byte_array(fs_c_content, "PATHS").split("\0")
+  end
+
+  def decode_wd(fs_c_content)
+    decode_byte_array(fs_c_content, "WD").delete_suffix("\0")
   end
 
   def mock_fs_c_dependencies(work_dir, tmpdir, entrypoint,
@@ -476,11 +538,13 @@ class MakeFsCTest < Minitest::Test
     gemspec_paths: [],
     bundler_config_path: nil,
     bundle_ruby_dir: nil,
-    stdlib_paths: [])
+    stdlib_paths: [],
+    ruby_install_dir: "/path/to/install",
+    original_ruby_install_dir: "/path/to/install")
     mock_task(Kompo::WorkDir, path: work_dir, original_dir: tmpdir)
     mock_task(Kompo::InstallRuby,
-      ruby_install_dir: "/path/to/install",
-      original_ruby_install_dir: "/path/to/install",
+      ruby_install_dir: ruby_install_dir,
+      original_ruby_install_dir: original_ruby_install_dir,
       ruby_major_minor: "3.4")
     mock_task(Kompo::CopyProjectFiles, entrypoint_path: entrypoint, additional_paths: additional_paths)
     mock_task(Kompo::CopyGemfile, gemfile_exists: gemfile_exists, gemspec_paths: gemspec_paths)
