@@ -218,7 +218,7 @@ module Kompo
       # An unnormalized work_dir would not break the build, it would ship a binary
       # whose VFS never matches anything (see WorkDir#canonical_path). Fail loudly
       # rather than repairing it here, so the upstream regression gets fixed.
-      unless @work_dir == File.expand_path(@work_dir)
+      unless @work_dir == File.realpath(@work_dir)
         raise "work_dir must be a canonical absolute path, got: #{@work_dir.inspect}"
       end
 

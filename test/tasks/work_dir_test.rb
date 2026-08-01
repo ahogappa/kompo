@@ -53,6 +53,26 @@ class WorkDirTest < Minitest::Test
     end
   end
 
+  def test_work_dir_rejects_cached_work_dir_behind_an_escaping_symlink
+    with_tmpdir do |tmpdir|
+      outside = File.expand_path("../..", __dir__)
+      link = File.join(tmpdir, "escape")
+      File.symlink(outside, link)
+      escaped = File.join(link, "kompo_escape_probe")
+
+      # Lexically this sits under Dir.tmpdir, so only resolving the symlink reveals
+      # that mkdir_p would create the work directory outside the temp directory.
+      metadata = {"work_dir" => escaped, "ruby_version" => RUBY_VERSION}
+      tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", JSON.generate(metadata)]
+
+      path = Kompo::WorkDir.path(args: {kompo_cache: File.join(tmpdir, ".kompo", "cache")})
+
+      refute_equal File.join(outside, "kompo_escape_probe"), path
+      refute Dir.exist?(File.join(outside, "kompo_escape_probe"))
+      assert path.start_with?(File.realpath(Dir.tmpdir))
+    end
+  end
+
   def test_work_dir_handles_invalid_metadata_json
     with_tmpdir do |tmpdir|
       tmpdir << [".kompo/cache/#{RUBY_VERSION}/metadata.json", "not valid json"]

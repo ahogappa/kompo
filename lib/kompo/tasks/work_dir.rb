@@ -28,14 +28,16 @@ module Kompo
             metadata = JSON.parse(File.read(cache_metadata_path))
             cached_work_dir = metadata["work_dir"]
 
+            # Canonicalized before validating so the check below sees where the path
+            # actually lands: "/tmp/link/work" satisfies a lexical check no matter
+            # where link points. Relative paths are left alone so valid_tmpdir_path?
+            # still rejects them instead of canonical_path resolving them against cwd.
+            cached_work_dir = canonical_path(cached_work_dir) if cached_work_dir&.start_with?("/")
+
             if cached_work_dir && !valid_tmpdir_path?(cached_work_dir)
               warn "warn: #{cached_work_dir} is outside system temp directory, creating new work directory"
               cached_work_dir = nil
             end
-
-            # After validating, not before: expanding first would make a relative path
-            # absolute against the cwd and slip it past valid_tmpdir_path?.
-            cached_work_dir &&= canonical_path(cached_work_dir)
 
             if cached_work_dir
               # Check if the directory exists and belongs to us (has marker) or doesn't exist at all
@@ -105,7 +107,15 @@ module Kompo
     # or an unresolved symlink (macOS /var/folders -> /private/var/folders) makes
     # kompo-vfs miss every lookup and silently fall through to the real filesystem.
     def canonical_path(path)
-      File.exist?(path) ? File.realpath(path) : File.expand_path(path)
+      return File.realpath(path) if File.exist?(path)
+
+      # Not created yet, so realpath cannot run: resolve the deepest existing ancestor
+      # instead, or a symlinked parent smuggles the path past the tmpdir check and
+      # mkdir_p creates the work directory wherever that symlink points.
+      parent = File.dirname(path)
+      return File.expand_path(path) if parent == path
+
+      File.join(canonical_path(parent), File.basename(path))
     end
 
     def valid_tmpdir_path?(path)

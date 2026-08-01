@@ -472,6 +472,20 @@ class MakeFsCTest < Minitest::Test
     end
   end
 
+  def test_make_fs_c_rejects_symlinked_work_dir
+    with_tmpdir do |tmpdir|
+      work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
+      link = File.join(tmpdir, "work_link")
+      File.symlink(work_dir, link)
+
+      # An alias is lexically clean but still not the path Ruby reports at runtime.
+      mock_fs_c_dependencies(link, tmpdir, entrypoint)
+
+      error = assert_raises(Taski::AggregateError) { Kompo::MakeFsC.path }
+      assert_match(/canonical absolute path/, error.message)
+    end
+  end
+
   def test_make_fs_c_deduplicates_on_embedded_path
     with_tmpdir do |tmpdir|
       work_dir, entrypoint = setup_work_dir_with_entrypoint(tmpdir)
